@@ -1,0 +1,17 @@
+{
+  "required": true,
+  "package": "github.cosmicdan.temperaturebands.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "minVersion": "0.8",
+  "client": [
+  ],
+  "mixins": [
+    "DensityFunctionsHooks",
+    "LevelStorageSourceHooks",
+    "MinecraftServerHooks",
+    "RandomStateHooks"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
