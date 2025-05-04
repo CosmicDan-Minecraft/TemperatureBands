@@ -13,7 +13,7 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 public final class TemperatureBandsForge {
     private final TemperatureBands INSTANCE;
 
-    public TemperatureBandsForge(FMLJavaModLoadingContext context) {
-        INSTANCE = new TemperatureBands(new ModPlatformForge(context));
+    public TemperatureBandsForge() {
+        INSTANCE = new TemperatureBands(new ModPlatformForge());
     }
 }

@@ -4,13 +4,18 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '8.1.1' apply false
 }
 
+apply from: 'modprops.gradle'
+group = project.maven_group
+version = project.mod_version
+
 architectury {
-    minecraft = project.minecraft_version
+    minecraft = rootProject.minecraft_version
 }
 
 allprojects {
-    group = rootProject.maven_group
-    version = rootProject.mod_version
+	// Removed and applied to root (above) and individual subprojects for multiproject compat.
+    //group = 
+    //version = 
 }
 
 subprojects {
@@ -18,11 +23,12 @@ subprojects {
     apply plugin: 'architectury-plugin'
     apply plugin: 'maven-publish'
 
-    base {
-        // Set up a suffixed format for the mod jar names, e.g. `example-fabric`.
-        archivesName = "$rootProject.archives_name-$project.name"
-    }
-
+    // Removed and applied to individual subprojects for multiproject compat.
+    //base {
+    //    // Set up a suffixed format for the mod jar names, e.g. `example-fabric`.
+    //    archivesName = "$rootProject.archives_name-$project.name"
+    //}
+    
     repositories {
         maven {
             name = 'ParchmentMC'
@@ -45,11 +51,7 @@ subprojects {
 
     dependencies {
         minecraft "net.minecraft:minecraft:$rootProject.minecraft_version"
-        mappings loom.layered() {
-            officialMojangMappings()
-            // Via tags search on MC version at https://github.com/ParchmentMC/Parchment
-            parchment("org.parchmentmc.data:parchment-1.20.1:2023.09.03@zip")
-        }
+        mappings loom.officialMojangMappings()
     }
 
     java {

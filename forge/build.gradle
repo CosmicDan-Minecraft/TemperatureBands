@@ -2,6 +2,12 @@ plugins {
     id 'com.github.johnrengelman.shadow'
 }
 
+apply from: '../modprops.gradle'
+//base { archivesName = "$rootProject.archives_name-$project.name" }
+base { archivesName = project.archives_base_name }
+version = project.mod_version + "-Forge-${rootProject.minecraft_version}"
+group = project.maven_group
+
 loom {
     forge {
         mixinConfig "temperaturebands.mixins.json"
@@ -60,5 +66,20 @@ shadowJar {
 }
 
 remapJar {
-    inputFile.set shadowJar.archiveFile
+    input.set shadowJar.archiveFile
+    //Old, might still be needed...?
+    //dependsOn shadowJar
+    archiveClassifier = null
+}
+
+// Extras from CosmicDan, check if these are still needed...
+
+jar {
+    archiveClassifier = "dev"
+}
+
+sourcesJar {
+    def commonSources = project(":common").sourcesJar
+    dependsOn commonSources
+    from commonSources.archiveFile.map { zipTree(it) }
 }
