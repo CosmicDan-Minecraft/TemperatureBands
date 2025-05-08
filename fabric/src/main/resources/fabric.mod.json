@@ -3,16 +3,16 @@
   "id": "temperaturebands",
   "version": "${version}",
   "name": "Temperature Bands",
-  "description": "This is an example description! Tell everyone what your mod is about!",
+  "description": "Modifies world generation to place biomes into repeating temperature bands. Compatible with most worldgen mods.",
   "authors": [
-    "Me!"
+    "CosmicDan"
   ],
   "contact": {
-    "homepage": "https://fabricmc.net/",
-    "sources": "https://github.com/FabricMC/fabric-example-mod"
+    "homepage": "https://www.curseforge.com/minecraft/mc-mods/temperaturebands",
+    "sources": "https://github.com/CosmicDan-Minecraft/TemperatureBands"
   },
-  "license": "CC0-1.0",
-  "icon": "assets/temperaturebands/icon.png",
+  "license": "LGPL-1.0",
+  "icon": "logo.png",
   "environment": "*",
   "entrypoints": {
     "main": [
@@ -29,9 +29,8 @@
     "fabricloader": ">=0.16.14",
     "minecraft": "~1.20.1",
     "java": ">=17",
-    "fabric-api": "*"
+    "forgeconfigapiport": ">=8.0.0"
   },
   "suggests": {
-    "another-mod": "*"
   }
 }

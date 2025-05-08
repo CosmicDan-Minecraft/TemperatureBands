@@ -1,17 +1,19 @@
 modLoader = "javafml"
 loaderVersion = "[47,)"
-#issueTrackerURL = ""
-license = "Insert License Here"
+issueTrackerURL = "https://github.com/CosmicDan-Minecraft/TemperatureBands/issues"
+license = "LGPLv3"
 
 [[mods]]
 modId = "temperaturebands"
 version = "${version}"
 displayName = "Temperature Bands"
-authors = "Me!"
+authors = "CosmicDan"
 description = '''
-This is an example description! Tell everyone what your mod is about!
+Modifies world generation to place biomes into repeating temperature bands. Compatible with most worldgen mods.
+
+https://www.curseforge.com/minecraft/mc-mods/temperaturebands
 '''
-#logoFile = ""
+logoFile = "logo.png"
 
 [[dependencies.temperaturebands]]
 modId = "forge"
