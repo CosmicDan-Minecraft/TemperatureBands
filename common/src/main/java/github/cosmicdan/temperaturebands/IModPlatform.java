@@ -1,8 +1,7 @@
 package github.cosmicdan.temperaturebands;
 
-import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.fml.config.ModConfig;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 public interface IModPlatform {
-    void registerConfig(ModConfig.Type type, ForgeConfigSpec spec);
+    void registerConfigCommon(ModConfigSpec spec);
 }

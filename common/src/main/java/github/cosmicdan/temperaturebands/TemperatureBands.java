@@ -3,8 +3,7 @@ package github.cosmicdan.temperaturebands;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.mojang.logging.LogUtils;
 import net.minecraft.world.level.levelgen.DensityFunction;
-import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.fml.config.ModConfig;
+import net.neoforged.neoforge.common.ModConfigSpec;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 
@@ -25,9 +24,9 @@ public final class TemperatureBands {
     public TemperatureBands(final IModPlatform modPlatform) {
         MODPLATFORM = modPlatform;
         // Register common config
-        final Pair<CommonConfig, ForgeConfigSpec> specPairServer = new ForgeConfigSpec.Builder().configure(CommonConfig::new);
-        CONFIG_DEFAULT = specPairServer.getLeft();
-        MODPLATFORM.registerConfig(ModConfig.Type.COMMON, specPairServer.getRight());
+        final Pair<CommonConfig, ModConfigSpec> specPairConfigCommon = new ModConfigSpec.Builder().configure(CommonConfig::new);
+        CONFIG_DEFAULT = specPairConfigCommon.getLeft();
+        MODPLATFORM.registerConfigCommon(specPairConfigCommon.getRight());
     }
 
     private static Path saveDir;

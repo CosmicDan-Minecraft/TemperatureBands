@@ -1,5 +1,5 @@
 modLoader = "javafml"
-loaderVersion = "[47,)"
+loaderVersion = "[4,)"
 issueTrackerURL = "https://github.com/CosmicDan-Minecraft/TemperatureBands/issues"
 license = "LGPLv3"
 
@@ -16,15 +16,18 @@ https://www.curseforge.com/minecraft/mc-mods/temperaturebands
 logoFile = "logo.png"
 
 [[dependencies.temperaturebands]]
-modId = "forge"
-mandatory = true
-versionRange = "[47,)"
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1,)"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.temperaturebands]]
 modId = "minecraft"
-mandatory = true
-versionRange = "[1.20.1,)"
+type = "required"
+versionRange = "[1.21.1,)"
 ordering = "NONE"
 side = "BOTH"
+
+[[mixins]]
+config = "temperaturebands.mixins.json"
