@@ -43,10 +43,8 @@ dependencies {
     common(project(path: ':common', configuration: 'namedElements')) { transitive false }
     shadowBundle project(path: ':common', configuration: 'transformProductionNeoForge')
     
-    // World Preview 
-    // [Not available for NeoForge 1.21.1]
-    // JourneyMap
-    modLocalRuntime("curse.maven:journeymap-32274:6506649")
+    // World Preview (NeoForge port via Modrinth)
+    modLocalRuntime("maven.modrinth:world-preview-neoforged-(unofficial):y3St0do0")
 }
 
 processResources {
