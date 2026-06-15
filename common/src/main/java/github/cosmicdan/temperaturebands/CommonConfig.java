@@ -15,7 +15,8 @@ public class CommonConfig {
     public final ModConfigSpec.DoubleValue bandPositionShift;
     public static final String bandPositionShiftTxt = " Shift the bands by this percentage.\n" +
             " Normally the Hot band (Desert and such) will generate at origin (0,0) so the default shift of 25% will make the origin temperate (middle temp) instead, shifted\n" +
-            " downwards to simulate a 'Northern hemisphere' start (Colder will be North, or East if Vertical bands, and Hotter will be South or West). A value of 0.75 would simulate southern hemisphere start instead.";
+            " downwards to simulate a 'Northern hemisphere' start (Colder will be North, or East if Vertical bands, and Hotter will be South or West). A value of 0.75 would simulate southern hemisphere start instead.\n" +
+            " NOTE: Some world gen mods like Tectonic and Larion seem to have their own idea about initial world spawn and don't use origin, you might want a different mod like 'Biome Spawn Point' instead.";
     public final ModConfigSpec.DoubleValue tempRange;
     public static final String tempRangeTxt = " Absolute min/max temperature range. Increasing this will make the coldest and hottest bands larger while reducing others, lowering this value will have the opposite effect.\n" +
             " The default value makes the hottest/coldest bands a tiny bit smaller than the others.\n" +
@@ -35,7 +36,7 @@ public class CommonConfig {
     public static final String sectionAlgo1 = "algorithm1";
     public static final String sectionAlgo1Txt = " Settings for algorithm 1, the 'simple' or 'default' algorithm.\n" +
             " This algorithm is very simple and produces jaggy lines that aren't very random or natural looking, but it looks OK as long as you keep useNoise enabled.\n" +
-            " Keeping the variance low but noiseFactor a decent amount (around 100 or so) will produce some OK looking curves/waves in the bands, but it you want something more predictable you can reduce noiseFactor and increase variance.\n";
+            " Keeping the variance low but noiseFactor a decent amount (around 100 or so) will produce some OK looking curves/waves in the bands, but if you want something more predictable you can reduce noiseFactor and increase variance.\n";
     public final ModConfigSpec.IntValue algo1bandVariance;
     public static final String algo1bandVarianceTxt = " Band variance in blocks (roughly). If below 10, each band will have a completely straight edge across the world and disables all remaining algo1 features.\n" +
             " You will want to keep this a fairly small value. Making it too large could result in weirdness, especially if it's too close to the bandSize.";
