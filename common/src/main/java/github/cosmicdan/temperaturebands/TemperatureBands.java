@@ -63,7 +63,7 @@ public final class TemperatureBands {
     private static int tempAlgo1bandVarianceMid = 0;
 
     public static void doTempConfig() {
-        if (!configDone) {
+        if (!configDone && CONFIG_DEFAULT != null) {
             // check for world prop
             if (savePropFile != null && savePropFile.exists()) {
                 // world prop exists, use world config
