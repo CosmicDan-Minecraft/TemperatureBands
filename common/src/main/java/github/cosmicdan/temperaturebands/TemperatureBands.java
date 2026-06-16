@@ -1,10 +1,14 @@
 package github.cosmicdan.temperaturebands;
 
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.mojang.logging.LogUtils;
+import net.minecraft.core.Holder;
 import net.minecraft.world.level.levelgen.DensityFunction;
+import net.minecraft.world.level.levelgen.DensityFunctions;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import org.apache.commons.lang3.tuple.Pair;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
 import java.io.File;
@@ -12,7 +16,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Properties;
+import java.util.*;
 
 public final class TemperatureBands {
     public static final String MOD_ID = "temperaturebands";
@@ -20,6 +24,13 @@ public final class TemperatureBands {
     public static IModPlatform MODPLATFORM;
 
     public static CommonConfig CONFIG_DEFAULT = null;
+
+    /** Used to "remember" some things for each dimension so we can access it later from various places. Entries are created in ChunkMapHooks, added to by various other hooks, and cleared on shutdown via MinecraftServerHooks */
+    public static final Cache<String, DimensionData> DIMENSION_DATA_CACHE = Caffeine.newBuilder().build();
+
+    /** As above, but "draft" versions of DimensionData that are cut-down and waiting to be fully initialized after ServerLevel has finished instantiation  **/
+    public static final Cache<String, DimensionData> DIMENSION_DATA_CACHE_DRAFTS = Caffeine.newBuilder().build();
+
 
     public TemperatureBands(final IModPlatform modPlatform) {
         MODPLATFORM = modPlatform;
@@ -34,36 +45,40 @@ public final class TemperatureBands {
     private static boolean configDone = false;
 
     public static void onLevelStorageLoad(Path saveDirIn) {
-        clearSaveAndConfig();
+        resetSaveAndConfig();
         saveDir = saveDirIn;
         savePropFile = saveDir.resolve(MOD_ID + ".prop").toFile();
-        doTempConfig();
+        doModConfigIfNeeded();
     }
 
-    public static void clearSaveAndConfig() {
+    public static void resetSaveAndConfig() {
         saveDir = null;
         savePropFile = null;
+        configDimBlacklist.clear();
         configDone = false;
     }
 
     // config values (initial values shouldn't matter, they're loaded from mod or world config)
-    private static int configBandSize = 2048;
-    private static boolean configUseVerticalBands = false;
-    private static float configPosShift = 0.25f;
-    private static float configTempRange = 0.60f;
-    private static float configGradeShift = -0.05f;
-    private static int configAlgorithm = 1;
-    private static int configNoiseFactor = 100;
-    // algo1 config
-    private static int configAlgo1BandVariance = 128;
-    private static float configAlgo1bandVarianceSteepness = 0.1f;
-    // values derived/calculated from config
-    private static float tempBandMid = 0f;
-    private static float tempGradeAdj = 0f;
-    private static int tempAlgo1bandVarianceMid = 0;
+    static int configBandSize = 2048;
+    static boolean configUseVerticalBands = false;
+    static float configPosShift = 0.25f;
+    static float configTempRange = 0.60f;
+    static float configGradeShift = -0.05f;
+    static int configAlgorithm = 1;
+    static int configNoiseFactor = 100;
+    // blacklist config
+    public static Set<String> configDimBlacklist = new HashSet<>();
+    public static boolean configDimBlacklistAsWhitelist = false;
 
-    public static void doTempConfig() {
-        if (!configDone && CONFIG_DEFAULT != null) {
+    // algo1 config
+    static int configAlgo1BandVariance = 128;
+    static float configAlgo1bandVarianceSteepness = 0.1f;
+    // values derived/calculated from config
+    static float tempBandMid = 0f;
+    static float tempGradeAdj = 0f;
+    static int tempAlgo1bandVarianceMid = 0;
+    public static void doModConfigIfNeeded() {
+        if (!configDone) {
             // check for world prop
             if (savePropFile != null && savePropFile.exists()) {
                 // world prop exists, use world config
@@ -84,9 +99,16 @@ public final class TemperatureBands {
                     } else {
                         throw new RuntimeException("World config has unsupported algorithm (" + configAlgorithm + "), did you downgrade Temperature Bands?");
                     }
+                    // Whitelist/blacklist
+                    configDimBlacklistAsWhitelist = Boolean.parseBoolean(prop.getProperty("configDimBlacklistAsWhitelist"));
+                    String dimBlacklist = prop.getProperty("configDimBlacklist");
+                    if (dimBlacklist == null) // Loading an existing world from older mod version
+                        dimBlacklist = "";
+                    setDimBlacklist(configDimBlacklist, dimBlacklist);
+
                     updateDerivedConfig();
                 } catch (IOException ex) {
-                    throw new RuntimeException("Error reading world config. Crashing-out intentionally to prevent corruption. Please report this Temperature Bands error.");
+                    throw new RuntimeException("Error reading world config. Crashing-out intentionally to prevent corruption. If you modified the world config manually, please fix it. Otherwise, report this Temperature Bands error.");
                 }
             } else {
                 // get and calc values from config
@@ -103,107 +125,129 @@ public final class TemperatureBands {
                 } else {
                     throw new RuntimeException("Unhandled algorithm at config load, fixme!");
                 }
+                // Whitelist/blacklist
+                configDimBlacklistAsWhitelist = TemperatureBands.CONFIG_DEFAULT.dimBlacklistAsWhitelist.get();
+                String dimBlacklist = TemperatureBands.CONFIG_DEFAULT.dimBlacklist.get();
+                setDimBlacklist(configDimBlacklist, dimBlacklist);
+
                 updateDerivedConfig();
+
                 if (saveDir != null && saveDir.toFile().exists()) {
                     try (FileOutputStream output = new FileOutputStream(savePropFile)) {
-                        Properties prop = new Properties();
-                        prop.setProperty("configBandSize", String.valueOf(configBandSize));
-                        prop.setProperty("configUseVerticalBands", String.valueOf(configUseVerticalBands));
-                        prop.setProperty("configPosShift", String.valueOf(configPosShift));
-                        prop.setProperty("configTempRange", String.valueOf(configTempRange));
-                        prop.setProperty("configGradeShift", String.valueOf(configGradeShift));
-                        prop.setProperty("configAlgorithm", String.valueOf(configAlgorithm));
-                        prop.setProperty("configNoiseFactor", String.valueOf(configNoiseFactor));
-                        if (configAlgorithm == 1) {
-                            prop.setProperty("configAlgo1BandVariance", String.valueOf(configAlgo1BandVariance));
-                            prop.setProperty("configAlgo1bandVarianceSteepness", String.valueOf(configAlgo1bandVarianceSteepness));
-                        } else {
-                            throw new RuntimeException("Unhandled algorithm at config world save, fixme!");
-                        }
+                        Properties prop = setConfigProps();
                         prop.store(output, "World-specific Temperature Bands settings. Do not edit!");
-                        LOGGER.info("Saved world config to " + savePropFile.getName());
+                        LOGGER.info("Saved world config to {}", savePropFile.getName());
                     } catch (IOException ex) {
                         throw new RuntimeException("Error writing world config. Crashing-out intentionally to prevent corruption. Please report this Temperature Bands error.");
                     }
                 } else {
                     // world is either deleted or exited, clear vars
-                    clearSaveAndConfig();
+                    resetSaveAndConfig();
                 }
             }
-            if (false) {
-                // debug
-                LOGGER.info("~~~~");
-                LOGGER.info(String.valueOf(configBandSize));
-                LOGGER.info(String.valueOf(configUseVerticalBands));
-                LOGGER.info(String.valueOf(configPosShift));
-                LOGGER.info(String.valueOf(configTempRange));
-                LOGGER.info(String.valueOf(configGradeShift));
-                LOGGER.info(String.valueOf(configAlgorithm));
-                LOGGER.info(String.valueOf(configAlgo1BandVariance));
-                LOGGER.info(String.valueOf(configAlgo1bandVarianceSteepness));
-                LOGGER.info("~~~~");
-            }
+
             configDone = true;
         }
+    }
+
+    private static void setDimBlacklist(Set<String> listToUse, String dimBlacklist) {
+        String[] dimBlacklistSplit = dimBlacklist.split(",");
+        //if ()
+        Collections.addAll(listToUse, dimBlacklistSplit);
+        listToUse.remove("");
+        if (!listToUse.isEmpty())
+            LOGGER.info("Using dimension {}: {}", configDimBlacklistAsWhitelist ? "whitelist" : "blacklist", dimBlacklist);
+        else
+            LOGGER.info("Dimension {} is empty for this world", configDimBlacklistAsWhitelist ? "whitelist" : "blacklist");
+    }
+
+    private static @NotNull Properties setConfigProps() {
+        Properties prop = new Properties();
+        prop.setProperty("configBandSize", String.valueOf(configBandSize));
+        prop.setProperty("configUseVerticalBands", String.valueOf(configUseVerticalBands));
+        prop.setProperty("configPosShift", String.valueOf(configPosShift));
+        prop.setProperty("configTempRange", String.valueOf(configTempRange));
+        prop.setProperty("configGradeShift", String.valueOf(configGradeShift));
+        prop.setProperty("configAlgorithm", String.valueOf(configAlgorithm));
+        prop.setProperty("configNoiseFactor", String.valueOf(configNoiseFactor));
+        prop.setProperty("configDimBlacklistAsWhitelist", String.valueOf(configDimBlacklistAsWhitelist));
+        String configDimBlacklistRaw = "";
+        for (String blacklistEntry : configDimBlacklist) {
+            configDimBlacklistRaw = configDimBlacklistRaw.concat(blacklistEntry + ",");
+        }
+        configDimBlacklistRaw = configDimBlacklistRaw.substring(0, configDimBlacklistRaw.length() - 1);
+        prop.setProperty("configDimBlacklist", configDimBlacklistRaw);
+        if (configAlgorithm == 1) {
+            prop.setProperty("configAlgo1BandVariance", String.valueOf(configAlgo1BandVariance));
+            prop.setProperty("configAlgo1bandVarianceSteepness", String.valueOf(configAlgo1bandVarianceSteepness));
+        } else {
+            throw new RuntimeException("Unhandled algorithm at config world save, fixme!");
+        }
+        return prop;
     }
 
     private static void updateDerivedConfig() {
         tempBandMid = configBandSize / 2.0f;
         tempGradeAdj = tempBandMid / (configTempRange * 2.0f);
         if (configAlgo1BandVariance > CommonConfig.algo1bandVarianceMin) {
-            tempAlgo1bandVarianceMid = configAlgo1BandVariance / 2;
+            tempAlgo1bandVarianceMid = (int) (configAlgo1BandVariance * 0.5);
         }
     }
 
-    public static double doTempNoise(DensityFunction.FunctionContext context, Operation<Double> original) {
-        int bandPos;
-        int bandShift;
-        if (configUseVerticalBands) {
-            bandPos = Math.abs(context.blockX() - (int) (configBandSize * (configPosShift * 8)));
-            bandShift = Math.abs(context.blockZ());
+    public static boolean isDimensionWhitelisted(String dimensionName) {
+        boolean isWhitelistedDim = false;
+        if (TemperatureBands.configDimBlacklistAsWhitelist) {
+            if (TemperatureBands.configDimBlacklist.contains(dimensionName))
+                isWhitelistedDim = true;
+        } else if (!TemperatureBands.configDimBlacklist.contains(dimensionName))
+            isWhitelistedDim = true;
+        return isWhitelistedDim;
+    }
+
+    public static void finalizeDimensionDataForDraftLevel(String dimensionName) {
+        DimensionData draftDimData = TemperatureBands.DIMENSION_DATA_CACHE_DRAFTS.getIfPresent(dimensionName);
+        if (draftDimData != null) {
+            DIMENSION_DATA_CACHE.put(dimensionName,
+                    new DimensionDataAtomic(
+                            draftDimData.getLevel(),
+                            draftDimData.getNoiseRouter(),
+                            draftDimData.getNoiseFunctionForName(ShiftedNoiseTemperature.NAME),
+                            draftDimData.getNoiseFunctionForName(ShiftedNoiseHumidity.NAME)
+                    ));
+            DIMENSION_DATA_CACHE_DRAFTS.invalidate(dimensionName);
         } else {
-            bandPos = Math.abs(context.blockZ() - (int) (configBandSize * (configPosShift * 8)));
-            bandShift = Math.abs(context.blockX());
+            throw new RuntimeException("Tried to finalize DimensionData from draft that didn't exist (" + dimensionName + "), eh?");
         }
+    }
 
-        if (configAlgorithm == 1) {
-            bandShift = (int) (bandShift * configAlgo1bandVarianceSteepness);
-            if (configAlgo1BandVariance >= CommonConfig.algo1bandVarianceMin) {
-                // using band variance
-                bandShift = bandShift % configAlgo1BandVariance;
-                if (bandShift > tempAlgo1bandVarianceMid) {
-                    // shift is descending, adjust accordingly
-                    bandShift = tempAlgo1bandVarianceMid - (bandShift - tempAlgo1bandVarianceMid);
-                }
-                bandPos += bandShift;
-            }
-
-            // divide bandPos by 8 because we calculate based on a bouncing gradient, idk better words lol
-            bandPos /= 8;
-
-            if (configNoiseFactor > 0) {
-                bandPos += (int) (original.call(context) * configNoiseFactor);
-            }
+    public static DensityFunction replaceNoiseIfNeeded(DimensionData activeDimData, String dimensionName, DensityFunction currentFunction, String functionName) {
+        // first check if we already made modded function, return it if so
+        DensityFunctions.HolderHolder dimDataModdedFunction = activeDimData.getNoiseFunctionForName(functionName);
+        if (dimDataModdedFunction != null) {
+            // We already made the modded function for this dimension, reuse it
+            currentFunction = dimDataModdedFunction;
+        } else if (currentFunction instanceof DensityFunctions.HolderHolder currentFunctionHolder && currentFunctionHolder.function().value() instanceof DensityFunctions.ShiftedNoise currentFunctionActual) {
+            // Vanilla noise that we want to replace
+            ShiftedNoiseEx newNoise = null;
+            if (functionName.equals(ShiftedNoiseTemperature.NAME))
+                newNoise = new ShiftedNoiseTemperature(dimensionName, currentFunctionActual.shiftX(), currentFunctionActual.shiftY(), currentFunctionActual.shiftZ(), currentFunctionActual.xzScale(), currentFunctionActual.yScale(), currentFunctionActual.noise());
+            else if (functionName.equals(ShiftedNoiseHumidity.NAME))
+                newNoise = new ShiftedNoiseHumidity(dimensionName, currentFunctionActual.shiftX(), currentFunctionActual.shiftY(), currentFunctionActual.shiftZ(), currentFunctionActual.xzScale(), currentFunctionActual.yScale(), currentFunctionActual.noise());
+            else
+                throw new RuntimeException("Unhandled noise type: " + functionName);
+            DensityFunctions.HolderHolder newFunction = new DensityFunctions.HolderHolder(new Holder.Direct<>(newNoise));
+            activeDimData.setNoiseFunctionForName(functionName, newFunction);
+            currentFunction = new DensityFunctions.HolderHolder(new Holder.Direct<>(newFunction));
+            TemperatureBands.LOGGER.info("Succeeded in hooking {} for dimension '{}'", functionName, dimensionName);
         } else {
-            throw new RuntimeException("Temperature Bands has an invalid algorithm setting (" + configAlgorithm + ")");
+            TemperatureBands.LOGGER.error("Failed hooking temperature for dimension '{}' because it is not a Holder of ShiftedNoise type. Please report this to CosmicDan so support for this custom dimension can be added.", dimensionName);
+            dumpExtraClassInfo(currentFunction);
         }
+        return currentFunction;
+    }
 
-        // calculate grade
-        float grade = bandPos % configBandSize;
-        if (grade > tempBandMid) {
-            // grade is descending, adjust accordingly
-            grade = tempBandMid - (grade - tempBandMid);
-        }
-        grade = grade / (tempGradeAdj);
-        // shift grade because vanilla has a bias for cold
-        grade = grade + configGradeShift;
-        if (grade < 0.0f)
-            grade = 0.0f;
-        // we now have a grade from 0.0 to temperaturebands_$tempRange, make it a -/+ value with 0.0 at middle
-        float tempLimit = grade - configTempRange;
-        // invert to match vanilla lower = colder
-        tempLimit = -tempLimit;
-
-        return tempLimit;
+    private static void dumpExtraClassInfo(DensityFunction func) {
+        LOGGER.error("    - Class type is '{}'", func.getClass().getCanonicalName());
+        LOGGER.error("    - Class dump: {}", func.toString());
     }
 }

@@ -32,6 +32,10 @@ public class CommonConfig {
     public static final String noiseFactorTxt = " If above zero, will use original noise generation to help make the edges between bands a bit nicer.\n" +
             " See each algorithm for details on how noiseFactor is used.\n" +
             " The unit is arbitrary and very dependent on bandSize. For e.g. 100 is nice for a bandSize of 2048 but might be too wild if bandSize is decreased, or too tame if bandSize is increased.";
+    public final ModConfigSpec.ConfigValue<String> dimBlacklist;
+    public static final String dimBlacklistTxt = " Specify a blacklist of dimensions, separated by commas. Default excludes the_nether and the_end.";
+    public final ModConfigSpec.BooleanValue dimBlacklistAsWhitelist;
+    public static final String dimBlacklistAsWhitelistTxt = " If true, the above blacklist will be treated as a whitelist instead.";
 
     public static final String sectionAlgo1 = "algorithm1";
     public static final String sectionAlgo1Txt = " Settings for algorithm 1, the 'simple' or 'default' algorithm.\n" +
@@ -67,6 +71,12 @@ public class CommonConfig {
         noiseFactor = builder
                 .comment(noiseFactorTxt)
                 .defineInRange("noiseFactor", 100, 0, 1000);
+        dimBlacklist = builder
+                .comment(dimBlacklistTxt)
+                .define("dimBlacklist", "minecraft:the_nether,minecraft:the_end");
+        dimBlacklistAsWhitelist = builder
+                .comment(dimBlacklistAsWhitelistTxt)
+                .define("dimBlacklistAsWhitelist", false);
         builder.pop();
 
         builder.push(sectionAlgo1).comment(sectionAlgo1Txt);

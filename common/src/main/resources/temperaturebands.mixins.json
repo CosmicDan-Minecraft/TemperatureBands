@@ -9,7 +9,10 @@
     "DensityFunctionsHooks",
     "LevelStorageSourceHooks",
     "MinecraftServerHooks",
-    "RandomStateHooks"
+    "RandomStateHooks",
+    "ChunkMapHooks",
+    "NoiseRouterHooks",
+    "ServerLevelHooks"
   ],
   "injectors": {
     "defaultRequire": 1

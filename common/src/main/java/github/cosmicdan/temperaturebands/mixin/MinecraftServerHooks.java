@@ -7,14 +7,19 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+/**
+ * Responsible for clearing config when a world (server) has closed
+ */
 @Mixin(MinecraftServer.class)
 abstract class MinecraftServerHooks {
     @Inject(
             method = "stopServer",
-            at = @At("HEAD")
+            at = @At("TAIL")
     )
     private void onStopServer(CallbackInfo ci) {
         // Clear config so it can be reloaded if a new world is loaded
-        TemperatureBands.clearSaveAndConfig();
+        TemperatureBands.resetSaveAndConfig();
+        TemperatureBands.DIMENSION_DATA_CACHE.invalidateAll();
+        TemperatureBands.DIMENSION_DATA_CACHE_DRAFTS.invalidateAll();
     }
 }
