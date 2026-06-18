@@ -1,28 +1,168 @@
 package github.cosmicdan.temperaturebands;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.mojang.datafixers.util.Pair;
+import github.cosmicdan.temperaturebands.mixin.MultiNoiseBiomeSourceInvoker;
+import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BiomeTags;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.Climate;
+import net.minecraft.world.level.biome.MultiNoiseBiomeSource;
 import net.minecraft.world.level.levelgen.DensityFunctions;
 import net.minecraft.world.level.levelgen.NoiseRouter;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-public abstract class DimensionData {
-    private final ServerLevel level;
-    private final NoiseRouter noiseRouter;
+import java.util.Set;
 
-    public DimensionData(ServerLevel level, NoiseRouter noiseRouter) {
+import static github.cosmicdan.temperaturebands.TemperatureBands.LOGGER;
+
+public class DimensionData {
+    public final boolean isDraft;
+    public final boolean isHumidityEnabled;
+    private final ServerLevel level; // NOT thread safe because it's highly mutable, impossible to make it so
+    private final NoiseRouter noiseRouter; // Shallowly thread-safe
+    private final @Nullable DensityFunctions.HolderHolder noiseTemperature; // Shallowly thread-safe
+    private final @Nullable DensityFunctions.HolderHolder noiseHumidity; // Shallowly thread-safe
+    private final MultiNoiseBiomeSource biomeSource; // Probably shallowly thread-safe
+    public final Cache<Holder<Biome>, Boolean> biomeRivers = Caffeine.newBuilder().build(); // Thread-safe
+    public final Cache<Holder<Biome>, Boolean> biomeOceans = Caffeine.newBuilder().build(); // Thread-safe
+    public final Cache<Holder<Biome>, Boolean> biomeRiversAndOceans = Caffeine.newBuilder().build(); // Thread-safe
+
+    private final Cache<Long, Double> humidityCache = Caffeine.newBuilder().maximumSize(TemperatureBands.humidityCacheSize).build();
+    public final int humidityPartSize = TemperatureBands.humidityResolution * TemperatureBands.humidityResolution;
+    public final int partSizeMiddleOffset = (int)Math.round(humidityPartSize * 0.5);
+
+    private final Cache<Long, ClimateTargetPointEx> climateSamplerCache = Caffeine.newBuilder().maximumSize(TemperatureBands.climateSamplerCacheSize).build();
+
+    public DimensionData(boolean isDraft, ServerLevel level, NoiseRouter noiseRouter, @Nullable DensityFunctions.HolderHolder noiseTemperature, @Nullable DensityFunctions.HolderHolder noiseHumidity) {
+        this.isDraft = isDraft;
         this.level = level;
         this.noiseRouter = noiseRouter;
-    }
+        this.noiseTemperature = noiseTemperature;
+        this.noiseHumidity = noiseHumidity;
 
-    public ServerLevel getLevel() {
-        return level;
+        if (isDraft) {
+            // world is still under construction
+            biomeSource = null;
+            isHumidityEnabled = false;
+        } else if (noiseHumidity != null) {
+            isHumidityEnabled = true;
+            // verification (only necessary for humidity)
+            if (!(level.getChunkSource().getGenerator().getBiomeSource() instanceof MultiNoiseBiomeSource biomeSourceInstance)) {
+                biomeSource = null;
+                LOGGER.error("Error: The dimension {} does not use a MultiNoiseBiomeSource; humidity modification cannot continue. Please report this to CosmicDan so support for this custom dimension might be added.", level.dimension().location());
+            } else {
+                // setup stuff for humidity
+                this.biomeSource = biomeSourceInstance;
+                // fetch appropriate biomes for humidity purposes
+                Set<Holder<Biome>> possibleBiomes = level.getChunkSource().getGenerator().getBiomeSource().possibleBiomes();
+                for (Holder<Biome> biomeHolder : possibleBiomes) {
+                    if (biomeHolder.is(BiomeTags.IS_RIVER)) {
+                        biomeRivers.put(biomeHolder, Boolean.TRUE);
+                        biomeRiversAndOceans.put(biomeHolder, Boolean.TRUE);
+                    } else if (biomeHolder.is(BiomeTags.IS_OCEAN)) {
+                        biomeOceans.put(biomeHolder, Boolean.TRUE);
+                        biomeRiversAndOceans.put(biomeHolder, Boolean.TRUE);
+                    }
+                }
+                biomeRivers.cleanUp();
+                biomeOceans.cleanUp();
+                biomeRiversAndOceans.cleanUp();
+                // TODO: only do this if config option to dump river/ocean biome names is set
+                LOGGER.info("List of all biomes with 'minecraft:is_river' tag:");
+                for (Holder<Biome> biomeHolder : biomeRivers.asMap().keySet()) {
+                    if (biomeHolder.unwrapKey().isPresent()) {
+                        LOGGER.info(" - {}", biomeHolder.unwrapKey().get().location());
+                    }
+                }
+                LOGGER.info("List of all biomes with 'minecraft:is_ocean' tag:");
+                for (Holder<Biome> biomeHolder : biomeOceans.asMap().keySet()) {
+                    if (biomeHolder.unwrapKey().isPresent()) {
+                        LOGGER.info(" - {}", biomeHolder.unwrapKey().get().location());
+                    }
+                }
+            }
+        } else {
+            // humidity function not enabled (or not yet setup)
+            biomeSource = null;
+            isHumidityEnabled = false;
+        }
     }
 
     public NoiseRouter getNoiseRouter() {
         return noiseRouter;
     }
 
-    public abstract DensityFunctions.HolderHolder getNoiseFunctionForName(String noiseName);
-    public abstract void setNoiseFunctionForName(String noiseName, DensityFunctions.HolderHolder noise);
+    public DensityFunctions.HolderHolder getNoiseFunctionForName(String noiseName) {
+        if (noiseName.equals(ShiftedNoiseTemperature.NAME))
+            return noiseTemperature;
+        else if (noiseName.equals(ShiftedNoiseHumidity.NAME))
+            return noiseHumidity;
+        else
+            throw new RuntimeException("Attempted getting an invalid noise: " + noiseName);
+    }
+
+    @NotNull
+    public DensityFunctions.HolderHolder getTemperatureFunction() {
+        if (noiseTemperature == null)
+            throw new RuntimeException("Tried to get TemperatureFunction but it hasn't been set setup yet, eh?");
+        else
+            return noiseTemperature;
+    }
+
+    public static DimensionData recreateDimDataWithNewNoiseFunction(String dimensionName, DimensionData dimData, String noiseName, DensityFunctions.HolderHolder noiseFunction) {
+        if (noiseName.equals(ShiftedNoiseTemperature.NAME))
+            dimData = new DimensionData(true, dimData.level, dimData.noiseRouter, noiseFunction, dimData.noiseHumidity);
+        else if (noiseName.equals(ShiftedNoiseHumidity.NAME))
+            dimData = new DimensionData(true, dimData.level, dimData.noiseRouter, dimData.noiseTemperature, noiseFunction);
+        else
+            throw new RuntimeException("Attempted recreating with invalid noise: " + noiseName);
+
+        TemperatureBands.DIMENSION_DATA_CACHE.put(dimensionName, dimData);
+        return dimData;
+    }
+
+    public static void finalizeDimData(String dimensionName, DimensionData dimData) {
+        if (dimData.isDraft) {
+            dimData = new DimensionData(false, dimData.level, dimData.noiseRouter, dimData.noiseTemperature, dimData.noiseHumidity);
+            TemperatureBands.DIMENSION_DATA_CACHE.put(dimensionName, dimData);
+        }
+    }
+
+    public Double getHumidityCached(int blockX, int blockZ) {
+        long packedPos = packBlockXZtoLong(blockX, blockZ);
+        return humidityCache.getIfPresent(packedPos);
+    }
+
+    public void setHumidityCached(int blockX, int blockZ, double value) {
+        long packedPos = packBlockXZtoLong(blockX, blockZ);
+        humidityCache.put(packedPos, value);
+    }
+
+    public ClimateTargetPointEx getClimateSampleCached(int blockX, int blockZ) {
+        long packedPos = packBlockXZtoLong(blockX, blockZ);
+        return climateSamplerCache.getIfPresent(packedPos);
+    }
+
+    public void setClimateSampleCached(int blockX, int blockZ, ClimateTargetPointEx value) {
+        long packedPos = packBlockXZtoLong(blockX, blockZ);
+        climateSamplerCache.put(packedPos, value);
+    }
+
+    public MultiNoiseBiomeSource getBiomeSource() {
+        return biomeSource;
+    }
+
+    public Climate.Sampler getClimateSampler() {
+        return level.getChunkSource().randomState().sampler();
+    }
+
+    public static long packBlockXZtoLong(int blockX, int blockZ) {
+        return (((long)blockX) << 32) | (blockZ & 0xffffffffL);
+    }
 
     @Override
     public String toString() {

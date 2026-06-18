@@ -2,10 +2,11 @@ package github.cosmicdan.temperaturebands.mixin;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import github.cosmicdan.temperaturebands.*;
-import net.minecraft.core.Holder;
+import github.cosmicdan.temperaturebands.DimensionData;
+import github.cosmicdan.temperaturebands.ShiftedNoiseHumidity;
+import github.cosmicdan.temperaturebands.ShiftedNoiseTemperature;
+import github.cosmicdan.temperaturebands.TemperatureBands;
 import net.minecraft.world.level.levelgen.DensityFunction;
-import net.minecraft.world.level.levelgen.DensityFunctions;
 import net.minecraft.world.level.levelgen.NoiseRouter;
 import org.jspecify.annotations.NonNull;
 import org.spongepowered.asm.mixin.Final;
@@ -43,24 +44,13 @@ public class NoiseRouterHooks {
         if (currentFunction.equals(temperature) || currentFunction.equals(vegetation)) {
             // First find the dimension that this NoiseRouter belongs to, and get existing dimensiondata if present
             String dimensionName = null;
-            //boolean isDraftDimensionData = true;
             DimensionData activeDimData = null;
-
-            // find existing dimensiondata
             for (Map.Entry<String, @NonNull DimensionData> dimDataEntry : TemperatureBands.DIMENSION_DATA_CACHE.asMap().entrySet()) {
                 if (dimDataEntry.getValue().getNoiseRouter().equals(temperatureBands_$getSelf())) {
                     activeDimData = dimDataEntry.getValue();
                     dimensionName = dimDataEntry.getKey();
-                    //isDraftDimensionData = false;
                 }
             }
-            for (Map.Entry<String, @NonNull DimensionData> dimDataEntry : TemperatureBands.DIMENSION_DATA_CACHE_DRAFTS.asMap().entrySet()) {
-                if (dimDataEntry.getValue().getNoiseRouter().equals(temperatureBands_$getSelf())) {
-                    activeDimData = dimDataEntry.getValue();
-                    dimensionName = dimDataEntry.getKey();
-                }
-            }
-
             if (activeDimData != null) {
                 // dimension is whitelisted
                 if (currentFunction.equals(temperature))
@@ -72,5 +62,5 @@ public class NoiseRouterHooks {
         return original.call(currentFunction, visitor);
     }
 
-
 }
+

@@ -1,5 +1,6 @@
 package github.cosmicdan.temperaturebands.mixin;
 
+import github.cosmicdan.temperaturebands.DimensionData;
 import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.ResourceKey;
@@ -11,6 +12,7 @@ import net.minecraft.world.RandomSequences;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.dimension.LevelStem;
+import net.minecraft.world.level.levelgen.DensityFunctions;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.storage.ServerLevelData;
 import net.minecraft.world.level.storage.WritableLevelData;
@@ -37,9 +39,10 @@ public abstract class ServerLevelHooks extends Level {
     private void onCreationDone(MinecraftServer minecraftServer, Executor executor, LevelStorageSource.LevelStorageAccess levelStorageAccess, ServerLevelData serverLevelData, ResourceKey resourceKey, LevelStem levelStem, ChunkProgressListener chunkProgressListener, boolean bl, long l, List list, boolean bl2, RandomSequences randomSequences, CallbackInfo ci) {
         final String dimensionName = dimension().location().toString();
         if (TemperatureBands.isDimensionWhitelisted(dimensionName)) {
-            if (TemperatureBands.DIMENSION_DATA_CACHE.getIfPresent(dimensionName) == null)
-                return; // dimension data already made and finalized
-            TemperatureBands.finalizeDimensionDataForDraftLevel(dimensionName);
+            DimensionData dimData = TemperatureBands.DIMENSION_DATA_CACHE.getIfPresent(dimensionName);
+            if (dimData != null) {
+                DimensionData.finalizeDimData(dimensionName, dimData);
+            }
         }
     }
 }

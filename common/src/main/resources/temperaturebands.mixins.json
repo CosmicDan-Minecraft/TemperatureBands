@@ -12,7 +12,8 @@
     "RandomStateHooks",
     "ChunkMapHooks",
     "NoiseRouterHooks",
-    "ServerLevelHooks"
+    "ServerLevelHooks",
+    "MultiNoiseBiomeSourceInvoker"
   ],
   "injectors": {
     "defaultRequire": 1

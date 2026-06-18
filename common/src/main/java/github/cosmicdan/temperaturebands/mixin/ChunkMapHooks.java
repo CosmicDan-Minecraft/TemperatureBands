@@ -3,7 +3,6 @@ package github.cosmicdan.temperaturebands.mixin;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import github.cosmicdan.temperaturebands.DimensionData;
-import github.cosmicdan.temperaturebands.DimensionDataDraft;
 import github.cosmicdan.temperaturebands.TemperatureBands;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.server.level.ChunkMap;
@@ -53,7 +52,7 @@ public abstract class ChunkMapHooks {
                 }
             }
             if (!dimDataAlreadyMade) {
-                for (Map.Entry<String, @NonNull DimensionData> dimDataEntry : TemperatureBands.DIMENSION_DATA_CACHE_DRAFTS.asMap().entrySet()) {
+                for (Map.Entry<String, @NonNull DimensionData> dimDataEntry : TemperatureBands.DIMENSION_DATA_CACHE.asMap().entrySet()) {
                     if (dimDataEntry.getKey().equals(dimensionName)) {
                         dimDataAlreadyMade = true;
                         break;
@@ -61,7 +60,7 @@ public abstract class ChunkMapHooks {
                 }
             }
             if (!dimDataAlreadyMade)
-                TemperatureBands.DIMENSION_DATA_CACHE_DRAFTS.put(dimensionName, new DimensionDataDraft(level, noiseGeneratorSettings.noiseRouter()));
+                TemperatureBands.DIMENSION_DATA_CACHE.put(dimensionName, new DimensionData(true, level, noiseGeneratorSettings.noiseRouter(), null, null));
         }
         return original.call(noiseGeneratorSettings, holderGetter, seed);
     }

@@ -6,9 +6,11 @@ import com.mojang.logging.LogUtils;
 import net.minecraft.core.Holder;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.DensityFunctions;
+import net.minecraft.world.level.levelgen.NoiseRouter;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 
 import java.io.File;
@@ -27,9 +29,6 @@ public final class TemperatureBands {
 
     /** Used to "remember" some things for each dimension so we can access it later from various places. Entries are created in ChunkMapHooks, added to by various other hooks, and cleared on shutdown via MinecraftServerHooks */
     public static final Cache<String, DimensionData> DIMENSION_DATA_CACHE = Caffeine.newBuilder().build();
-
-    /** As above, but "draft" versions of DimensionData that are cut-down and waiting to be fully initialized after ServerLevel has finished instantiation  **/
-    public static final Cache<String, DimensionData> DIMENSION_DATA_CACHE_DRAFTS = Caffeine.newBuilder().build();
 
 
     public TemperatureBands(final IModPlatform modPlatform) {
@@ -69,6 +68,19 @@ public final class TemperatureBands {
     // blacklist config
     public static Set<String> configDimBlacklist = new HashSet<>();
     public static boolean configDimBlacklistAsWhitelist = false;
+    // humidity config (TODO)
+    // 6 is pretty fast
+    public static int humidityResolution = 4; // Lower values mean higher accuracy or "resolution" for calculating the distance from ocean/river for a given area, represented as a square root (i.e. default of 8 means each 64x64 area will use the same distance values). Values lower than 8 start to become extremely expensive on CPU/worldgen time, the "chunkyness" of the default value of 8 is significantly reduced by humidityNoiseFactor. Note that a value of 4 will effectively disable the cache, size 4 is equal to chunk size.
+    public static int humiditySearchDistance = 256; // The upper distance in blocks on XZ (horizontal) axis from ocean/rivers to be considered as maximum "dryness" (lower humidity). Meaning, higher numbers will make humidity drop slower as distance increases from ocean/river biomes. Higher values will be a little more expensive on CPU/worldgen time.
+    public static int humidityCacheSize = 100000; // Size of humidity cache, for each block area (e.g. calculated humidity value for every 64x64x64 block area will be cached). Measured in number of points, not actual data size. This doesn't use much memory since it's only storing a single number for each cache entry. The default of 100 thousand can reach a maximum of about 6Mb memory usage (when full).
+    public static float humidityRiverValue = 0.5f;
+    public static boolean humidityUseManhattanDistance = false; // aka taxicab distance, follows the grid - much faster but slightly less accurate. Minecraft itself is based on a grid already so it's recommended to keep enabled.
+    public static float humidityNoiseFactor = 0.5f;
+    public static float humidityCenterWeight = 3.0f; // The "weightiness" towards middle values for humidity. Vanilla humidity generation tends to favour values closer to the middle, so this is used reduce the amount of humidity extremes (e.g. too much Jungle and Savanna). The default value seems good to me.
+
+    public static int climateSamplerCacheSize = 1000000; // Cache size of Climate Sampler. Measured in number of points, not actual data size. The default of 1 million can reach a maximum of about 80Mb memory usage (when full).
+    static int climateSamplerResolution = -1; // Lower values mean higher accuracy or "resolution" for sampling the climate (used for humidity searching). The default of -1 means automatic, which is half of humidityResolution (seems to be the most logical choice).
+
 
     // algo1 config
     static int configAlgo1BandVariance = 128;
@@ -105,6 +117,8 @@ public final class TemperatureBands {
                     if (dimBlacklist == null) // Loading an existing world from older mod version
                         dimBlacklist = "";
                     setDimBlacklist(configDimBlacklist, dimBlacklist);
+                    // Humidity stuff (TODO)
+                    //humidityCacheSize
 
                     updateDerivedConfig();
                 } catch (IOException ex) {
@@ -129,6 +143,8 @@ public final class TemperatureBands {
                 configDimBlacklistAsWhitelist = TemperatureBands.CONFIG_DEFAULT.dimBlacklistAsWhitelist.get();
                 String dimBlacklist = TemperatureBands.CONFIG_DEFAULT.dimBlacklist.get();
                 setDimBlacklist(configDimBlacklist, dimBlacklist);
+                // Humidity stuff (TODO)
+                //humidityCacheSize
 
                 updateDerivedConfig();
 
@@ -204,28 +220,16 @@ public final class TemperatureBands {
         return isWhitelistedDim;
     }
 
-    public static void finalizeDimensionDataForDraftLevel(String dimensionName) {
-        DimensionData draftDimData = TemperatureBands.DIMENSION_DATA_CACHE_DRAFTS.getIfPresent(dimensionName);
-        if (draftDimData != null) {
-            DIMENSION_DATA_CACHE.put(dimensionName,
-                    new DimensionDataAtomic(
-                            draftDimData.getLevel(),
-                            draftDimData.getNoiseRouter(),
-                            draftDimData.getNoiseFunctionForName(ShiftedNoiseTemperature.NAME),
-                            draftDimData.getNoiseFunctionForName(ShiftedNoiseHumidity.NAME)
-                    ));
-            DIMENSION_DATA_CACHE_DRAFTS.invalidate(dimensionName);
-        } else {
-            throw new RuntimeException("Tried to finalize DimensionData from draft that didn't exist (" + dimensionName + "), eh?");
-        }
-    }
-
+    /**
+     * WARNING - The passed-in activeDimData might be destroyed upon exit of this method.
+     */
     public static DensityFunction replaceNoiseIfNeeded(DimensionData activeDimData, String dimensionName, DensityFunction currentFunction, String functionName) {
         // first check if we already made modded function, return it if so
         DensityFunctions.HolderHolder dimDataModdedFunction = activeDimData.getNoiseFunctionForName(functionName);
         if (dimDataModdedFunction != null) {
             // We already made the modded function for this dimension, reuse it
             currentFunction = dimDataModdedFunction;
+            //TemperatureBands.LOGGER.info("...returned already-replaced function");
         } else if (currentFunction instanceof DensityFunctions.HolderHolder currentFunctionHolder && currentFunctionHolder.function().value() instanceof DensityFunctions.ShiftedNoise currentFunctionActual) {
             // Vanilla noise that we want to replace
             ShiftedNoiseEx newNoise = null;
@@ -236,14 +240,25 @@ public final class TemperatureBands {
             else
                 throw new RuntimeException("Unhandled noise type: " + functionName);
             DensityFunctions.HolderHolder newFunction = new DensityFunctions.HolderHolder(new Holder.Direct<>(newNoise));
-            activeDimData.setNoiseFunctionForName(functionName, newFunction);
             currentFunction = new DensityFunctions.HolderHolder(new Holder.Direct<>(newFunction));
+            DimensionData.recreateDimDataWithNewNoiseFunction(dimensionName, activeDimData, functionName, (DensityFunctions.HolderHolder) currentFunction);
             TemperatureBands.LOGGER.info("Succeeded in hooking {} for dimension '{}'", functionName, dimensionName);
         } else {
-            TemperatureBands.LOGGER.error("Failed hooking temperature for dimension '{}' because it is not a Holder of ShiftedNoise type. Please report this to CosmicDan so support for this custom dimension can be added.", dimensionName);
+            TemperatureBands.LOGGER.error("Failed hooking temperature for dimension '{}' because it is not a Holder of ShiftedNoise type. Please report this to CosmicDan so support for this custom dimension might be added.", dimensionName);
             dumpExtraClassInfo(currentFunction);
         }
         return currentFunction;
+    }
+
+    public static Map.Entry<String, @NonNull DimensionData> findDimDataViaNoiseRouter(NoiseRouter noiseRouter) {
+        String dimensionName = null;
+        DimensionData activeDimData = null;
+        for (Map.Entry<String, @NonNull DimensionData> dimDataEntry : TemperatureBands.DIMENSION_DATA_CACHE.asMap().entrySet()) {
+            if (dimDataEntry.getValue().getNoiseRouter().equals(noiseRouter)) {
+                return dimDataEntry;
+            }
+        }
+        return null;
     }
 
     private static void dumpExtraClassInfo(DensityFunction func) {

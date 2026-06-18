@@ -20,6 +20,5 @@ abstract class MinecraftServerHooks {
         // Clear config so it can be reloaded if a new world is loaded
         TemperatureBands.resetSaveAndConfig();
         TemperatureBands.DIMENSION_DATA_CACHE.invalidateAll();
-        TemperatureBands.DIMENSION_DATA_CACHE_DRAFTS.invalidateAll();
     }
 }
