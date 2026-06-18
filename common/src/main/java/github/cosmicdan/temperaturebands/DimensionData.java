@@ -1,9 +1,8 @@
 package github.cosmicdan.temperaturebands;
 
+import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.mojang.datafixers.util.Pair;
-import github.cosmicdan.temperaturebands.mixin.MultiNoiseBiomeSourceInvoker;
 import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BiomeTags;
@@ -15,7 +14,7 @@ import net.minecraft.world.level.levelgen.NoiseRouter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Set;
+import java.util.*;
 
 import static github.cosmicdan.temperaturebands.TemperatureBands.LOGGER;
 
@@ -29,13 +28,10 @@ public class DimensionData {
     private final MultiNoiseBiomeSource biomeSource; // Probably shallowly thread-safe
     public final Cache<Holder<Biome>, Boolean> biomeRivers = Caffeine.newBuilder().build(); // Thread-safe
     public final Cache<Holder<Biome>, Boolean> biomeOceans = Caffeine.newBuilder().build(); // Thread-safe
-    public final Cache<Holder<Biome>, Boolean> biomeRiversAndOceans = Caffeine.newBuilder().build(); // Thread-safe
+    //public final Cache<Holder<Biome>, Boolean> biomeRiversAndOceans = Caffeine.newBuilder().build(); // Thread-safe
 
-    private final Cache<Long, Double> humidityCache = Caffeine.newBuilder().maximumSize(TemperatureBands.humidityCacheSize).build();
     public final int humidityPartSize = TemperatureBands.humidityResolution * TemperatureBands.humidityResolution;
     public final int partSizeMiddleOffset = (int)Math.round(humidityPartSize * 0.5);
-
-    private final Cache<Long, ClimateTargetPointEx> climateSamplerCache = Caffeine.newBuilder().maximumSize(TemperatureBands.climateSamplerCacheSize).build();
 
     public DimensionData(boolean isDraft, ServerLevel level, NoiseRouter noiseRouter, @Nullable DensityFunctions.HolderHolder noiseTemperature, @Nullable DensityFunctions.HolderHolder noiseHumidity) {
         this.isDraft = isDraft;
@@ -62,15 +58,15 @@ public class DimensionData {
                 for (Holder<Biome> biomeHolder : possibleBiomes) {
                     if (biomeHolder.is(BiomeTags.IS_RIVER)) {
                         biomeRivers.put(biomeHolder, Boolean.TRUE);
-                        biomeRiversAndOceans.put(biomeHolder, Boolean.TRUE);
+                        //biomeRiversAndOceans.put(biomeHolder, Boolean.TRUE);
                     } else if (biomeHolder.is(BiomeTags.IS_OCEAN)) {
                         biomeOceans.put(biomeHolder, Boolean.TRUE);
-                        biomeRiversAndOceans.put(biomeHolder, Boolean.TRUE);
+                        //biomeRiversAndOceans.put(biomeHolder, Boolean.TRUE);
                     }
                 }
                 biomeRivers.cleanUp();
                 biomeOceans.cleanUp();
-                biomeRiversAndOceans.cleanUp();
+                //biomeRiversAndOceans.cleanUp();
                 // TODO: only do this if config option to dump river/ocean biome names is set
                 LOGGER.info("List of all biomes with 'minecraft:is_river' tag:");
                 for (Holder<Biome> biomeHolder : biomeRivers.asMap().keySet()) {
@@ -84,6 +80,33 @@ public class DimensionData {
                         LOGGER.info(" - {}", biomeHolder.unwrapKey().get().location());
                     }
                 }
+
+                /*
+                // TEMP: River/Ocean biome dump
+                // TODO: Just do this manual work, but then do biome finding with original *and* new "simplified" version, and compare results (see if they're accurate)
+                Map<Holder<Biome>, Set<Climate.ParameterPoint>> biomePoints = new HashMap<>();
+                List<Pair<Climate.ParameterPoint, Holder<Biome>>> biomeParams = ((MultiNoiseBiomeSourceInvoker) getBiomeSource()).getParameters().values();
+                for (Pair<Climate.ParameterPoint, Holder<Biome>> paramEntry : biomeParams) {
+                    if (paramEntry.getSecond().is(BiomeTags.IS_RIVER) || paramEntry.getSecond().is(BiomeTags.IS_OCEAN)) {
+                        Climate.ParameterPoint paramPoint = paramEntry.getFirst();
+                        Holder<Biome> biome = paramEntry.getSecond();
+                        Set<Climate.ParameterPoint> biomeEntry = biomePoints.get(biome);
+                        if (biomeEntry == null) {
+                            biomeEntry = new HashSet<>();
+                            biomePoints.put(biome, biomeEntry);
+                        }
+                        biomeEntry.add(paramPoint);
+                    }
+                }
+                LOGGER.info("~~~ START DUMP OF biomePoints");
+                for (Map.Entry<Holder<Biome>, Set<Climate.ParameterPoint>> entry : biomePoints.entrySet()) {
+                    LOGGER.info("{}:", entry.getKey().unwrapKey().get().location());
+                    for (Climate.ParameterPoint value : entry.getValue()) {
+                        LOGGER.info("    {}", value.toString());
+                    }
+                }
+                LOGGER.info("~~~ END DUMP");
+                 */
             }
         } else {
             // humidity function not enabled (or not yet setup)
@@ -132,26 +155,6 @@ public class DimensionData {
         }
     }
 
-    public Double getHumidityCached(int blockX, int blockZ) {
-        long packedPos = packBlockXZtoLong(blockX, blockZ);
-        return humidityCache.getIfPresent(packedPos);
-    }
-
-    public void setHumidityCached(int blockX, int blockZ, double value) {
-        long packedPos = packBlockXZtoLong(blockX, blockZ);
-        humidityCache.put(packedPos, value);
-    }
-
-    public ClimateTargetPointEx getClimateSampleCached(int blockX, int blockZ) {
-        long packedPos = packBlockXZtoLong(blockX, blockZ);
-        return climateSamplerCache.getIfPresent(packedPos);
-    }
-
-    public void setClimateSampleCached(int blockX, int blockZ, ClimateTargetPointEx value) {
-        long packedPos = packBlockXZtoLong(blockX, blockZ);
-        climateSamplerCache.put(packedPos, value);
-    }
-
     public MultiNoiseBiomeSource getBiomeSource() {
         return biomeSource;
     }
@@ -162,6 +165,14 @@ public class DimensionData {
 
     public static long packBlockXZtoLong(int blockX, int blockZ) {
         return (((long)blockX) << 32) | (blockZ & 0xffffffffL);
+    }
+
+    public static int unpackBlockFromLongX(long packedPos) {
+        return (int) (packedPos >> 32);
+    }
+
+    public static int unpackBlockFromLongZ(long packedPos) {
+        return (int) packedPos;
     }
 
     @Override

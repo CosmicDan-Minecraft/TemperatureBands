@@ -65,21 +65,24 @@ public final class TemperatureBands {
     static float configGradeShift = -0.05f;
     static int configAlgorithm = 1;
     static int configNoiseFactor = 100;
+    static int configDistanceFunction = 1; // Distance function to use for various calculations. The default of 1 uses "Octile" distance which is quite fast and accurate. 0 uses "Manhattan" (or "Taxi Cab") distance which is slightly faster but quite inaccurate. 2 uses pure distance via hypotenuse calculation, which is a bit slow but provides maximum accuracy. Recommended to leave on 1 (which will be default if an invalid number is specified).
     // blacklist config
     public static Set<String> configDimBlacklist = new HashSet<>();
     public static boolean configDimBlacklistAsWhitelist = false;
     // humidity config (TODO)
     // 6 is pretty fast
     public static int humidityResolution = 4; // Lower values mean higher accuracy or "resolution" for calculating the distance from ocean/river for a given area, represented as a square root (i.e. default of 8 means each 64x64 area will use the same distance values). Values lower than 8 start to become extremely expensive on CPU/worldgen time, the "chunkyness" of the default value of 8 is significantly reduced by humidityNoiseFactor. Note that a value of 4 will effectively disable the cache, size 4 is equal to chunk size.
-    public static int humiditySearchDistance = 256; // The upper distance in blocks on XZ (horizontal) axis from ocean/rivers to be considered as maximum "dryness" (lower humidity). Meaning, higher numbers will make humidity drop slower as distance increases from ocean/river biomes. Higher values will be a little more expensive on CPU/worldgen time.
-    public static int humidityCacheSize = 100000; // Size of humidity cache, for each block area (e.g. calculated humidity value for every 64x64x64 block area will be cached). Measured in number of points, not actual data size. This doesn't use much memory since it's only storing a single number for each cache entry. The default of 100 thousand can reach a maximum of about 6Mb memory usage (when full).
-    public static float humidityRiverValue = 0.5f;
-    public static boolean humidityUseManhattanDistance = false; // aka taxicab distance, follows the grid - much faster but slightly less accurate. Minecraft itself is based on a grid already so it's recommended to keep enabled.
+    public static int humiditySearchDistance = 512; // The upper distance in blocks on XZ (horizontal) axis from ocean/rivers to be considered as maximum "dryness" (lower humidity). Meaning, higher numbers will make humidity drop slower as distance increases from ocean/river biomes. Higher values will be a little more expensive on CPU/worldgen time.
+    //public static float humidityRange = 2.0f; // Vanilla clamps humidity between -1.0 and +1.0. If you want that same clamping range, set this to 2.0. The default of 1.6 means it will be clamped to between -0.8 and +0.8 which takes
+    public static float humidityRiverInfluence = 0.4f; // How much rivers should contribute to final humidity value. I.e. default of 0.2 means 20% of river closeness will be added to the initial humidity calculated from ocean distance (which might be the lowest possible value). Setting to 0 will disable any river influence on humidity (and give a small speed boost). Higher values will make biome placement very noisy, i.e. lots of tiny scattered "dots" of biomes.
     public static float humidityNoiseFactor = 0.5f;
     public static float humidityCenterWeight = 3.0f; // The "weightiness" towards middle values for humidity. Vanilla humidity generation tends to favour values closer to the middle, so this is used reduce the amount of humidity extremes (e.g. too much Jungle and Savanna). The default value seems good to me.
 
-    public static int climateSamplerCacheSize = 1000000; // Cache size of Climate Sampler. Measured in number of points, not actual data size. The default of 1 million can reach a maximum of about 80Mb memory usage (when full).
-    static int climateSamplerResolution = -1; // Lower values mean higher accuracy or "resolution" for sampling the climate (used for humidity searching). The default of -1 means automatic, which is half of humidityResolution (seems to be the most logical choice).
+    public static int climateSamplerResolution = -1; // Lower values mean higher accuracy or "resolution" for sampling the climate (used for humidity searching). The default of -1 means automatic, which is the cube of humidityResolution (seems to be the most logical choice - biome edges look natural with sporadic patches and performance is still OK).
+    public static int climateSamplerCacheSize = 1000000; // Cache size of Climate Sampler. Measured in number of points, not actual data size. The default of 1 million can reach a maximum of about 80Mb memory usage (when full). Setting to zero will disable caching, which may result in better performance if your memory is slow or exhausted.
+    public static int climateSamplerCachePrefetchRadius = 0; // If above zero, whenever climate sampling is needed, additional climate sampling (and caching) will be done asynchronously in this radius (as units of "climateSamplerResolution").
+    public static int climateSamplerCacheExpirySeconds = 30; // Lifetime of cached Climate Sampler entries in seconds. Setting to zero will cause cache entries to expire immediately after one read. Setting to -1 will make cache entries last as long as they can until cache is full (where oldest cache entries will be replaced). Recommended to leave on default.
+
 
 
     // algo1 config
@@ -259,6 +262,28 @@ public final class TemperatureBands {
             }
         }
         return null;
+    }
+
+    public static double calculateBlockDistance(int startX, int endX, int startZ, int endZ) {
+        if (configDistanceFunction == 0) {
+            // Manhattan distance
+            return Math.abs(startX - endX) + Math.abs(startZ - endZ);
+        } else if (configDistanceFunction == 2) {
+            // Pure (hypotenuse)
+            return Math.hypot(Math.abs(startX - endX), Math.abs(startZ - endZ));
+        } else {
+            // Octile (diagonal)
+            long distanceX = Math.abs(startX - endX);
+            long distanceZ = Math.abs(startZ - endZ);
+            double straightCost = 1.0;
+            double diagonalCost = Math.sqrt(2);
+
+            if (distanceX > distanceZ) {
+                return ((diagonalCost * distanceZ) + (straightCost * (distanceX - distanceZ)));
+            } else {
+                return ((diagonalCost * distanceX) + (straightCost * (distanceZ - distanceX)));
+            }
+        }
     }
 
     private static void dumpExtraClassInfo(DensityFunction func) {
