@@ -269,6 +269,8 @@ public final class TemperatureBands {
         return isWhitelistedDim;
     }
 
+    private static final Map<String, Set<String>> failedDimensionNoiseReplacements = new HashMap<>();
+
     /**
      * WARNING - The passed-in activeDimData might be destroyed upon exit of this method.
      */
@@ -293,8 +295,12 @@ public final class TemperatureBands {
             DimensionData.recreateDimDataWithNewNoiseFunction(dimensionName, activeDimData, functionName, (DensityFunctions.HolderHolder) currentFunction);
             TemperatureBands.LOGGER.info("Succeeded in hooking {} for dimension '{}'", functionName, dimensionName);
         } else {
-            TemperatureBands.LOGGER.error("Failed hooking temperature for dimension '{}' because it is not a Holder of ShiftedNoise type. Please report this to CosmicDan so support for this custom dimension might be added.", dimensionName);
-            dumpExtraClassInfo(currentFunction);
+            Set<String> failedDimensionEntry = failedDimensionNoiseReplacements.computeIfAbsent(dimensionName, k -> new HashSet<>());
+            if (!failedDimensionEntry.contains(functionName)) {
+                TemperatureBands.LOGGER.error("Failed hooking {} for dimension '{}' because it is not a Holder of ShiftedNoise type. Please report this to CosmicDan so support for this custom dimension might be added.", functionName, dimensionName);
+                failedDimensionEntry.add(functionName);
+                dumpExtraClassInfo(currentFunction);
+            }
         }
         return currentFunction;
     }
