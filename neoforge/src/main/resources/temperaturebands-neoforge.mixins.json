@@ -1,0 +1,17 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "github.cosmicdan.temperaturebands.neoforge.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "WorldPreviewForgeHooksWorkManager",
+    "WorldPreviewHooksWorkBatch"
+  ],
+  "client": [
+  ],
+  "server":[
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

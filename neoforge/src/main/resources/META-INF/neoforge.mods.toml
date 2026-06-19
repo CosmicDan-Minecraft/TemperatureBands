@@ -29,5 +29,15 @@ versionRange = "[1.21.1,)"
 ordering = "NONE"
 side = "BOTH"
 
+[[dependencies.temperaturebands]]
+modId = "world_preview"
+type = "optional"
+versionRange = "[1,)"
+ordering = "AFTER"
+side = "BOTH"
+
 [[mixins]]
 config = "temperaturebands.mixins.json"
+
+[[mixins]]
+config = "temperaturebands-neoforge.mixins.json"

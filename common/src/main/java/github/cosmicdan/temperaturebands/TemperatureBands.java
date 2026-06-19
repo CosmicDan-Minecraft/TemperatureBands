@@ -18,6 +18,8 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 
 public final class TemperatureBands {
@@ -83,6 +85,7 @@ public final class TemperatureBands {
     public static int climateSamplerCachePrefetchRadius = 0; // If above zero, whenever climate sampling is needed, additional climate sampling (and caching) will be done asynchronously in this radius (as units of "climateSamplerResolution").
     public static int climateSamplerCacheExpirySeconds = 30; // Lifetime of cached Climate Sampler entries in seconds. Setting to zero will cause cache entries to expire immediately after one read. Setting to -1 will make cache entries last as long as they can until cache is full (where oldest cache entries will be replaced). Recommended to leave on default.
 
+    public static boolean configDoBenchmark = true;
 
 
     // algo1 config
@@ -289,5 +292,34 @@ public final class TemperatureBands {
     private static void dumpExtraClassInfo(DensityFunction func) {
         LOGGER.error("    - Class type is '{}'", func.getClass().getCanonicalName());
         LOGGER.error("    - Class dump: {}", func.toString());
+    }
+
+    public static int batchesTotal = 0;
+    public static int batchesDone = -1;
+    private static Instant benchmarkStart;
+
+    public static void benchmarkReset() {
+        if (batchesTotal > 0) {
+            LOGGER.info("WorldPreview benchmark cancelled");
+        }
+        batchesTotal = 0;
+        batchesDone = -1;
+        benchmarkStart = Instant.now();
+    }
+
+    public static void benchmarkStart(int batchesSize) {
+        LOGGER.info("Starting WorldPreview benchmark, waiting for {} batches to finish...", batchesSize);
+        benchmarkStart = Instant.now();
+        batchesTotal = batchesSize;
+        batchesDone = 0;
+    }
+
+    public static void benchmarkBatchDone() {
+        batchesDone++;
+        if (batchesDone >= batchesTotal) {
+            LOGGER.info("WorldPreview benchmark finished, {} batches took {} seconds." , batchesTotal, String.format("%.2f", Duration.between(benchmarkStart, Instant.now()).abs().toMillis() / 1000.0));
+            batchesTotal = 0;
+            batchesDone = -1;
+        }
     }
 }

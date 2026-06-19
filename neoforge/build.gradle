@@ -48,7 +48,9 @@ dependencies {
     forgeRuntimeLibrary("com.github.ben-manes.caffeine:caffeine:3.2.4")
     
     // World Preview (NeoForge port via Modrinth)
-    modLocalRuntime("maven.modrinth:world-preview-neoforged-(unofficial):y3St0do0")
+    modImplementation("maven.modrinth:world-preview-neoforged-(unofficial):y3St0do0")
+    
+    modLocalRuntime("curse.maven:zfastnoise-1460602:7976498")
 }
 
 processResources {
