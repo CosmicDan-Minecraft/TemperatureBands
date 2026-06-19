@@ -63,9 +63,8 @@ public final class TemperatureBands {
     // Global settings (not per-world)
     public static boolean configDoBenchmark = false;
     // Global climate sampler settings (not per-world)
-    public static int configClimateSamplerCacheSize = 1000000;
-    public static int configClimateSamplerCachePrefetchRadius = 2;
-    public static int configClimateSamplerCacheExpirySeconds = 300;
+    public static int configClimateSamplerCacheSize = 5;
+    public static int configClimateSamplerCachePrefetchRadius = -8;
 
     // Base world config
     static int configBandSize = 2048;
@@ -75,7 +74,7 @@ public final class TemperatureBands {
     static float configGradeShift = -0.05f;
     static int configAlgorithm = 1;
     static int configNoiseFactor = 100;
-    static int configDistanceFunction = 1; // Distance function to use for various calculations. The default of 1 uses "Octile" distance which is quite fast and accurate. 0 uses "Manhattan" (or "Taxi Cab") distance which is slightly faster but quite inaccurate. 2 uses pure distance via hypotenuse calculation, which is a bit slow but provides maximum accuracy. Recommended to leave on 1 (which will be default if an invalid number is specified).
+    static int configDistanceFunction = 1;
     // Whitelist/blacklist config
     public static Set<String> configDimBlacklist = new HashSet<>();
     public static boolean configDimBlacklistAsWhitelist = false;
@@ -104,7 +103,16 @@ public final class TemperatureBands {
             configDoBenchmark = TemperatureBands.CONFIG_DEFAULT.doBenchmark.get();
             configClimateSamplerCacheSize = TemperatureBands.CONFIG_DEFAULT.climateSamplerCacheSize.get();
             configClimateSamplerCachePrefetchRadius = TemperatureBands.CONFIG_DEFAULT.climateSamplerCachePrefetchRadius.get();
-            configClimateSamplerCacheExpirySeconds = TemperatureBands.CONFIG_DEFAULT.climateSamplerCacheExpirySeconds.get();
+            if (configClimateSamplerCachePrefetchRadius < 0) {
+                int threadCount = Runtime.getRuntime().availableProcessors();
+                int originalSetting = configClimateSamplerCachePrefetchRadius;
+                configClimateSamplerCachePrefetchRadius = threadCount / -configClimateSamplerCachePrefetchRadius;
+                if (configClimateSamplerCachePrefetchRadius < 1) {
+                    LOGGER.info("Disabling climate sampler prefetching due to not enough threads (i.e. from {}/{}, based on {} CPU threads available)", -originalSetting, threadCount, threadCount);
+                    configClimateSamplerCachePrefetchRadius = 0;
+                } else
+                    LOGGER.info("Using radius of {} for climate sampler prefetching (from {}/{}, based on {} CPU threads available)", configClimateSamplerCachePrefetchRadius, -originalSetting, threadCount, threadCount);
+            }
             // check for world prop
             if (savePropFile != null && savePropFile.exists()) {
                 // world prop exists, use world config
@@ -119,13 +127,11 @@ public final class TemperatureBands {
                     configGradeShift = Float.parseFloat(prop.getProperty(CommonConfig.tempGradeShiftName));
                     configAlgorithm = Integer.parseInt(prop.getProperty(CommonConfig.bandAlgorithmName));
                     configNoiseFactor = Integer.parseInt(prop.getProperty(CommonConfig.noiseFactorName));
+                    configDistanceFunction = Integer.parseInt(prop.getProperty(CommonConfig.distanceFunctionName, "1"));
                     // Whitelist/blacklist
-                    String dimBlacklist = prop.getProperty(CommonConfig.dimBlacklistName);
-                    if (dimBlacklist == null) // Loading an existing world from older mod version
-                        dimBlacklist = "";
+                    String dimBlacklist = prop.getProperty(CommonConfig.dimBlacklistName, "");
                     setDimBlacklist(configDimBlacklist, dimBlacklist);
                     configDimBlacklistAsWhitelist = Boolean.parseBoolean(prop.getProperty(CommonConfig.dimBlacklistAsWhitelistName));
-                    // TODO: handle default if not found (worlds from previous version)
                     // Temp algo 1
                     if (configAlgorithm == 1) {
                         configAlgo1BandVariance = Integer.parseInt(prop.getProperty(CommonConfig.algo1bandVarianceName));
@@ -164,6 +170,7 @@ public final class TemperatureBands {
                 configNoiseFactor = TemperatureBands.CONFIG_DEFAULT.noiseFactor.get();
                 // Whitelist/blacklist
                 configDimBlacklistAsWhitelist = TemperatureBands.CONFIG_DEFAULT.dimBlacklistAsWhitelist.get();
+                configDistanceFunction = TemperatureBands.CONFIG_DEFAULT.distanceFunction.get();
                 String dimBlacklist = TemperatureBands.CONFIG_DEFAULT.dimBlacklist.get();
                 setDimBlacklist(configDimBlacklist, dimBlacklist);
                 // Temp algo 1
@@ -226,6 +233,7 @@ public final class TemperatureBands {
         prop.setProperty(CommonConfig.tempGradeShiftName, String.valueOf(configGradeShift));
         prop.setProperty(CommonConfig.bandAlgorithmName, String.valueOf(configAlgorithm));
         prop.setProperty(CommonConfig.noiseFactorName, String.valueOf(configNoiseFactor));
+        prop.setProperty(CommonConfig.distanceFunctionName, String.valueOf(configDistanceFunction));
         // Whitelist/blacklist
         String configDimBlacklistRaw = "";
         for (String blacklistEntry : configDimBlacklist) {

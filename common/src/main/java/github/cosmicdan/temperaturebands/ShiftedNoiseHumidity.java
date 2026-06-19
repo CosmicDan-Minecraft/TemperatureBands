@@ -1,8 +1,6 @@
 package github.cosmicdan.temperaturebands;
 
-import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.*;
 import github.cosmicdan.temperaturebands.mixin.MultiNoiseBiomeSourceInvoker;
 import net.minecraft.core.Holder;
 import net.minecraft.util.KeyDispatchDataCodec;
@@ -17,7 +15,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 import static github.cosmicdan.temperaturebands.TemperatureBands.*;
 
@@ -27,16 +24,13 @@ public class ShiftedNoiseHumidity extends ShiftedNoiseEx {
     private final AsyncLoadingCache<Long, ClimateTargetPointEx> climateSamplerCache;
     private DimensionData dimData = null;
     private MultiNoiseBiomeSourceInvoker biomeSourceInvoker = null;
-    //private long cacheHit = 0;
-    //private long cacheTotal = 0;
     private int climateSamplerResolutionActual;
+    private boolean oceansOnly = false;
 
     public ShiftedNoiseHumidity(String dimensionName, DensityFunction shiftX, DensityFunction shiftY, DensityFunction shiftZ, double xzScale, double yScale, NoiseHolder noise) {
         super(dimensionName, shiftX, shiftY, shiftZ, xzScale, yScale, noise);
         if (configClimateSamplerCacheSize > 0) {
-            Caffeine<Object, Object> cacheBuilder = Caffeine.newBuilder().initialCapacity(configClimateSamplerCacheSize).maximumSize(configClimateSamplerCacheSize);
-            if (configClimateSamplerCacheExpirySeconds >= 0)
-                cacheBuilder.expireAfterAccess(configClimateSamplerCacheExpirySeconds, TimeUnit.SECONDS);
+            Caffeine<Long, ClimateTargetPointEx> cacheBuilder = Caffeine.newBuilder().maximumWeight((long) configClimateSamplerCacheSize * 1024 * 1024).weigher((key, value) -> value.sizeWithLongKey());
             climateSamplerCache = cacheBuilder.buildAsync(this::sampleClimate);
         } else {
             climateSamplerCache = null;
@@ -63,6 +57,8 @@ public class ShiftedNoiseHumidity extends ShiftedNoiseEx {
             climateSamplerResolutionActual = configClimateSamplerResolution;
             if (climateSamplerResolutionActual < 0)
                 climateSamplerResolutionActual = configHumidityResolution * configHumidityResolution * configHumidityResolution;
+            if (configHumidityRiverInfluence == 0.0)
+                oceansOnly = true;
         }
         if (!dimData.isHumidityEnabled) {
             return computeNoise(context);
@@ -73,7 +69,7 @@ public class ShiftedNoiseHumidity extends ShiftedNoiseEx {
             // default humidity if biome wasn't found
             double humidityValue = -1.0;
             // TODO: Redo the "ocean only" option when humidityRiverInfluence = 0.0 (and benchmark then add % increase note to config comment)
-            Pair<Double, Double> nearestOceanAndRiverDistance = getDistanceToNearestBiomes(context, originPosX, originPosZ, dimData.biomeOceans, configHumidityRiverInfluence > 0.0 ? dimData.biomeRivers : null, configHumiditySearchDistance, climateSamplerResolutionActual);
+            Pair<Double, Double> nearestOceanAndRiverDistance = getDistanceToNearestBiomes(context, originPosX, originPosZ, dimData.biomeOceans, dimData.biomeRivers, configHumiditySearchDistance, climateSamplerResolutionActual);
             double nearestOcean = nearestOceanAndRiverDistance.getLeft();
             double nearestRiver = nearestOceanAndRiverDistance.getRight();
             // Humidity has 5 levels, ranging from -1.0 (least humid) to +1.0 (most humid)
@@ -130,10 +126,10 @@ public class ShiftedNoiseHumidity extends ShiftedNoiseEx {
             Holder<Biome> holder = getNoiseBiome(context, blockX, blockZ);
             if (firstBiomeDistance == -1.0 && firstBiomes.contains(holder))
                 firstBiomeDistance = calculateBlockDistance(originX, blockX, originZ, blockZ);
-            else if (secondBiomes != null && secondBiomeDistance == -1.0 && secondBiomes.contains(holder))
+            else if (!oceansOnly && secondBiomeDistance == -1.0 && secondBiomes.contains(holder))
                 secondBiomeDistance = calculateBlockDistance(originX, blockX, originZ, blockZ);
 
-            if (firstBiomeDistance > -1.0 && (secondBiomeDistance > -1.0 || secondBiomes == null))
+            if (firstBiomeDistance > -1.0 && (secondBiomeDistance > -1.0 || oceansOnly))
                 return Pair.of(firstBiomeDistance, secondBiomeDistance);
 
             angle += 0.5;
@@ -188,12 +184,12 @@ public class ShiftedNoiseHumidity extends ShiftedNoiseEx {
         int blockZ = DimensionData.unpackBlockFromLongZ(packedBlockPos);
         DensityFunction.SinglePointContext singlePointContext = new DensityFunction.SinglePointContext(blockX, blockY, blockZ);
         //float temperatureResult = searchOpts.equals(ClimateSearchResults.OCEANS_ONLY) ? 0.0f : (float) dimData.getTemperatureFunction().compute(singlePointContext);
-        float temperatureResult = (float) dimData.getClimateSampler().temperature().compute(singlePointContext);
-        float humidityResult = (float) computeNoise(singlePointContext); // use original non-overridden noise for humidity
+        float temperatureResult = oceansOnly ? 0.0f : (float) dimData.getClimateSampler().temperature().compute(singlePointContext);
+        float humidityResult = oceansOnly ? 0.0f : (float) computeNoise(singlePointContext); // use original non-overridden noise for humidity
         float continentalnessResult = (float) dimData.getClimateSampler().continentalness().compute(singlePointContext);
-        float erosionResult = (float) dimData.getClimateSampler().erosion().compute(singlePointContext);
-        float depthResult = (float) dimData.getClimateSampler().depth().compute(singlePointContext);
-        float weirdnessResult = (float) dimData.getClimateSampler().weirdness().compute(singlePointContext);
+        float erosionResult = oceansOnly ? 0.0f : (float) dimData.getClimateSampler().erosion().compute(singlePointContext);
+        float depthResult = oceansOnly ? 0.0f : (float) dimData.getClimateSampler().depth().compute(singlePointContext);
+        float weirdnessResult = oceansOnly ? 0.0f : (float) dimData.getClimateSampler().weirdness().compute(singlePointContext);
 
         Climate.TargetPoint sampleResultRaw = Climate.target(temperatureResult, humidityResult, continentalnessResult, erosionResult, depthResult, weirdnessResult);
         return new ClimateTargetPointEx(sampleResultRaw, false);
