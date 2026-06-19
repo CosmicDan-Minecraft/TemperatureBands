@@ -295,6 +295,8 @@ public final class TemperatureBands {
             DimensionData.recreateDimDataWithNewNoiseFunction(dimensionName, activeDimData, functionName, (DensityFunctions.HolderHolder) currentFunction);
             TemperatureBands.LOGGER.info("Succeeded in hooking {} for dimension '{}'", functionName, dimensionName);
         } else {
+            if (dimensionName.equals("minecraft:the_end") && CONFIG_DEFAULT.ignoreTheEndFailures.get())
+                return currentFunction;
             Set<String> failedDimensionEntry = failedDimensionNoiseReplacements.computeIfAbsent(dimensionName, k -> new HashSet<>());
             if (!failedDimensionEntry.contains(functionName)) {
                 TemperatureBands.LOGGER.error("Failed hooking {} for dimension '{}' because it is not a Holder of ShiftedNoise type. Please report this to CosmicDan so support for this custom dimension might be added.", functionName, dimensionName);

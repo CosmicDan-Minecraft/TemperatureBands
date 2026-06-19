@@ -16,6 +16,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static github.cosmicdan.temperaturebands.TemperatureBands.*;
@@ -115,7 +116,7 @@ public class ShiftedNoiseHumidity extends ShiftedNoiseEx {
     }
 
     // Simple 2D archimedean spiral check
-    private Pair<Double, Double> getDistanceToNearestBiomes(FunctionContext context, int originX, int originZ, Cache<Holder<Biome>, Boolean> firstBiomes, @Nullable Cache<Holder<Biome>, Boolean> secondBiomes, int searchRadiusXZ, int searchStep) {
+    private Pair<Double, Double> getDistanceToNearestBiomes(FunctionContext context, int originX, int originZ, Set<Holder<Biome>> firstBiomes, @Nullable Set<Holder<Biome>> secondBiomes, int searchRadiusXZ, int searchStep) {
         double angle = 0;
         double radius = 0;
         double firstBiomeDistance = -1.0;
@@ -127,9 +128,9 @@ public class ShiftedNoiseHumidity extends ShiftedNoiseEx {
             int blockX = (int) Math.round(originX + xOffset);
             int blockZ = (int) Math.round(originZ + zOffset);
             Holder<Biome> holder = getNoiseBiome(context, blockX, blockZ);
-            if (firstBiomeDistance == -1.0 && firstBiomes.getIfPresent(holder) != null)
+            if (firstBiomeDistance == -1.0 && firstBiomes.contains(holder))
                 firstBiomeDistance = calculateBlockDistance(originX, blockX, originZ, blockZ);
-            else if (secondBiomes != null && secondBiomeDistance == -1.0 && secondBiomes.getIfPresent(holder) != null)
+            else if (secondBiomes != null && secondBiomeDistance == -1.0 && secondBiomes.contains(holder))
                 secondBiomeDistance = calculateBlockDistance(originX, blockX, originZ, blockZ);
 
             if (firstBiomeDistance > -1.0 && (secondBiomeDistance > -1.0 || secondBiomes == null))

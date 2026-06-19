@@ -8,6 +8,11 @@ public class CommonConfig {
     public final ModConfigSpec.BooleanValue doBenchmark;
     public static final String doBenchmarkTxt = " Only for (Neo)Forge. If true and World Preview is installed, a benchmark will be performed when opening the 'Preview' tab." +
             " Refer to the mod description page for details and tips.";
+    public final ModConfigSpec.BooleanValue ignoreTheEndFailures;
+    public static final String ignoreTheEndFailuresTxt = " When true, failures to replace temperature/humidity functions for these dimensions will be ignored (separate with commas, same format as blacklist). The default entry of The End is there since vanilla End uses a constant 0.0 for temperature\n" +
+            " and doesn't use humidity noise at all, but the mod tries to replace temperature anyway giving a false 'report if you want support for this custom dimension' error. Just a little QoL for those who upgraded from old versions of Temperature Bands.";
+    public final ModConfigSpec.BooleanValue dumpRiverAndOceanBiomes;
+    public static final String dumpRiverAndOceanBiomesTxt = " If true, when loading into a world, the list of all biomes with 'minecraft:is_river' and 'minecraft:is_ocean' tags will be dumped to console/log for each dimension. Might be useful for modpack creators.";
     public static final String sectionClimateSamplerPerf = "climatesampler-performance";
     public static final String sectionClimateSamplerPerfTxt = " Global climate sampler settings related to performance (shared by all worlds, not saved per-world).\n" +
             " A custom climate sampler is used when calculating humidity based on proximity to rivers and/or oceans. These settings are currently only relevant if the 'advanced' humidity algorithm is enabled (which is the default for new worlds, but kept disabled for existing worlds).";
@@ -133,7 +138,11 @@ public class CommonConfig {
         doBenchmark = builder
                 .comment(doBenchmarkTxt)
                 .define("doBenchmark", false);
+        ignoreTheEndFailures = builder
+                .comment(ignoreTheEndFailuresTxt)
+                .define("ignoreTheEndFailures", true);
         builder.pop();
+        dumpRiverAndOceanBiomes = builder.comment(dumpRiverAndOceanBiomesTxt).define("dumpRiverAndOceanBiomesTxt", false);
 
         builder.push(sectionClimateSamplerPerf).comment(sectionClimateSamplerPerfTxt);
         climateSamplerCacheSize = builder
