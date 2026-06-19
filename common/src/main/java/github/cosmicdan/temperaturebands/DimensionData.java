@@ -1,6 +1,5 @@
 package github.cosmicdan.temperaturebands;
 
-import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import net.minecraft.core.Holder;
@@ -28,9 +27,8 @@ public class DimensionData {
     private final MultiNoiseBiomeSource biomeSource; // Probably shallowly thread-safe
     public final Cache<Holder<Biome>, Boolean> biomeRivers = Caffeine.newBuilder().build(); // Thread-safe
     public final Cache<Holder<Biome>, Boolean> biomeOceans = Caffeine.newBuilder().build(); // Thread-safe
-    //public final Cache<Holder<Biome>, Boolean> biomeRiversAndOceans = Caffeine.newBuilder().build(); // Thread-safe
 
-    public final int humidityPartSize = TemperatureBands.humidityResolution * TemperatureBands.humidityResolution;
+    public final int humidityPartSize = TemperatureBands.configHumidityResolution * TemperatureBands.configHumidityResolution;
     public final int partSizeMiddleOffset = (int)Math.round(humidityPartSize * 0.5);
 
     public DimensionData(boolean isDraft, ServerLevel level, NoiseRouter noiseRouter, @Nullable DensityFunctions.HolderHolder noiseTemperature, @Nullable DensityFunctions.HolderHolder noiseHumidity) {

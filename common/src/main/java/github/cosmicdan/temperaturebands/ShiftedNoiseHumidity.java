@@ -16,8 +16,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import static github.cosmicdan.temperaturebands.TemperatureBands.*;
@@ -34,10 +32,10 @@ public class ShiftedNoiseHumidity extends ShiftedNoiseEx {
 
     public ShiftedNoiseHumidity(String dimensionName, DensityFunction shiftX, DensityFunction shiftY, DensityFunction shiftZ, double xzScale, double yScale, NoiseHolder noise) {
         super(dimensionName, shiftX, shiftY, shiftZ, xzScale, yScale, noise);
-        if (climateSamplerCacheSize > 0) {
-            Caffeine<Object, Object> cacheBuilder = Caffeine.newBuilder().initialCapacity(climateSamplerCacheSize).maximumSize(climateSamplerCacheSize);
-            if (climateSamplerCacheExpirySeconds >= 0)
-                cacheBuilder.expireAfterAccess(climateSamplerCacheExpirySeconds, TimeUnit.SECONDS);
+        if (configClimateSamplerCacheSize > 0) {
+            Caffeine<Object, Object> cacheBuilder = Caffeine.newBuilder().initialCapacity(configClimateSamplerCacheSize).maximumSize(configClimateSamplerCacheSize);
+            if (configClimateSamplerCacheExpirySeconds >= 0)
+                cacheBuilder.expireAfterAccess(configClimateSamplerCacheExpirySeconds, TimeUnit.SECONDS);
             climateSamplerCache = cacheBuilder.buildAsync(this::sampleClimate);
         } else {
             climateSamplerCache = null;
@@ -50,7 +48,7 @@ public class ShiftedNoiseHumidity extends ShiftedNoiseEx {
     }
 
     private int scalePosValueForHumidity(int pos, int offset) {
-        int posPreScaled = (pos >> humidityResolution) + offset;
+        int posPreScaled = (pos >> configHumidityResolution) + offset;
         return (posPreScaled * dimData.humidityPartSize) + dimData.partSizeMiddleOffset;
     }
 
@@ -61,9 +59,9 @@ public class ShiftedNoiseHumidity extends ShiftedNoiseEx {
             if (dimData == null)
                 throw new RuntimeException("Humidity function trying to compute before ServerLevel has been made. Eh?");
             biomeSourceInvoker = (MultiNoiseBiomeSourceInvoker) dimData.getBiomeSource();
-            climateSamplerResolutionActual = climateSamplerResolution;
-            if (climateSamplerResolutionActual < 1)
-                climateSamplerResolutionActual = humidityResolution * humidityResolution * humidityResolution;
+            climateSamplerResolutionActual = configClimateSamplerResolution;
+            if (climateSamplerResolutionActual < 0)
+                climateSamplerResolutionActual = configHumidityResolution * configHumidityResolution * configHumidityResolution;
         }
         if (!dimData.isHumidityEnabled) {
             return computeNoise(context);
@@ -73,7 +71,8 @@ public class ShiftedNoiseHumidity extends ShiftedNoiseEx {
 
             // default humidity if biome wasn't found
             double humidityValue = -1.0;
-            Pair<Double, Double> nearestOceanAndRiverDistance = getDistanceToNearestBiomes(context, originPosX, originPosZ, dimData.biomeOceans, humidityRiverInfluence > 0.0 ? dimData.biomeRivers : null, humiditySearchDistance, climateSamplerResolutionActual);
+            // TODO: Redo the "ocean only" option when humidityRiverInfluence = 0.0 (and benchmark then add % increase note to config comment)
+            Pair<Double, Double> nearestOceanAndRiverDistance = getDistanceToNearestBiomes(context, originPosX, originPosZ, dimData.biomeOceans, configHumidityRiverInfluence > 0.0 ? dimData.biomeRivers : null, configHumiditySearchDistance, climateSamplerResolutionActual);
             double nearestOcean = nearestOceanAndRiverDistance.getLeft();
             double nearestRiver = nearestOceanAndRiverDistance.getRight();
             // Humidity has 5 levels, ranging from -1.0 (least humid) to +1.0 (most humid)
@@ -85,7 +84,7 @@ public class ShiftedNoiseHumidity extends ShiftedNoiseEx {
 
             if (nearestOcean >= 0.0) {
                 // Determine humidity as a percentage (0.0 to 1.0)
-                humidityValue = 1.0 - (nearestOcean / humiditySearchDistance);
+                humidityValue = 1.0 - (nearestOcean / configHumiditySearchDistance);
                 // Then apply some "middle weightiness"
                 //humidityValue = calcMiddleWeightedValue(humidityValue);
                 // Finally, clamp it to the range MC wants (vanilla expects -1.0 to +1.0)
@@ -94,8 +93,8 @@ public class ShiftedNoiseHumidity extends ShiftedNoiseEx {
 
             if (nearestRiver >= 0.0) {
                 // add river influence
-                double humidityValue2 = 1.0 - (nearestRiver / humiditySearchDistance);
-                humidityValue = humidityValue + (humidityValue2 * humidityRiverInfluence);
+                double humidityValue2 = 1.0 - (nearestRiver / configHumiditySearchDistance);
+                humidityValue = humidityValue + (humidityValue2 * configHumidityRiverInfluence);
             }
 
             // use humidityNoiseFactor for this point to soften the edges a bit
@@ -142,6 +141,7 @@ public class ShiftedNoiseHumidity extends ShiftedNoiseEx {
         return Pair.of(firstBiomeDistance, secondBiomeDistance);
     }
 
+    /*
     private double calcMiddleWeightedValue(double value) {
         if (value < 0.5) {
             return Math.pow(value * 2, humidityCenterWeight) * 0.5;
@@ -149,10 +149,11 @@ public class ShiftedNoiseHumidity extends ShiftedNoiseEx {
             return 1.0 - Math.pow((1.0 - value) * 2, humidityCenterWeight) * 0.5;
         }
     }
+     */
 
     private Holder<Biome> getNoiseBiome(FunctionContext context, int blockX, int blockZ) {
         final ClimateTargetPointEx targetPointEx;
-        if (climateSamplerCacheSize > 0) {
+        if (configClimateSamplerCacheSize > 0) {
             targetPointEx = sampleClimateCached(context, blockX, blockZ);
         } else {
             targetPointEx = sampleClimate(DimensionData.packBlockXZtoLong(blockX, blockZ));
@@ -162,12 +163,12 @@ public class ShiftedNoiseHumidity extends ShiftedNoiseEx {
 
     public ClimateTargetPointEx sampleClimateCached(FunctionContext context, int blockX, int blockZ) {
         ClimateTargetPointEx result = climateSamplerCache.get(DimensionData.packBlockXZtoLong(blockX, blockZ)).join();
-        if (climateSamplerCachePrefetchRadius > 0) {
+        if (configClimateSamplerCachePrefetchRadius > 0 && configClimateSamplerCacheSize > 0) {
             // another spiral. Cbf making the methods common.
             double angle = 0;
             double radius = 0;
             List<Long> points = new ArrayList<>();
-            while (radius <= climateSamplerCachePrefetchRadius) {
+            while (radius <= configClimateSamplerCachePrefetchRadius) {
                 double xOffset = radius * Math.cos(angle);
                 double zOffset = radius * Math.sin(angle);
                 int thisX = (int) Math.round(blockX + xOffset);

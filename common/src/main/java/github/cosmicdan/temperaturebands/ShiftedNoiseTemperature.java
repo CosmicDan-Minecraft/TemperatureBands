@@ -10,9 +10,19 @@ import static github.cosmicdan.temperaturebands.TemperatureBands.*;
 // Modified copy of ShiftedNoise for Temperature override. DensityFunctionHooks is used to manually verify that ShiftedNoise hasn't changed.
 public class ShiftedNoiseTemperature extends ShiftedNoiseEx {
     public static final String NAME = "temperature";
+    public static final int algo1bandVarianceMin = 10; // fixed minimum value to enable configAlgo1BandVariance
+    // config-derived values
+    static float tempBandMid = 0f;
+    static float tempGradeAdj = 0f;
+    static int tempAlgo1bandVarianceMid = 0;
 
     public ShiftedNoiseTemperature(String dimensionName, DensityFunction shiftX, DensityFunction shiftY, DensityFunction shiftZ, double xzScale, double yScale, NoiseHolder noise) {
         super(dimensionName, shiftX, shiftY, shiftZ, xzScale, yScale, noise);
+        tempBandMid = configBandSize / 2.0f;
+        tempGradeAdj = tempBandMid / (configTempRange * 2.0f);
+        if (configAlgo1BandVariance >= algo1bandVarianceMin) {
+            tempAlgo1bandVarianceMid = (int) (configAlgo1BandVariance * 0.5);
+        }
     }
 
     @Override
@@ -34,7 +44,7 @@ public class ShiftedNoiseTemperature extends ShiftedNoiseEx {
 
         if (configAlgorithm == 1) {
             bandShift = (int) (bandShift * configAlgo1bandVarianceSteepness);
-            if (configAlgo1BandVariance >= CommonConfig.algo1bandVarianceMin) {
+            if (configAlgo1BandVariance >= algo1bandVarianceMin) {
                 // using band variance
                 bandShift = bandShift % configAlgo1BandVariance;
                 if (bandShift > tempAlgo1bandVarianceMid) {

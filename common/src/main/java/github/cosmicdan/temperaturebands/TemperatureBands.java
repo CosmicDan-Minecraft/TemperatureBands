@@ -60,6 +60,14 @@ public final class TemperatureBands {
     }
 
     // config values (initial values shouldn't matter, they're loaded from mod or world config)
+    // Global settings (not per-world)
+    public static boolean configDoBenchmark = false;
+    // Global climate sampler settings (not per-world)
+    public static int configClimateSamplerCacheSize = 1000000;
+    public static int configClimateSamplerCachePrefetchRadius = 2;
+    public static int configClimateSamplerCacheExpirySeconds = 300;
+
+    // Base world config
     static int configBandSize = 2048;
     static boolean configUseVerticalBands = false;
     static float configPosShift = 0.25f;
@@ -68,35 +76,35 @@ public final class TemperatureBands {
     static int configAlgorithm = 1;
     static int configNoiseFactor = 100;
     static int configDistanceFunction = 1; // Distance function to use for various calculations. The default of 1 uses "Octile" distance which is quite fast and accurate. 0 uses "Manhattan" (or "Taxi Cab") distance which is slightly faster but quite inaccurate. 2 uses pure distance via hypotenuse calculation, which is a bit slow but provides maximum accuracy. Recommended to leave on 1 (which will be default if an invalid number is specified).
-    // blacklist config
+    // Whitelist/blacklist config
     public static Set<String> configDimBlacklist = new HashSet<>();
     public static boolean configDimBlacklistAsWhitelist = false;
-    // humidity config (TODO)
-    // 6 is pretty fast
-    public static int humidityResolution = 4; // Lower values mean higher accuracy or "resolution" for calculating the distance from ocean/river for a given area, represented as a square root (i.e. default of 8 means each 64x64 area will use the same distance values). Values lower than 8 start to become extremely expensive on CPU/worldgen time, the "chunkyness" of the default value of 8 is significantly reduced by humidityNoiseFactor. Note that a value of 4 will effectively disable the cache, size 4 is equal to chunk size.
-    public static int humiditySearchDistance = 512; // The upper distance in blocks on XZ (horizontal) axis from ocean/rivers to be considered as maximum "dryness" (lower humidity). Meaning, higher numbers will make humidity drop slower as distance increases from ocean/river biomes. Higher values will be a little more expensive on CPU/worldgen time.
-    //public static float humidityRange = 2.0f; // Vanilla clamps humidity between -1.0 and +1.0. If you want that same clamping range, set this to 2.0. The default of 1.6 means it will be clamped to between -0.8 and +0.8 which takes
-    public static float humidityRiverInfluence = 0.4f; // How much rivers should contribute to final humidity value. I.e. default of 0.2 means 20% of river closeness will be added to the initial humidity calculated from ocean distance (which might be the lowest possible value). Setting to 0 will disable any river influence on humidity (and give a small speed boost). Higher values will make biome placement very noisy, i.e. lots of tiny scattered "dots" of biomes.
-    public static float humidityNoiseFactor = 0.5f;
-    public static float humidityCenterWeight = 3.0f; // The "weightiness" towards middle values for humidity. Vanilla humidity generation tends to favour values closer to the middle, so this is used reduce the amount of humidity extremes (e.g. too much Jungle and Savanna). The default value seems good to me.
-
-    public static int climateSamplerResolution = -1; // Lower values mean higher accuracy or "resolution" for sampling the climate (used for humidity searching). The default of -1 means automatic, which is the cube of humidityResolution (seems to be the most logical choice - biome edges look natural with sporadic patches and performance is still OK).
-    public static int climateSamplerCacheSize = 1000000; // Cache size of Climate Sampler. Measured in number of points, not actual data size. The default of 1 million can reach a maximum of about 80Mb memory usage (when full). Setting to zero will disable caching, which may result in better performance if your memory is slow or exhausted.
-    public static int climateSamplerCachePrefetchRadius = 0; // If above zero, whenever climate sampling is needed, additional climate sampling (and caching) will be done asynchronously in this radius (as units of "climateSamplerResolution").
-    public static int climateSamplerCacheExpirySeconds = 30; // Lifetime of cached Climate Sampler entries in seconds. Setting to zero will cause cache entries to expire immediately after one read. Setting to -1 will make cache entries last as long as they can until cache is full (where oldest cache entries will be replaced). Recommended to leave on default.
-
-    public static boolean configDoBenchmark = true;
-
-
-    // algo1 config
+    // Temperature algo1 config
     static int configAlgo1BandVariance = 128;
     static float configAlgo1bandVarianceSteepness = 0.1f;
-    // values derived/calculated from config
-    static float tempBandMid = 0f;
-    static float tempGradeAdj = 0f;
-    static int tempAlgo1bandVarianceMid = 0;
+    // Humidity config
+    public static int configHumidityAlgorithm = 2; // TODO, simple algorithm (value 1)
+    // Humidity algo 1 (simple) config
+    public static boolean configHumidityAlgo1MimicTemp = true; // TODO, simple algorithm
+    public static float configHumidityAlgo1MimicScale = 0.5f; // TODO, simple algorithm
+    // Humidity algo 2 (advanced) config
+    public static int configHumidityResolution = 4;
+    public static float configHumidityRiverInfluence = 0.4f;
+    public static int configHumiditySearchDistance = 512;
+    //public static float humidityRange = 2.0f; // Vanilla clamps humidity between -1.0 and +1.0. If you want that same clamping range, set this to 2.0. The default of 1.6 means it will be clamped to between -0.8 and +0.8 which takes
+    //public static float humidityNoiseFactor = 0.5f;
+    //public static float humidityCenterWeight = 3.0f; // The "weightiness" towards middle values for humidity. Vanilla humidity generation tends to favour values closer to the middle, so this is used reduce the amount of humidity extremes (e.g. too much Jungle and Savanna). The default value seems good to me.
+    // Climate sampler settings (world-specific)
+    public static int configClimateSamplerResolution = -1;
+
+
     public static void doModConfigIfNeeded() {
         if (!configDone) {
+            // global config (not per-world)
+            configDoBenchmark = TemperatureBands.CONFIG_DEFAULT.doBenchmark.get();
+            configClimateSamplerCacheSize = TemperatureBands.CONFIG_DEFAULT.climateSamplerCacheSize.get();
+            configClimateSamplerCachePrefetchRadius = TemperatureBands.CONFIG_DEFAULT.climateSamplerCachePrefetchRadius.get();
+            configClimateSamplerCacheExpirySeconds = TemperatureBands.CONFIG_DEFAULT.climateSamplerCacheExpirySeconds.get();
             // check for world prop
             if (savePropFile != null && savePropFile.exists()) {
                 // world prop exists, use world config
@@ -104,29 +112,44 @@ public final class TemperatureBands {
                 try (FileInputStream input = new FileInputStream(savePropFile)) {
                     Properties prop = new Properties();
                     prop.load(input);
-                    configBandSize = Integer.parseInt(prop.getProperty("configBandSize"));
-                    configUseVerticalBands = Boolean.parseBoolean(prop.getProperty("configUseVerticalBands"));
-                    configPosShift = Float.parseFloat(prop.getProperty("configPosShift"));
-                    configTempRange = Float.parseFloat(prop.getProperty("configTempRange"));
-                    configGradeShift = Float.parseFloat(prop.getProperty("configGradeShift"));
-                    configAlgorithm = Integer.parseInt(prop.getProperty("configAlgorithm"));
-                    configNoiseFactor = Integer.parseInt(prop.getProperty("configNoiseFactor"));
-                    if (configAlgorithm == 1) {
-                        configAlgo1BandVariance = Integer.parseInt(prop.getProperty("configAlgo1BandVariance"));
-                        configAlgo1bandVarianceSteepness = Float.parseFloat(prop.getProperty("configAlgo1bandVarianceSteepness"));
-                    } else {
-                        throw new RuntimeException("World config has unsupported algorithm (" + configAlgorithm + "), did you downgrade Temperature Bands?");
-                    }
+                    configBandSize = Integer.parseInt(prop.getProperty(CommonConfig.bandSizeName));
+                    configUseVerticalBands = Boolean.parseBoolean(prop.getProperty(CommonConfig.useVerticalBandsName));
+                    configPosShift = Float.parseFloat(prop.getProperty(CommonConfig.bandPositionShiftName));
+                    configTempRange = Float.parseFloat(prop.getProperty(CommonConfig.tempRangeName));
+                    configGradeShift = Float.parseFloat(prop.getProperty(CommonConfig.tempGradeShiftName));
+                    configAlgorithm = Integer.parseInt(prop.getProperty(CommonConfig.bandAlgorithmName));
+                    configNoiseFactor = Integer.parseInt(prop.getProperty(CommonConfig.noiseFactorName));
                     // Whitelist/blacklist
-                    configDimBlacklistAsWhitelist = Boolean.parseBoolean(prop.getProperty("configDimBlacklistAsWhitelist"));
-                    String dimBlacklist = prop.getProperty("configDimBlacklist");
+                    String dimBlacklist = prop.getProperty(CommonConfig.dimBlacklistName);
                     if (dimBlacklist == null) // Loading an existing world from older mod version
                         dimBlacklist = "";
                     setDimBlacklist(configDimBlacklist, dimBlacklist);
-                    // Humidity stuff (TODO)
-                    //humidityCacheSize
+                    configDimBlacklistAsWhitelist = Boolean.parseBoolean(prop.getProperty(CommonConfig.dimBlacklistAsWhitelistName));
+                    // TODO: handle default if not found (worlds from previous version)
+                    // Temp algo 1
+                    if (configAlgorithm == 1) {
+                        configAlgo1BandVariance = Integer.parseInt(prop.getProperty(CommonConfig.algo1bandVarianceName));
+                        configAlgo1bandVarianceSteepness = Float.parseFloat(prop.getProperty(CommonConfig.algo1bandVarianceSteepnessName));
+                    } else {
+                        throw new RuntimeException("World config has unsupported temperature algorithm (" + configAlgorithm + "), did you downgrade Temperature Bands?");
+                    }
+                    // Humidity
+                    configHumidityAlgorithm = Integer.parseInt(prop.getProperty(CommonConfig.humidityAlgorithmName, "0")); // default must be 0 to preserve existing worlds
+                    if (configHumidityAlgorithm == 1) {
+                        // Humidity algo 1 (simple)
+                        configHumidityAlgo1MimicTemp = Boolean.parseBoolean(prop.getProperty(CommonConfig.humidityAlgo1MimicTempName));
+                        configHumidityAlgo1MimicScale = Float.parseFloat(prop.getProperty(CommonConfig.humidityAlgo1MimicScaleName));
+                    } else if (configHumidityAlgorithm == 2) {
+                        // Humidity algo 2 (advanced)
+                        configHumidityResolution = Integer.parseInt(prop.getProperty(CommonConfig.humidityResolutionName));
+                        configHumidityRiverInfluence = Float.parseFloat(prop.getProperty(CommonConfig.humidityRiverInfluenceName));
+                        configHumiditySearchDistance = Integer.parseInt(prop.getProperty(CommonConfig.humiditySearchDistanceName));
+                    } else if (configHumidityAlgorithm != 0) {
+                        throw new RuntimeException("World config has unsupported humidity algorithm (" + configHumidityAlgorithm + "), did you downgrade Temperature Bands?");
+                    }
+                    // Climate sampler (world-specific)
+                    configClimateSamplerResolution = Integer.parseInt(prop.getProperty(CommonConfig.climateSamplerResolutionName, "-1"));
 
-                    updateDerivedConfig();
                 } catch (IOException ex) {
                     throw new RuntimeException("Error reading world config. Crashing-out intentionally to prevent corruption. If you modified the world config manually, please fix it. Otherwise, report this Temperature Bands error.");
                 }
@@ -139,24 +162,36 @@ public final class TemperatureBands {
                 configGradeShift = TemperatureBands.CONFIG_DEFAULT.tempGradeShift.get().floatValue();
                 configAlgorithm = TemperatureBands.CONFIG_DEFAULT.bandAlgorithm.get();
                 configNoiseFactor = TemperatureBands.CONFIG_DEFAULT.noiseFactor.get();
+                // Whitelist/blacklist
+                configDimBlacklistAsWhitelist = TemperatureBands.CONFIG_DEFAULT.dimBlacklistAsWhitelist.get();
+                String dimBlacklist = TemperatureBands.CONFIG_DEFAULT.dimBlacklist.get();
+                setDimBlacklist(configDimBlacklist, dimBlacklist);
+                // Temp algo 1
                 if (configAlgorithm == 1) {
                     configAlgo1BandVariance = TemperatureBands.CONFIG_DEFAULT.algo1bandVariance.get();
                     configAlgo1bandVarianceSteepness = TemperatureBands.CONFIG_DEFAULT.algo1bandVarianceSteepness.get().floatValue();
                 } else {
                     throw new RuntimeException("Unhandled algorithm at config load, fixme!");
                 }
-                // Whitelist/blacklist
-                configDimBlacklistAsWhitelist = TemperatureBands.CONFIG_DEFAULT.dimBlacklistAsWhitelist.get();
-                String dimBlacklist = TemperatureBands.CONFIG_DEFAULT.dimBlacklist.get();
-                setDimBlacklist(configDimBlacklist, dimBlacklist);
-                // Humidity stuff (TODO)
-                //humidityCacheSize
-
-                updateDerivedConfig();
+                // Humidity
+                configHumidityAlgorithm = TemperatureBands.CONFIG_DEFAULT.humidityAlgorithm.get();
+                if (configHumidityAlgorithm == 1) {
+                    // Humidity algo 1 (simple)
+                    configHumidityAlgo1MimicTemp = TemperatureBands.CONFIG_DEFAULT.humidityAlgo1MimicTemp.get();
+                    configHumidityAlgo1MimicScale = TemperatureBands.CONFIG_DEFAULT.humidityAlgo1MimicScale.get().floatValue();
+                } else if (configHumidityAlgorithm == 2) {
+                    // Humidity algo 2 (advanced)
+                    configHumidityResolution = TemperatureBands.CONFIG_DEFAULT.humidityResolution.get();
+                    configHumidityRiverInfluence = TemperatureBands.CONFIG_DEFAULT.humidityRiverInfluence.get().floatValue();
+                    configHumiditySearchDistance = TemperatureBands.CONFIG_DEFAULT.humiditySearchDistance.get();
+                } else if (configHumidityAlgorithm != 0) {
+                    throw new RuntimeException("Unhandled humidity algorithm at config load, fixme!");
+                }
+                configClimateSamplerResolution = TemperatureBands.CONFIG_DEFAULT.climateSamplerResolution.get();
 
                 if (saveDir != null && saveDir.toFile().exists()) {
                     try (FileOutputStream output = new FileOutputStream(savePropFile)) {
-                        Properties prop = setConfigProps();
+                        Properties prop = setConfigPropsForSaving();
                         prop.store(output, "World-specific Temperature Bands settings. Do not edit!");
                         LOGGER.info("Saved world config to {}", savePropFile.getName());
                     } catch (IOException ex) {
@@ -174,7 +209,6 @@ public final class TemperatureBands {
 
     private static void setDimBlacklist(Set<String> listToUse, String dimBlacklist) {
         String[] dimBlacklistSplit = dimBlacklist.split(",");
-        //if ()
         Collections.addAll(listToUse, dimBlacklistSplit);
         listToUse.remove("");
         if (!listToUse.isEmpty())
@@ -183,37 +217,46 @@ public final class TemperatureBands {
             LOGGER.info("Dimension {} is empty for this world", configDimBlacklistAsWhitelist ? "whitelist" : "blacklist");
     }
 
-    private static @NotNull Properties setConfigProps() {
+    private static @NotNull Properties setConfigPropsForSaving() {
         Properties prop = new Properties();
-        prop.setProperty("configBandSize", String.valueOf(configBandSize));
-        prop.setProperty("configUseVerticalBands", String.valueOf(configUseVerticalBands));
-        prop.setProperty("configPosShift", String.valueOf(configPosShift));
-        prop.setProperty("configTempRange", String.valueOf(configTempRange));
-        prop.setProperty("configGradeShift", String.valueOf(configGradeShift));
-        prop.setProperty("configAlgorithm", String.valueOf(configAlgorithm));
-        prop.setProperty("configNoiseFactor", String.valueOf(configNoiseFactor));
-        prop.setProperty("configDimBlacklistAsWhitelist", String.valueOf(configDimBlacklistAsWhitelist));
+        prop.setProperty(CommonConfig.bandSizeName, String.valueOf(configBandSize));
+        prop.setProperty(CommonConfig.useVerticalBandsName, String.valueOf(configUseVerticalBands));
+        prop.setProperty(CommonConfig.bandPositionShiftName, String.valueOf(configPosShift));
+        prop.setProperty(CommonConfig.tempRangeName, String.valueOf(configTempRange));
+        prop.setProperty(CommonConfig.tempGradeShiftName, String.valueOf(configGradeShift));
+        prop.setProperty(CommonConfig.bandAlgorithmName, String.valueOf(configAlgorithm));
+        prop.setProperty(CommonConfig.noiseFactorName, String.valueOf(configNoiseFactor));
+        // Whitelist/blacklist
         String configDimBlacklistRaw = "";
         for (String blacklistEntry : configDimBlacklist) {
             configDimBlacklistRaw = configDimBlacklistRaw.concat(blacklistEntry + ",");
         }
         configDimBlacklistRaw = configDimBlacklistRaw.substring(0, configDimBlacklistRaw.length() - 1);
-        prop.setProperty("configDimBlacklist", configDimBlacklistRaw);
+        prop.setProperty(CommonConfig.dimBlacklistName, configDimBlacklistRaw);
+        prop.setProperty(CommonConfig.dimBlacklistAsWhitelistName, String.valueOf(configDimBlacklistAsWhitelist));
+        // Temp algo 1
         if (configAlgorithm == 1) {
-            prop.setProperty("configAlgo1BandVariance", String.valueOf(configAlgo1BandVariance));
-            prop.setProperty("configAlgo1bandVarianceSteepness", String.valueOf(configAlgo1bandVarianceSteepness));
+            prop.setProperty(CommonConfig.algo1bandVarianceName, String.valueOf(configAlgo1BandVariance));
+            prop.setProperty(CommonConfig.algo1bandVarianceSteepnessName, String.valueOf(configAlgo1bandVarianceSteepness));
         } else {
             throw new RuntimeException("Unhandled algorithm at config world save, fixme!");
         }
-        return prop;
-    }
-
-    private static void updateDerivedConfig() {
-        tempBandMid = configBandSize / 2.0f;
-        tempGradeAdj = tempBandMid / (configTempRange * 2.0f);
-        if (configAlgo1BandVariance > CommonConfig.algo1bandVarianceMin) {
-            tempAlgo1bandVarianceMid = (int) (configAlgo1BandVariance * 0.5);
+        // Humidity
+        prop.setProperty(CommonConfig.humidityAlgorithmName, String.valueOf(configHumidityAlgorithm));
+        if (configHumidityAlgorithm == 1) {
+            // Humidity algo 1 (simple)
+            prop.setProperty(CommonConfig.humidityAlgo1MimicTempName, String.valueOf(configHumidityAlgo1MimicTemp));
+            prop.setProperty(CommonConfig.humidityAlgo1MimicScaleName, String.valueOf(configHumidityAlgo1MimicScale));
+        } else if (configHumidityAlgorithm == 2) {
+            // Humidity algo 2 (advanced)
+            prop.setProperty(CommonConfig.humidityResolutionName, String.valueOf(configHumidityResolution));
+            prop.setProperty(CommonConfig.humidityRiverInfluenceName, String.valueOf(configHumidityRiverInfluence));
+            prop.setProperty(CommonConfig.humiditySearchDistanceName, String.valueOf(configHumiditySearchDistance));
+        } else if (configHumidityAlgorithm != 0) {
+            throw new RuntimeException("Unhandled humidity algorithm at config world save, fixme!");
         }
+        prop.setProperty(CommonConfig.climateSamplerResolutionName, String.valueOf(configClimateSamplerResolution));
+        return prop;
     }
 
     public static boolean isDimensionWhitelisted(String dimensionName) {
