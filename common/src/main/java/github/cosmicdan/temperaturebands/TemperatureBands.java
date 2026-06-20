@@ -6,11 +6,9 @@ import com.mojang.logging.LogUtils;
 import net.minecraft.core.Holder;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.DensityFunctions;
-import net.minecraft.world.level.levelgen.NoiseRouter;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
-import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 
 import java.io.File;
@@ -353,76 +351,9 @@ public final class TemperatureBands {
             if (!failedDimensionEntry.contains(functionName)) {
                 TemperatureBands.LOGGER.error("Failed hooking {} for dimension '{}' because it is not a Holder of ShiftedNoise type. Please report this to CosmicDan so support for this custom dimension might be added.", functionName, dimensionName);
                 failedDimensionEntry.add(functionName);
-                dumpExtraClassInfo(currentFunction);
+                TbUtils.dumpExtraClassInfo(currentFunction);
             }
         }
         return currentFunction;
-    }
-
-    public static Map.Entry<String, @NonNull DimensionData> findDimDataViaNoiseRouter(NoiseRouter noiseRouter) {
-        String dimensionName = null;
-        DimensionData activeDimData = null;
-        for (Map.Entry<String, @NonNull DimensionData> dimDataEntry : TemperatureBands.DIMENSION_DATA_CACHE.asMap().entrySet()) {
-            if (dimDataEntry.getValue().getNoiseRouter().equals(noiseRouter)) {
-                return dimDataEntry;
-            }
-        }
-        return null;
-    }
-
-    public static double calculateBlockDistance(int startX, int endX, int startZ, int endZ) {
-        if (configDistanceFunction == 0) {
-            // Manhattan distance
-            return Math.abs(startX - endX) + Math.abs(startZ - endZ);
-        } else if (configDistanceFunction == 2) {
-            // Pure (hypotenuse)
-            return Math.hypot(Math.abs(startX - endX), Math.abs(startZ - endZ));
-        } else {
-            // Octile (diagonal)
-            long distanceX = Math.abs(startX - endX);
-            long distanceZ = Math.abs(startZ - endZ);
-            double straightCost = 1.0;
-            double diagonalCost = Math.sqrt(2);
-
-            if (distanceX > distanceZ) {
-                return ((diagonalCost * distanceZ) + (straightCost * (distanceX - distanceZ)));
-            } else {
-                return ((diagonalCost * distanceX) + (straightCost * (distanceZ - distanceX)));
-            }
-        }
-    }
-
-    private static void dumpExtraClassInfo(DensityFunction func) {
-        LOGGER.error("    - Class type is '{}'", func.getClass().getCanonicalName());
-        LOGGER.error("    - Class dump: {}", func.toString());
-    }
-
-    public static int batchesTotal = 0;
-    public static int batchesDone = -1;
-    private static Instant benchmarkStart;
-
-    public static void benchmarkReset() {
-        if (batchesTotal > 0) {
-            LOGGER.info("WorldPreview benchmark cancelled");
-        }
-        batchesTotal = 0;
-        batchesDone = -1;
-        benchmarkStart = Instant.now();
-    }
-
-    public static void benchmarkStart(int batchesSize) {
-        LOGGER.info("Starting WorldPreview benchmark, waiting for {} batches to finish...", batchesSize);
-        benchmarkStart = Instant.now();
-        batchesTotal = batchesSize;
-        batchesDone = 0;
-    }
-
-    public static void benchmarkBatchDone() {
-        batchesDone++;
-        if (batchesDone >= batchesTotal) {
-            LOGGER.info("WorldPreview benchmark finished, {} batches took {} seconds." , batchesTotal, String.format("%.2f", Duration.between(benchmarkStart, Instant.now()).abs().toMillis() / 1000.0));
-            batchesTotal = 0;
-            batchesDone = -1;
-        }
     }
 }

@@ -125,9 +125,9 @@ public class ShiftedNoiseHumidity extends ShiftedNoiseEx {
             int blockZ = (int) Math.round(originZ + zOffset);
             Holder<Biome> holder = getNoiseBiome(context, blockX, blockZ);
             if (firstBiomeDistance == -1.0 && firstBiomes.contains(holder))
-                firstBiomeDistance = calculateBlockDistance(originX, blockX, originZ, blockZ);
+                firstBiomeDistance = TbUtils.calculateBlockDistance(originX, blockX, originZ, blockZ);
             else if (!oceansOnly && secondBiomeDistance == -1.0 && secondBiomes.contains(holder))
-                secondBiomeDistance = calculateBlockDistance(originX, blockX, originZ, blockZ);
+                secondBiomeDistance = TbUtils.calculateBlockDistance(originX, blockX, originZ, blockZ);
 
             if (firstBiomeDistance > -1.0 && (secondBiomeDistance > -1.0 || oceansOnly))
                 return Pair.of(firstBiomeDistance, secondBiomeDistance);

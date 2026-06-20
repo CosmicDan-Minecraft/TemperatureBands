@@ -3,6 +3,7 @@ package github.cosmicdan.temperaturebands.neoforge.mixin;
 import com.caeruleusTait.world.preview.backend.WorkManager;
 import com.caeruleusTait.world.preview.backend.worker.WorkBatch;
 import com.caeruleusTait.world.preview.backend.worker.WorkResult;
+import github.cosmicdan.temperaturebands.TbUtils;
 import github.cosmicdan.temperaturebands.TemperatureBands;
 import net.minecraft.core.BlockPos;
 import org.spongepowered.asm.mixin.Final;
@@ -28,7 +29,7 @@ abstract class WorldPreviewForgeHooksWorkManager {
     )
     public void onQueueRangeStart(BlockPos topLeftBlock, BlockPos bottomRightBlock, CallbackInfo ci) {
         if (TemperatureBands.configDoBenchmark)
-            TemperatureBands.benchmarkReset();
+            TbUtils.benchmarkReset();
     }
 
     @Inject(
@@ -37,7 +38,7 @@ abstract class WorldPreviewForgeHooksWorkManager {
     )
     public void onQueueRangeEnd(BlockPos topLeftBlock, BlockPos bottomRightBlock, CallbackInfo ci) {
         if (TemperatureBands.configDoBenchmark)
-            TemperatureBands.benchmarkStart(currentBatches.size());
+            TbUtils.benchmarkStart(currentBatches.size());
     }
 }
 
@@ -50,7 +51,7 @@ abstract class WorldPreviewHooksWorkBatch {
     )
     public void onApplyChunkResultEnd(List<WorkResult> workResultList, CallbackInfo ci) {
         if (TemperatureBands.configDoBenchmark)
-            TemperatureBands.benchmarkBatchDone();
+            TbUtils.benchmarkBatchDone();
     }
 }
 
