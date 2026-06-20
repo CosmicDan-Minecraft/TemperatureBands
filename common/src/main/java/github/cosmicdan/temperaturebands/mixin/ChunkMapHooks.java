@@ -59,19 +59,10 @@ public abstract class ChunkMapHooks {
                     }
                 }
             }
-            if (!dimDataAlreadyMade)
+            if (!dimDataAlreadyMade) {
                 TemperatureBands.DIMENSION_DATA_CACHE.put(dimensionName, new DimensionData(true, level, noiseGeneratorSettings.noiseRouter(), null, null));
+            }
         }
         return original.call(noiseGeneratorSettings, holderGetter, seed);
     }
-
-    /*
-    @Inject(
-        method = "<init>",
-        at = @At("TAIL")
-    )
-    public void onNewRandomStateDone(ServerLevel serverLevel, LevelStorageSource.LevelStorageAccess levelStorageAccess, DataFixer dataFixer, StructureTemplateManager structureTemplateManager, Executor executor, BlockableEventLoop blockableEventLoop, LightChunkGetter lightChunkGetter, ChunkGenerator chunkGenerator, ChunkProgressListener chunkProgressListener, ChunkStatusUpdateListener chunkStatusUpdateListener, Supplier supplier, int i, boolean bl, CallbackInfo ci) {
-        this.randomState.sampler()
-    }
-     */
 }

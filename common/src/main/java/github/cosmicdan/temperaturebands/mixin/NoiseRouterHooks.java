@@ -55,7 +55,7 @@ public class NoiseRouterHooks {
                 // dimension is whitelisted
                 if (currentFunction.equals(temperature))
                     currentFunction = TemperatureBands.replaceNoiseIfNeeded(activeDimData, dimensionName, currentFunction, ShiftedNoiseTemperature.NAME);
-                else if (currentFunction.equals(vegetation)) // TODO: check config if humidity changes enabled
+                else if (currentFunction.equals(vegetation) && TemperatureBands.configHumidityAlgorithm != 0)
                     currentFunction = TemperatureBands.replaceNoiseIfNeeded(activeDimData, dimensionName, currentFunction, ShiftedNoiseHumidity.NAME);
             }
         }

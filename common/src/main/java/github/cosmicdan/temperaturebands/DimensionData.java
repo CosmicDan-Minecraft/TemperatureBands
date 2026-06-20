@@ -67,7 +67,7 @@ public class DimensionData {
                     }
                 }
                 //biomeRiversAndOceans.cleanUp();
-                if (CONFIG_DEFAULT.dumpRiverAndOceanBiomes.get()) {
+                if (TemperatureBands.dumpRiverAndOceanBiomes) {
                     LOGGER.info("List of all biomes with 'minecraft:is_river' tag for dimension '{}':", level.dimension().location());
                     if (biomeRivers.isEmpty())
                         LOGGER.info(noneStringForBiomeDump);

@@ -13,6 +13,12 @@ public class CommonConfig {
              [doBenchmark] is only available for (Neo)Forge right now. If true and World Preview is installed, a benchmark will be performed when opening the 'Preview' tab
                 (and after closing the World Preview settings menu, i.e. whenever chunk previews start to generate).
               - Refer to the mod description page for details and tips on benchmarking and stress-testing.""";
+    public final ModConfigSpec.BooleanValue copyConfigOnRecreateWorld;
+    public static final String copyConfigOnRecreateWorldTxt = """
+             
+             [copyConfigOnRecreateWorld] will, when true, copy the previous world Temperature Bands config to the new world when "Recreate" is being done.
+              - Set this to false if you want to "upgrade" your world with new features/defaults when updating the mod.
+              - Relevant for client only. Servers will need to manually recreate their worlds (i.e. set the same seed/settings in server config and delete old world).""";
     public final ModConfigSpec.BooleanValue ignoreTheEndFailures; // TODO: Actually change to a blacklist and prefill with minecraft:the_end. Also make whitelist final values end with a comma.
     public static final String ignoreTheEndFailuresTxt = """
 
@@ -251,12 +257,15 @@ public class CommonConfig {
         doBenchmark = builder
                 .comment(doBenchmarkTxt)
                 .define("doBenchmark", false);
+        copyConfigOnRecreateWorld = builder
+                .comment(copyConfigOnRecreateWorldTxt)
+                .define("copyConfigOnRecreateWorld", true);
         ignoreTheEndFailures = builder
                 .comment(ignoreTheEndFailuresTxt)
                 .define("ignoreTheEndFailures", true);
         dumpRiverAndOceanBiomes = builder
                 .comment(dumpRiverAndOceanBiomesTxt)
-                .define("dumpRiverAndOceanBiomesTxt", false);
+                .define("dumpRiverAndOceanBiomes", false);
         builder.pop();
 
         builder.push(sectionClimateSamplerPerf).comment(sectionClimateSamplerPerfTxt);
@@ -295,7 +304,7 @@ public class CommonConfig {
                 .defineInRange("distanceFunction", 1, 0, 2);
         dimBlacklist = builder
                 .comment(dimBlacklistTxt)
-                .define("dimBlacklist", "minecraft:the_nether,minecraft:the_end");
+                .define("dimBlacklist", "minecraft:the_nether,minecraft:the_end,");
         dimBlacklistAsWhitelist = builder
                 .comment(dimBlacklistAsWhitelistTxt)
                 .define("dimBlacklistAsWhitelist", false);

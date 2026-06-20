@@ -32,6 +32,7 @@ public final class TemperatureBands {
     /** Used to "remember" some things for each dimension so we can access it later from various places. Entries are created in ChunkMapHooks, added to by various other hooks, and cleared on shutdown via MinecraftServerHooks */
     public static final Cache<String, DimensionData> DIMENSION_DATA_CACHE = Caffeine.newBuilder().build();
 
+    public static boolean isDeleteScreenActive = false;
 
     public TemperatureBands(final IModPlatform modPlatform) {
         MODPLATFORM = modPlatform;
@@ -42,26 +43,40 @@ public final class TemperatureBands {
     }
 
     private static Path saveDir;
+    private static Path saveDirPrev;
     private static File savePropFile;
+    private static File savePropFilePrev;
     private static boolean configDone = false;
+    private static boolean configForRecreateDone = false;
 
     public static void onLevelStorageLoad(Path saveDirIn) {
-        resetSaveAndConfig();
+        if (saveDir != null) {
+            // we're recreating a world from another world
+            saveDirPrev = saveDir;
+            savePropFilePrev = savePropFile;
+            configForRecreateDone = false;
+        }
         saveDir = saveDirIn;
         savePropFile = saveDir.resolve(MOD_ID + ".prop").toFile();
         doModConfigIfNeeded();
     }
 
-    public static void resetSaveAndConfig() {
+    public static void clearDimensionDataAndConfig() {
         saveDir = null;
+        saveDirPrev = null;
         savePropFile = null;
+        savePropFilePrev = null;
         configDimBlacklist.clear();
         configDone = false;
+        configForRecreateDone = false;
     }
 
     // config values (initial values shouldn't matter, they're loaded from mod or world config)
     // Global settings (not per-world)
     public static boolean configDoBenchmark = false;
+    public static boolean copyConfigOnRecreateWorld = true;
+    public static boolean ignoreTheEndFailures = true;
+    public static boolean dumpRiverAndOceanBiomes = false;
     // Global climate sampler settings (not per-world)
     public static int configClimateSamplerCacheSize = 5;
     public static int configClimateSamplerCachePrefetchRadius = -8;
@@ -96,27 +111,100 @@ public final class TemperatureBands {
     // Climate sampler settings (world-specific)
     public static int configClimateSamplerResolution = -1;
 
+    public static void doModConfigGlobal() {
+        // global config (not per-world) is always read from mod config
+        configDoBenchmark = TemperatureBands.CONFIG_DEFAULT.doBenchmark.get();
+        ignoreTheEndFailures = TemperatureBands.CONFIG_DEFAULT.ignoreTheEndFailures.get();
+        dumpRiverAndOceanBiomes = TemperatureBands.CONFIG_DEFAULT.dumpRiverAndOceanBiomes.get();
+        configClimateSamplerCacheSize = TemperatureBands.CONFIG_DEFAULT.climateSamplerCacheSize.get();
+        configClimateSamplerCachePrefetchRadius = TemperatureBands.CONFIG_DEFAULT.climateSamplerCachePrefetchRadius.get();
+        if (configClimateSamplerCachePrefetchRadius < 0) {
+            int threadCount = Runtime.getRuntime().availableProcessors();
+            int originalSetting = configClimateSamplerCachePrefetchRadius;
+            configClimateSamplerCachePrefetchRadius = threadCount / -configClimateSamplerCachePrefetchRadius;
+            if (configClimateSamplerCachePrefetchRadius < 1) {
+                LOGGER.info("Disabling climate sampler prefetching due to not enough threads (i.e. from {}/{}, based on {} CPU threads available)", -originalSetting, threadCount, threadCount);
+                configClimateSamplerCachePrefetchRadius = 0;
+            } else
+                LOGGER.info("Using radius of {} for climate sampler prefetching (from {}/{}, based on {} CPU threads available)", configClimateSamplerCachePrefetchRadius, -originalSetting, threadCount, threadCount);
+        }
+    }
+
+    private static void saveWorldSpecificConfig(File propFileOut, boolean isRecreate) {
+        try (FileOutputStream output = new FileOutputStream(propFileOut)) {
+            Properties prop = setConfigPropsForSaving();
+            prop.store(output, "World-specific Temperature Bands settings. Do not edit!");
+            if (isRecreate) {
+                LOGGER.info("Copied world-specific config from {}/{} to {}", savePropFilePrev.getParentFile().getName(), savePropFilePrev.getName(), propFileOut.getParentFile().getName());
+            } else {
+                LOGGER.info("Saved world-specific config to {}/{}", propFileOut.getParentFile().getName(), propFileOut.getName());
+            }
+        } catch (IOException ex) {
+            for (StackTraceElement element : ex.getStackTrace()) {
+                LOGGER.error(element.toString());
+            }
+            throw new RuntimeException("Error writing world-specific config. Crashing-out intentionally to prevent world corruption. Error details are above.");
+        }
+    }
+
+    public static void loadDefaultConfig(File propFileOut, boolean isRecreatingWorld) {
+        // get and calc values from config
+        if (isRecreatingWorld)
+            LOGGER.info("Loading default config because 'copyConfigOnRecreateWorld' is false (i.e. world is being 'upgraded')");
+        else
+            LOGGER.info("Loading default config (creating a new world)");
+        configBandSize = TemperatureBands.CONFIG_DEFAULT.bandSize.get();
+        configUseVerticalBands = TemperatureBands.CONFIG_DEFAULT.useVerticalBands.get();
+        configPosShift = TemperatureBands.CONFIG_DEFAULT.bandPositionShift.get().floatValue();
+        configTempRange = TemperatureBands.CONFIG_DEFAULT.tempRange.get().floatValue();
+        configGradeShift = TemperatureBands.CONFIG_DEFAULT.tempGradeShift.get().floatValue();
+        configAlgorithm = TemperatureBands.CONFIG_DEFAULT.bandAlgorithm.get();
+        configNoiseFactor = TemperatureBands.CONFIG_DEFAULT.noiseFactor.get();
+        // Whitelist/blacklist
+        configDimBlacklistAsWhitelist = TemperatureBands.CONFIG_DEFAULT.dimBlacklistAsWhitelist.get();
+        configDistanceFunction = TemperatureBands.CONFIG_DEFAULT.distanceFunction.get();
+        String dimBlacklist = TemperatureBands.CONFIG_DEFAULT.dimBlacklist.get();
+        setDimBlacklist(configDimBlacklist, dimBlacklist);
+        // Temp algo 1
+        if (configAlgorithm == 1) {
+            configAlgo1BandVariance = TemperatureBands.CONFIG_DEFAULT.algo1bandVariance.get();
+            configAlgo1bandVarianceSteepness = TemperatureBands.CONFIG_DEFAULT.algo1bandVarianceSteepness.get().floatValue();
+        } else {
+            throw new RuntimeException("Unhandled algorithm at config load, fixme!");
+        }
+        // Humidity
+        configHumidityAlgorithm = TemperatureBands.CONFIG_DEFAULT.humidityAlgorithm.get();
+        if (configHumidityAlgorithm == 1) {
+            // Humidity algo 1 (simple)
+            configHumidityAlgo1MimicTemp = TemperatureBands.CONFIG_DEFAULT.humidityAlgo1MimicTemp.get();
+            configHumidityAlgo1MimicScale = TemperatureBands.CONFIG_DEFAULT.humidityAlgo1MimicScale.get().floatValue();
+        } else if (configHumidityAlgorithm == 2) {
+            // Humidity algo 2 (advanced)
+            configHumidityResolution = TemperatureBands.CONFIG_DEFAULT.humidityResolution.get();
+            configHumidityRiverInfluence = TemperatureBands.CONFIG_DEFAULT.humidityRiverInfluence.get().floatValue();
+            configHumiditySearchDistance = TemperatureBands.CONFIG_DEFAULT.humiditySearchDistance.get();
+        } else if (configHumidityAlgorithm != 0) {
+            throw new RuntimeException("Unhandled humidity algorithm at config load, fixme!");
+        }
+        configClimateSamplerResolution = TemperatureBands.CONFIG_DEFAULT.climateSamplerResolution.get();
+
+        saveWorldSpecificConfig(propFileOut, false);
+    }
 
     public static void doModConfigIfNeeded() {
-        if (!configDone) {
-            // global config (not per-world)
-            configDoBenchmark = TemperatureBands.CONFIG_DEFAULT.doBenchmark.get();
-            configClimateSamplerCacheSize = TemperatureBands.CONFIG_DEFAULT.climateSamplerCacheSize.get();
-            configClimateSamplerCachePrefetchRadius = TemperatureBands.CONFIG_DEFAULT.climateSamplerCachePrefetchRadius.get();
-            if (configClimateSamplerCachePrefetchRadius < 0) {
-                int threadCount = Runtime.getRuntime().availableProcessors();
-                int originalSetting = configClimateSamplerCachePrefetchRadius;
-                configClimateSamplerCachePrefetchRadius = threadCount / -configClimateSamplerCachePrefetchRadius;
-                if (configClimateSamplerCachePrefetchRadius < 1) {
-                    LOGGER.info("Disabling climate sampler prefetching due to not enough threads (i.e. from {}/{}, based on {} CPU threads available)", -originalSetting, threadCount, threadCount);
-                    configClimateSamplerCachePrefetchRadius = 0;
-                } else
-                    LOGGER.info("Using radius of {} for climate sampler prefetching (from {}/{}, based on {} CPU threads available)", configClimateSamplerCachePrefetchRadius, -originalSetting, threadCount, threadCount);
-            }
-            // check for world prop
+        if (saveDirPrev != null && !configForRecreateDone) {
+            // we're recreating a world from another
+            doModConfigGlobal();
+            if (copyConfigOnRecreateWorld)
+                saveWorldSpecificConfig(savePropFile, true);
+            else
+                loadDefaultConfig(savePropFile, true);
+            configForRecreateDone = true;
+        } else if (!configDone) {
+            doModConfigGlobal();
             if (savePropFile != null && savePropFile.exists()) {
                 // world prop exists, use world config
-                LOGGER.info("Using world-specific config");
+                LOGGER.info("Loading world-specific config from {}/{}", savePropFile.getParentFile().getName(), savePropFile.getName());
                 try (FileInputStream input = new FileInputStream(savePropFile)) {
                     Properties prop = new Properties();
                     prop.load(input);
@@ -159,57 +247,19 @@ public final class TemperatureBands {
                 } catch (IOException ex) {
                     throw new RuntimeException("Error reading world config. Crashing-out intentionally to prevent corruption. If you modified the world config manually, please fix it. Otherwise, report this Temperature Bands error.");
                 }
+            } else if (saveDir != null && saveDir.toFile().exists()) {
+                loadDefaultConfig(savePropFile, false);
             } else {
-                // get and calc values from config
-                configBandSize = TemperatureBands.CONFIG_DEFAULT.bandSize.get();
-                configUseVerticalBands = TemperatureBands.CONFIG_DEFAULT.useVerticalBands.get();
-                configPosShift = TemperatureBands.CONFIG_DEFAULT.bandPositionShift.get().floatValue();
-                configTempRange = TemperatureBands.CONFIG_DEFAULT.tempRange.get().floatValue();
-                configGradeShift = TemperatureBands.CONFIG_DEFAULT.tempGradeShift.get().floatValue();
-                configAlgorithm = TemperatureBands.CONFIG_DEFAULT.bandAlgorithm.get();
-                configNoiseFactor = TemperatureBands.CONFIG_DEFAULT.noiseFactor.get();
-                // Whitelist/blacklist
-                configDimBlacklistAsWhitelist = TemperatureBands.CONFIG_DEFAULT.dimBlacklistAsWhitelist.get();
-                configDistanceFunction = TemperatureBands.CONFIG_DEFAULT.distanceFunction.get();
-                String dimBlacklist = TemperatureBands.CONFIG_DEFAULT.dimBlacklist.get();
-                setDimBlacklist(configDimBlacklist, dimBlacklist);
-                // Temp algo 1
-                if (configAlgorithm == 1) {
-                    configAlgo1BandVariance = TemperatureBands.CONFIG_DEFAULT.algo1bandVariance.get();
-                    configAlgo1bandVarianceSteepness = TemperatureBands.CONFIG_DEFAULT.algo1bandVarianceSteepness.get().floatValue();
-                } else {
-                    throw new RuntimeException("Unhandled algorithm at config load, fixme!");
-                }
-                // Humidity
-                configHumidityAlgorithm = TemperatureBands.CONFIG_DEFAULT.humidityAlgorithm.get();
-                if (configHumidityAlgorithm == 1) {
-                    // Humidity algo 1 (simple)
-                    configHumidityAlgo1MimicTemp = TemperatureBands.CONFIG_DEFAULT.humidityAlgo1MimicTemp.get();
-                    configHumidityAlgo1MimicScale = TemperatureBands.CONFIG_DEFAULT.humidityAlgo1MimicScale.get().floatValue();
-                } else if (configHumidityAlgorithm == 2) {
-                    // Humidity algo 2 (advanced)
-                    configHumidityResolution = TemperatureBands.CONFIG_DEFAULT.humidityResolution.get();
-                    configHumidityRiverInfluence = TemperatureBands.CONFIG_DEFAULT.humidityRiverInfluence.get().floatValue();
-                    configHumiditySearchDistance = TemperatureBands.CONFIG_DEFAULT.humiditySearchDistance.get();
-                } else if (configHumidityAlgorithm != 0) {
-                    throw new RuntimeException("Unhandled humidity algorithm at config load, fixme!");
-                }
-                configClimateSamplerResolution = TemperatureBands.CONFIG_DEFAULT.climateSamplerResolution.get();
-
-                if (saveDir != null && saveDir.toFile().exists()) {
-                    try (FileOutputStream output = new FileOutputStream(savePropFile)) {
-                        Properties prop = setConfigPropsForSaving();
-                        prop.store(output, "World-specific Temperature Bands settings. Do not edit!");
-                        LOGGER.info("Saved world config to {}", savePropFile.getName());
-                    } catch (IOException ex) {
-                        throw new RuntimeException("Error writing world config. Crashing-out intentionally to prevent corruption. Please report this Temperature Bands error.");
+                // should never happen
+                try {
+                    throw new RuntimeException("Error while trying to load default config or saving world-specific config. Temperature Bands probably won't work right.");
+                } catch (RuntimeException ex) {
+                    LOGGER.error(ex.getMessage());
+                    for (StackTraceElement element : ex.getStackTrace()) {
+                        LOGGER.error(element.toString());
                     }
-                } else {
-                    // world is either deleted or exited, clear vars
-                    resetSaveAndConfig();
                 }
             }
-
             configDone = true;
         }
     }
@@ -239,7 +289,6 @@ public final class TemperatureBands {
         for (String blacklistEntry : configDimBlacklist) {
             configDimBlacklistRaw = configDimBlacklistRaw.concat(blacklistEntry + ",");
         }
-        configDimBlacklistRaw = configDimBlacklistRaw.substring(0, configDimBlacklistRaw.length() - 1);
         prop.setProperty(CommonConfig.dimBlacklistName, configDimBlacklistRaw);
         prop.setProperty(CommonConfig.dimBlacklistAsWhitelistName, String.valueOf(configDimBlacklistAsWhitelist));
         // Temp algo 1
@@ -303,7 +352,7 @@ public final class TemperatureBands {
             DimensionData.recreateDimDataWithNewNoiseFunction(dimensionName, activeDimData, functionName, (DensityFunctions.HolderHolder) currentFunction);
             TemperatureBands.LOGGER.info("Succeeded in hooking {} for dimension '{}'", functionName, dimensionName);
         } else {
-            if (dimensionName.equals("minecraft:the_end") && CONFIG_DEFAULT.ignoreTheEndFailures.get())
+            if (dimensionName.equals("minecraft:the_end") && ignoreTheEndFailures)
                 return currentFunction;
             Set<String> failedDimensionEntry = failedDimensionNoiseReplacements.computeIfAbsent(dimensionName, k -> new HashSet<>());
             if (!failedDimensionEntry.contains(functionName)) {

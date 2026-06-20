@@ -1,7 +1,9 @@
 package github.cosmicdan.temperaturebands.mixin;
 
+import github.cosmicdan.temperaturebands.DimensionData;
 import github.cosmicdan.temperaturebands.TemperatureBands;
 import net.minecraft.world.level.storage.LevelStorageSource;
+import org.jspecify.annotations.NonNull;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -9,6 +11,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.nio.file.Path;
+import java.util.Map;
 
 /**
  * Responsible for fetching the save directory of a loaded world so we can save per-world config
@@ -22,8 +25,11 @@ abstract class LevelStorageSourceHooks {
             at = @At("TAIL")
     )
     private void onCreateAccess(String saveName, CallbackInfoReturnable<LevelStorageSource.LevelStorageAccess> cir) {
-        Path saveDir = getBaseDir().toAbsolutePath().resolve(saveName);
-        TemperatureBands.onLevelStorageLoad(saveDir);
+        // (Re)creating a new world OR Deleting a world
+        if (!TemperatureBands.isDeleteScreenActive) {
+            Path saveDir = getBaseDir().toAbsolutePath().resolve(saveName);
+            TemperatureBands.onLevelStorageLoad(saveDir);
+        }
     }
 
     @Inject(
@@ -31,6 +37,7 @@ abstract class LevelStorageSourceHooks {
             at = @At("TAIL")
     )
     private void onValidateAndCreateAccess(String saveName, CallbackInfoReturnable<LevelStorageSource.LevelStorageAccess> cir) {
+        // Loading an existing world (possibly for recreation, which will call onCreateAccess after confirmed)
         Path saveDir = getBaseDir().toAbsolutePath().resolve(saveName);
         TemperatureBands.onLevelStorageLoad(saveDir);
     }
