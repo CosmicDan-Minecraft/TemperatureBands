@@ -75,7 +75,7 @@ public final class TemperatureBands {
     // Global settings (not per-world)
     public static boolean configDoBenchmark = false;
     public static boolean copyConfigOnRecreateWorld = true;
-    public static boolean ignoreTheEndFailures = true;
+    public static Set<String> ignoreDimensionFailures = new HashSet<>();
     public static boolean dumpRiverAndOceanBiomes = false;
     // Global climate sampler settings (not per-world)
     public static int configClimateSamplerCacheSize = 5;
@@ -114,7 +114,7 @@ public final class TemperatureBands {
     public static void doModConfigGlobal() {
         // global config (not per-world) is always read from mod config
         configDoBenchmark = TemperatureBands.CONFIG_DEFAULT.doBenchmark.get();
-        ignoreTheEndFailures = TemperatureBands.CONFIG_DEFAULT.ignoreTheEndFailures.get();
+        TbUtils.convertCsvToSet(TemperatureBands.CONFIG_DEFAULT.ignoreDimensionFailures.get(), ignoreDimensionFailures);
         dumpRiverAndOceanBiomes = TemperatureBands.CONFIG_DEFAULT.dumpRiverAndOceanBiomes.get();
         configClimateSamplerCacheSize = TemperatureBands.CONFIG_DEFAULT.climateSamplerCacheSize.get();
         configClimateSamplerCachePrefetchRadius = TemperatureBands.CONFIG_DEFAULT.climateSamplerCachePrefetchRadius.get();
@@ -164,7 +164,7 @@ public final class TemperatureBands {
         configDimBlacklistAsWhitelist = TemperatureBands.CONFIG_DEFAULT.dimBlacklistAsWhitelist.get();
         configDistanceFunction = TemperatureBands.CONFIG_DEFAULT.distanceFunction.get();
         String dimBlacklist = TemperatureBands.CONFIG_DEFAULT.dimBlacklist.get();
-        setDimBlacklist(configDimBlacklist, dimBlacklist);
+        setDimBlacklist(dimBlacklist, configDimBlacklist);
         // Temp algo 1
         if (configAlgorithm == 1) {
             configAlgo1BandVariance = TemperatureBands.CONFIG_DEFAULT.algo1bandVariance.get();
@@ -218,7 +218,7 @@ public final class TemperatureBands {
                     configDistanceFunction = Integer.parseInt(prop.getProperty(CommonConfig.distanceFunctionName, "1"));
                     // Whitelist/blacklist
                     String dimBlacklist = prop.getProperty(CommonConfig.dimBlacklistName, "");
-                    setDimBlacklist(configDimBlacklist, dimBlacklist);
+                    setDimBlacklist(dimBlacklist, configDimBlacklist);
                     configDimBlacklistAsWhitelist = Boolean.parseBoolean(prop.getProperty(CommonConfig.dimBlacklistAsWhitelistName));
                     // Temp algo 1
                     if (configAlgorithm == 1) {
@@ -264,12 +264,10 @@ public final class TemperatureBands {
         }
     }
 
-    private static void setDimBlacklist(Set<String> listToUse, String dimBlacklist) {
-        String[] dimBlacklistSplit = dimBlacklist.split(",");
-        Collections.addAll(listToUse, dimBlacklistSplit);
-        listToUse.remove("");
-        if (!listToUse.isEmpty())
-            LOGGER.info("Using dimension {}: {}", configDimBlacklistAsWhitelist ? "whitelist" : "blacklist", dimBlacklist);
+    private static void setDimBlacklist(String dimBlacklistIn, Set<String> dimBlackListOut) {
+        TbUtils.convertCsvToSet(dimBlacklistIn, dimBlackListOut);
+        if (!dimBlackListOut.isEmpty())
+            LOGGER.info("Applying dimension {}: {}", configDimBlacklistAsWhitelist ? "whitelist" : "blacklist", dimBlacklistIn);
         else
             LOGGER.info("Dimension {} is empty for this world", configDimBlacklistAsWhitelist ? "whitelist" : "blacklist");
     }
@@ -285,11 +283,8 @@ public final class TemperatureBands {
         prop.setProperty(CommonConfig.noiseFactorName, String.valueOf(configNoiseFactor));
         prop.setProperty(CommonConfig.distanceFunctionName, String.valueOf(configDistanceFunction));
         // Whitelist/blacklist
-        String configDimBlacklistRaw = "";
-        for (String blacklistEntry : configDimBlacklist) {
-            configDimBlacklistRaw = configDimBlacklistRaw.concat(blacklistEntry + ",");
-        }
-        prop.setProperty(CommonConfig.dimBlacklistName, configDimBlacklistRaw);
+
+        prop.setProperty(CommonConfig.dimBlacklistName, TbUtils.convertSetToCsv(configDimBlacklist));
         prop.setProperty(CommonConfig.dimBlacklistAsWhitelistName, String.valueOf(configDimBlacklistAsWhitelist));
         // Temp algo 1
         if (configAlgorithm == 1) {
@@ -352,7 +347,7 @@ public final class TemperatureBands {
             DimensionData.recreateDimDataWithNewNoiseFunction(dimensionName, activeDimData, functionName, (DensityFunctions.HolderHolder) currentFunction);
             TemperatureBands.LOGGER.info("Succeeded in hooking {} for dimension '{}'", functionName, dimensionName);
         } else {
-            if (dimensionName.equals("minecraft:the_end") && ignoreTheEndFailures)
+            if (ignoreDimensionFailures.contains(dimensionName))
                 return currentFunction;
             Set<String> failedDimensionEntry = failedDimensionNoiseReplacements.computeIfAbsent(dimensionName, k -> new HashSet<>());
             if (!failedDimensionEntry.contains(functionName)) {

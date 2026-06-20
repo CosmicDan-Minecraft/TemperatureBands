@@ -19,11 +19,11 @@ public class CommonConfig {
              [copyConfigOnRecreateWorld] will, when true, copy the previous world Temperature Bands config to the new world when "Recreate" is being done.
               - Set this to false if you want to "upgrade" your world with new features/defaults when updating the mod.
               - Relevant for client only. Servers will need to manually recreate their worlds (i.e. set the same seed/settings in server config and delete old world).""";
-    public final ModConfigSpec.BooleanValue ignoreTheEndFailures; // TODO: Actually change to a blacklist and prefill with minecraft:the_end. Also make whitelist final values end with a comma.
-    public static final String ignoreTheEndFailuresTxt = """
+    public final ModConfigSpec.ConfigValue<String> ignoreDimensionFailures; // TODO: Actually change to a blacklist and prefill with minecraft:the_end. Also make whitelist final values end with a comma.
+    public static final String ignoreDimensionFailuresTxt = """
 
-             [ignoreTheEndFailures] is a list of dimensions to ignore logging errors about if replacing temperature/humidity functions fail.
-              - Separate with commas.
+             [ignoreDimensionFailures] is a list of dimensions to ignore logging errors about when replacing their temperature/humidity functions fail.
+              - Separate with commas. Trailing comma doesn't matter.
               - The default entry of The End is there since vanilla End uses a constant 0.0 for temperature (for some reason, though it doesn't use any humidity noise at all)
                 and the mod will try to replace temperature anyway, giving a false 'report if you want support for this custom dimension' error. Please don't report that error :)""";
     public final ModConfigSpec.BooleanValue dumpRiverAndOceanBiomes;
@@ -131,7 +131,9 @@ public class CommonConfig {
     public static final String dimBlacklistName = "configDimBlacklist";
     public static final String dimBlacklistTxt = """
              
-             [dimBlacklist] specifies a blacklist of dimensions to exclude from *all* modifications, separated by commas. Default excludes the_nether and the_end.""";
+             [dimBlacklist] specifies a blacklist of dimensions to exclude from *all* modifications.
+              - Separate with commas. Trailing comma doesn't matter.
+              - Default excludes the_nether and the_end.""";
     public final ModConfigSpec.BooleanValue dimBlacklistAsWhitelist;
     public static final String dimBlacklistAsWhitelistName = "configDimBlacklistAsWhitelist";
     public static final String dimBlacklistAsWhitelistTxt = """
@@ -260,9 +262,9 @@ public class CommonConfig {
         copyConfigOnRecreateWorld = builder
                 .comment(copyConfigOnRecreateWorldTxt)
                 .define("copyConfigOnRecreateWorld", true);
-        ignoreTheEndFailures = builder
-                .comment(ignoreTheEndFailuresTxt)
-                .define("ignoreTheEndFailures", true);
+        ignoreDimensionFailures = builder
+                .comment(ignoreDimensionFailuresTxt)
+                .define("ignoreDimensionFailures", "minecraft:the_end,");
         dumpRiverAndOceanBiomes = builder
                 .comment(dumpRiverAndOceanBiomesTxt)
                 .define("dumpRiverAndOceanBiomes", false);
