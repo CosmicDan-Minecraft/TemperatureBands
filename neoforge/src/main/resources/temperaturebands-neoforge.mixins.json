@@ -3,6 +3,7 @@
   "minVersion": "0.8",
   "package": "github.cosmicdan.temperaturebands.neoforge.mixin",
   "compatibilityLevel": "JAVA_21",
+  "plugin" : "github.cosmicdan.temperaturebands.neoforge.mixin.Plugin",
   "mixins": [
     "WorldPreviewForgeHooksWorkManager",
     "WorldPreviewHooksWorkBatch"
