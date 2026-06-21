@@ -17,9 +17,9 @@ public class CommonConfig {
     public static final String copyConfigOnRecreateWorldTxt = """
              
              [copyConfigOnRecreateWorld] will, when true, copy the previous world Temperature Bands config to the new world when "Recreate" is being done.
-              - Set this to false if you want to "upgrade" your world with new features/defaults when updating the mod.
-              - Relevant for client only. Servers will need to manually recreate their worlds (i.e. set the same seed/settings in server config and delete old world).""";
-    public final ModConfigSpec.ConfigValue<String> ignoreDimensionFailures; // TODO: Actually change to a blacklist and prefill with minecraft:the_end. Also make whitelist final values end with a comma.
+              - Set this to false if you want to "upgrade" your world with new features and defaults after updating the mod. You will still need to Recreate the world.
+              - Relevant for client only. Servers will need to manually recreate their worlds (e.g. set the same seed/settings in server config and delete old world).""";
+    public final ModConfigSpec.ConfigValue<String> ignoreDimensionFailures;
     public static final String ignoreDimensionFailuresTxt = """
 
              [ignoreDimensionFailures] is a list of dimensions to ignore logging errors about when replacing their temperature/humidity functions fail.
@@ -49,15 +49,29 @@ public class CommonConfig {
              [climateSamplerCachePrefetchRadius] is, if non-zero (along with climateSamplerCacheSize also being non-zero), the rough radius to perform additional sampling (and
                 caching) while caching-and-sampling the climate. This will be done asynchronously as units of 'climateSamplerResolution' (which is in the climatesampler-world
                 section).
-              - Negative numbers refer to a fraction of available CPU threads; the default of -8 will use one-eighth of threads as radius (actual thread count will be much higher
+              - Negative numbers refer to a fraction of available CPU threads; the default of -10 will use one-tenth of threads as radius (actual thread count will be higher
                 but they're very short-lived - a few MS - and modern Java handles this well).
               - Highly recommended to leave enabled as it drastically improves world generation speed, but there are diminishing returns if set too high.
               - If you experience 'can't keep up' warnings while exploring new chunks, try reducing this value. A low fixed number like 1 or 2 could be better.
-              - Result is rounded-down, meaning setting it too far negative could result in 0 which will disable prefetching. The default of -8 will do this if your CPU has *less*
-                than 8 threads, which is probably appropriate.
+              - Result is rounded-down, meaning setting it too far negative could result in 0 which will disable prefetching. The default of -10 will do this if your CPU has *less*
+                than 10 threads, which is probably appropriate.
               - Do note that World Preview (and new world creation) will be much slower at the very start, but the speed will improve over time and actually generate quicker
                 overall, especially in high resolutions of World Preview and/or high chunk rendering distances. Reducing thread count in World Preview settings a little might help too.
               - Finally, if you want to stress-test your CPU, disable this completely with 0 and keep max-1 (or max) threads in World Preview.""";
+    public final ModConfigSpec.IntValue climateSamplerCacheDelay;
+    public static final String climateSamplerCacheDelayTxt = """
+             
+             [climateSamplerCacheDelay] will, when above zero, delay sampler caching/prefetching until the game world has ticked this many times.
+              - The default value of zero means no delay.
+              - If you experience 'cant keep up' warnings in the log but only during the first few seconds of loading a world, increasing this value can help.
+              - If you're using World Preview, this value is ignored and prefetch is always active since it significantly improves preview speed and doesn't cause any issues.""";
+    public final ModConfigSpec.BooleanValue climateSamplerWarmupMsg;
+    public static final String climateSamplerWarmupMsgTxt = """
+             
+             [climateSamplerWarmupMsg] will, when true, show a message on the loading screen about the Climate Sampler needing to warm up.
+              - Only shown is advanced humidity is active for the overworld dimension
+              - The message is just some QoL because the progress will seem to be stuck on 0% for a few seconds while initial climate sampling occurs
+              - Config is here to disable it just in case you use a custom loading screen that causes a crash or something.""";
     public static final String sectionWorld = "world";
     public static final String sectionWorldTxt = """
              [world] are general defaults for new worlds. These will apply to newly-generated worlds only, existing worlds will remember their own settings.
@@ -133,12 +147,14 @@ public class CommonConfig {
              
              [dimBlacklist] specifies a blacklist of dimensions to exclude from *all* modifications.
               - Separate with commas. Trailing comma doesn't matter.
-              - Default excludes the_nether and the_end.""";
+              - Default excludes the_nether and the_end.
+              - Adding minecraft:overworld won't do anything, it is always whitelisted.""";
     public final ModConfigSpec.BooleanValue dimBlacklistAsWhitelist;
     public static final String dimBlacklistAsWhitelistName = "configDimBlacklistAsWhitelist";
     public static final String dimBlacklistAsWhitelistTxt = """
              
-             [dimBlacklistAsWhitelist] will, when true, use the above blacklist as a whitelist instead.""";
+             [dimBlacklistAsWhitelist] will, when true, use the above blacklist as a whitelist instead.
+              - Adding minecraft:overworld is not necessary, it is always whitelisted.""";
 
     public static final String sectionAlgo1 = "algorithm1";
     public static final String sectionAlgo1Txt = """
@@ -154,7 +170,8 @@ public class CommonConfig {
              
              [configAlgo1BandVariance] is the band variance in blocks (roughly). If below 10, each band will have a completely straight edge across the world and will disable all
                 remaining algo1 features.
-              - You will want to keep this a fairly small value. Making it too large will result in weirdness, especially if it's too close to the bandSize.""";
+              - You will want to keep this a fairly small value. Making it too large will result in weirdness, especially if it's too close to the bandSize.
+              - If you want to maintain as much performance as possible, keep this as a power of two.""";
     public final ModConfigSpec.DoubleValue algo1bandVarianceSteepness;
     public static final String algo1bandVarianceSteepnessName = "configAlgo1bandVarianceSteepness";
     public static final String algo1bandVarianceSteepnessTxt = """
@@ -276,7 +293,13 @@ public class CommonConfig {
                 .defineInRange("climateSamplerCacheSize", 5, 0, 128);
         climateSamplerCachePrefetchRadius = builder
                 .comment(climateSamplerCachePrefetchRadiusTxt)
-                .defineInRange("climateSamplerCachePrefetchRadius", -8, -32, 32);
+                .defineInRange("climateSamplerCachePrefetchRadius", -10, -32, 32);
+        climateSamplerCacheDelay = builder
+                .comment(climateSamplerCacheDelayTxt)
+                .defineInRange("climateSamplerCacheDelay", 0, 0, Integer.MAX_VALUE);
+        climateSamplerWarmupMsg = builder
+                .comment(climateSamplerWarmupMsgTxt)
+                .define("climateSamplerWarmupMsg", true);
         builder.pop();
 
         builder.push(sectionWorld).comment(sectionWorldTxt);

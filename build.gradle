@@ -65,6 +65,8 @@ subprojects {
     dependencies {
         minecraft "net.minecraft:minecraft:$rootProject.minecraft_version"
         mappings loom.officialMojangMappings()
+        // Caffeine library (fast LruCache) - https://github.com/ben-manes/caffeine
+        implementation("com.github.ben-manes.caffeine:caffeine:3.2.4")
     }
 
     java {

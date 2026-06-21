@@ -4,18 +4,18 @@
   "compatibilityLevel": "JAVA_17",
   "minVersion": "0.8",
   "client": [
-    "client.CreateWorldScreenHooks",
-    "client.WorldSelectionListEntryHooks"
+    "ClientGuiHooks$CreateWorldScreenHooks",
+    "ClientGuiHooks$WorldSelectionListEntryHooks",
+    "ClientGuiHooks$LevelLoadingScreenHooks"
   ],
   "mixins": [
-    "DensityFunctionsHooks",
-    "LevelStorageSourceHooks",
-    "MinecraftServerHooks",
-    "RandomStateHooks",
-    "ChunkMapHooks",
-    "NoiseRouterHooks",
-    "ServerLevelHooks",
-    "MultiNoiseBiomeSourceInvoker"
+    "LevelHooks$DensityFunctionsHooks",
+    "LevelHooks$LevelStorageSourceHooks",
+    "LevelHooks$ChunkMapHooks",
+    "LevelHooks$NoiseRouterHooks",
+    "LevelHooks$ServerLevelHooks",
+    "MultiNoiseBiomeSourceInvoker",
+    "RandomStateHooks"
   ],
   "injectors": {
     "defaultRequire": 1

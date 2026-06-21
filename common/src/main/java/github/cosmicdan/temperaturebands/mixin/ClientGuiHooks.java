@@ -1,0 +1,92 @@
+package github.cosmicdan.temperaturebands.mixin;
+
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import github.cosmicdan.temperaturebands.TemperatureBands;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.DebugScreenOverlay;
+import net.minecraft.client.gui.screens.LevelLoadingScreen;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.worldselection.CreateWorldScreen;
+import net.minecraft.client.gui.screens.worldselection.WorldSelectionList;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.progress.StoringChunkProgressListener;
+import org.spongepowered.asm.mixin.Final;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
+
+import java.util.List;
+
+public abstract class ClientGuiHooks {
+    /**
+     * Responsible for clearing data/config when the "Create World" screen is cancelled
+     */
+    @Mixin(CreateWorldScreen.class)
+    public static abstract class CreateWorldScreenHooks {
+        @Inject(
+                method = "popScreen",
+                at = @At("HEAD")
+        )
+        private void onPopScreen(CallbackInfo ci) {
+            TemperatureBands.clearDimensionDataAndConfig(null);
+            TemperatureBands.logDebug("World creation cancelled, clearing dimension data/config");
+        }
+    }
+
+    /**
+     * Responsible for detecting if a world is being deleted in order to skip loading config for it
+     */
+    @Mixin(WorldSelectionList.WorldListEntry.class)
+    public static abstract class WorldSelectionListEntryHooks {
+        @Inject(
+                method = "doDeleteWorld",
+                at = @At("HEAD")
+        )
+        public void onDoDeleteWorldStart(CallbackInfo ci) {
+            TemperatureBands.isDeleteScreenActive = true;
+        }
+
+        @Inject(
+                method = "doDeleteWorld",
+                at = @At("RETURN")
+        )
+        public void onDoDeleteWorldEnd(CallbackInfo ci) {
+            TemperatureBands.isDeleteScreenActive = false;
+        }
+    }
+
+    @Mixin(LevelLoadingScreen.class)
+    public static abstract class LevelLoadingScreenHooks extends Screen {
+        @Shadow
+        @Final
+        private StoringChunkProgressListener progressListener;
+
+        protected LevelLoadingScreenHooks(Component component) {
+            super(component);
+        }
+
+        @WrapOperation(
+                method = "render",
+                at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;drawCenteredString(Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/Component;III)V")
+        )
+        public void onDrawCenteredString(GuiGraphics guiGraphics, Font font, Component component, int middleX, int middleTopY, int color, Operation<Void> original) {
+            original.call(guiGraphics, font, component, middleX, middleTopY, color);
+            if (TemperatureBands.addLoadingScreenText) {
+                if (progressListener.getProgress() < 10) {
+                    TemperatureBands.updateActiveSamplers = true;
+                    int middleBottomY = (height / 2) + progressListener.getDiameter() + 9 + 2;
+                    guiGraphics.drawCenteredString(font, "Climate Sampler is warming up, standby...", middleX, middleBottomY, color);
+                    guiGraphics.drawCenteredString(font, "Active samplers = " + TemperatureBands.activeSamplers, middleX, middleBottomY + 13, color);
+                } else {
+                    TemperatureBands.updateActiveSamplers = false;
+                }
+            }
+
+        }
+    }
+}

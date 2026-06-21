@@ -44,7 +44,6 @@ dependencies {
     shadowBundle project(path: ':common', configuration: 'transformProductionNeoForge')
     
     // Caffeine library (fast LruCache) - https://github.com/ben-manes/caffeine
-    implementation("com.github.ben-manes.caffeine:caffeine:3.2.4")
     forgeRuntimeLibrary("com.github.ben-manes.caffeine:caffeine:3.2.4")
     
     // World Preview (NeoForge port via Modrinth)

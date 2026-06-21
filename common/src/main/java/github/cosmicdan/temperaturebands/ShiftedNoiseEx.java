@@ -6,6 +6,7 @@ import java.util.Objects;
 
 public abstract class ShiftedNoiseEx implements DensityFunction {
     final String dimensionName;
+    final DimensionConfig config;
     final DensityFunction shiftX;
     final DensityFunction shiftY;
     final DensityFunction shiftZ;
@@ -13,8 +14,9 @@ public abstract class ShiftedNoiseEx implements DensityFunction {
     final double yScale;
     final NoiseHolder noise;
 
-    public ShiftedNoiseEx(String dimensionName, DensityFunction shiftX, DensityFunction shiftY, DensityFunction shiftZ, double xzScale, double yScale, NoiseHolder noise) {
+    public ShiftedNoiseEx(String dimensionName, DimensionConfig config, DensityFunction shiftX, DensityFunction shiftY, DensityFunction shiftZ, double xzScale, double yScale, NoiseHolder noise) {
         this.dimensionName = dimensionName;
+        this.config = config;
         this.shiftX = shiftX;
         this.shiftY = shiftY;
         this.shiftZ = shiftZ;
@@ -23,14 +25,7 @@ public abstract class ShiftedNoiseEx implements DensityFunction {
         this.noise = noise;
     }
 
-    public abstract String getName();
-
-    DimensionData findDimensionData() {
-        DimensionData dimensionData = TemperatureBands.DIMENSION_DATA_CACHE.getIfPresent(dimensionName);
-        if (dimensionData == null)
-            throw new RuntimeException("Tried to get DimensionData for {} but it was null, eh?" + dimensionName);
-        return dimensionData;
-    }
+    public abstract double computeOriginal(FunctionContext context);
 
     @Override
     public String toString() {

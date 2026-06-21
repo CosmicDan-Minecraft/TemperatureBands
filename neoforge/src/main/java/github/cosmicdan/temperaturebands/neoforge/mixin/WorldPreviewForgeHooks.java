@@ -28,7 +28,7 @@ abstract class WorldPreviewForgeHooksWorkManager {
             at = @At("HEAD")
     )
     public void onQueueRangeStart(BlockPos topLeftBlock, BlockPos bottomRightBlock, CallbackInfo ci) {
-        if (TemperatureBands.configDoBenchmark)
+        if (TemperatureBands.CONFIG_GLOBAL.doBenchmark())
             TbUtils.benchmarkReset();
     }
 
@@ -37,7 +37,7 @@ abstract class WorldPreviewForgeHooksWorkManager {
             at = @At("RETURN")
     )
     public void onQueueRangeEnd(BlockPos topLeftBlock, BlockPos bottomRightBlock, CallbackInfo ci) {
-        if (TemperatureBands.configDoBenchmark)
+        if (TemperatureBands.CONFIG_GLOBAL.doBenchmark())
             TbUtils.benchmarkStart(currentBatches.size());
     }
 }
@@ -50,7 +50,7 @@ abstract class WorldPreviewHooksWorkBatch {
             at = @At("RETURN")
     )
     public void onApplyChunkResultEnd(List<WorkResult> workResultList, CallbackInfo ci) {
-        if (TemperatureBands.configDoBenchmark)
+        if (TemperatureBands.CONFIG_GLOBAL.doBenchmark())
             TbUtils.benchmarkBatchDone();
     }
 }
