@@ -40,7 +40,7 @@ public class DimensionData {
 
         // sanity check
         if (config == null)
-            throw new RuntimeException("Tried to create new DimensionData but provided config is null, eh?");
+            TbUtils.doCrash("Tried to create new DimensionData but provided config is null, eh?");
 
         if (isLevelReady) {
             // setup and verification for humidity
@@ -95,7 +95,7 @@ public class DimensionData {
         else if (noiseName.equals(ShiftedNoiseHumidity.NAME))
             return noiseHumidity;
         else
-            throw new RuntimeException("Attempted getting an invalid noise: " + noiseName);
+            TbUtils.doCrash("Attempted getting an invalid noise: " + noiseName);
     }
 
     /*
@@ -126,7 +126,7 @@ public class DimensionData {
         else if (noiseName.equals(ShiftedNoiseHumidity.NAME))
             dimData = new DimensionData(false, dimData.config, dimData.level, dimData.noiseRouter, dimData.noiseTemperature, noiseFunction);
         else
-            throw new RuntimeException("Attempted recreating with invalid noise: " + noiseName);
+            TbUtils.doCrash("Attempted recreating with invalid noise: " + noiseName);
 
         TemperatureBands.DIMENSION_DATA_CACHE.put(dimensionName, dimData);
     }

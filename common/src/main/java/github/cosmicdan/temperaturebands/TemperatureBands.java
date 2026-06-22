@@ -89,7 +89,7 @@ public final class TemperatureBands {
             else if (functionName.equals(ShiftedNoiseHumidity.NAME))
                 newNoise = new ShiftedNoiseHumidity(dimensionName, dimData.config, currentFunctionActual.shiftX(), currentFunctionActual.shiftY(), currentFunctionActual.shiftZ(), currentFunctionActual.xzScale(), currentFunctionActual.yScale(), currentFunctionActual.noise());
             else
-                throw new RuntimeException("Unhandled noise type: " + functionName);
+                TbUtils.doCrash("Unhandled noise type: " + functionName + ". Please add this dimension to blacklist, and/or report the error so support for this dimension might be added (if it's a mod-added dimension).");
             DensityFunctions.HolderHolder newFunction = new DensityFunctions.HolderHolder(new Holder.Direct<>(newNoise));
             currentFunction = new DensityFunctions.HolderHolder(new Holder.Direct<>(newFunction));
             DimensionData.recreateDimDataWithNewNoiseFunction(dimensionName, dimData, functionName, (DensityFunctions.HolderHolder) currentFunction);

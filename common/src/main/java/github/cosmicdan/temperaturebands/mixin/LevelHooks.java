@@ -163,7 +163,7 @@ public abstract class LevelHooks {
         )
         public DensityFunction onMapDensityFunction(DensityFunction instance, DensityFunction.Visitor visitor, Operation<DensityFunction> original) {
             if (DimensionConfig.isOnlyLoadingWorldWithoutConfig) {
-                throw new RuntimeException("Tried to load an existing world that didn't have the mod installed. Please recreate this world instead, or remove the mod.");
+                TbUtils.doCrash("Tried to load an existing world that didn't have the mod installed. Please recreate this world instead, or remove the mod.");
             }
             DensityFunction currentFunction = instance;
             if (currentFunction.equals(temperature) || currentFunction.equals(vegetation)) {

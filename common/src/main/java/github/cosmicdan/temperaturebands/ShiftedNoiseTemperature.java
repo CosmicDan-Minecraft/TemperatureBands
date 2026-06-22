@@ -68,7 +68,7 @@ public class ShiftedNoiseTemperature extends ShiftedNoiseEx {
                 bandPos += (int) (computeOriginal(context) * config.noiseFactor());
             }
         } else {
-            throw new RuntimeException("Temperature Bands has an invalid algorithm setting (" + config.bandAlgorithm() + ")");
+            TbUtils.doCrash("Temperature Bands has an invalid algorithm setting (" + config.bandAlgorithm() + ")");
         }
 
         // calculate grade

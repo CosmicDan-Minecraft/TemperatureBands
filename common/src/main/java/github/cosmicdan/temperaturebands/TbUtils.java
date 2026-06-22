@@ -1,5 +1,7 @@
 package github.cosmicdan.temperaturebands;
 
+import net.minecraft.CrashReport;
+import net.minecraft.ReportedException;
 import net.minecraft.world.level.levelgen.DensityFunction;
 
 import java.io.File;
@@ -110,8 +112,9 @@ public class TbUtils {
             try {
                 TEMP_PATH = Paths.get(System.getProperty("java.io.tmpdir")).toRealPath();
             } catch (IOException ex) {
-                logExceptionAsError(ex);
-                TemperatureBands.LOGGER.error("Exception while trying to get temporary path, full error above. Cannot continue.");
+                //logExceptionAsError(ex);
+                //TemperatureBands.LOGGER.error("Exception while trying to get temporary path, full error above. Cannot continue.");
+                doCrash(ex, "Couldn't get system temporary path");
             }
         }
         return TEMP_PATH;
@@ -127,16 +130,19 @@ public class TbUtils {
             }
             return pathToCheck.toPath().toRealPath().startsWith(getTempPath());
         } catch (IOException ex) {
-            logExceptionAsError(ex);
-            TemperatureBands.LOGGER.error("Exception while trying to get real path of '{}', full error above. Cannot continue.", pathToCheck);
+            //logExceptionAsError(ex);
+            //TemperatureBands.LOGGER.error("Exception while trying to get real path of '{}', full error above. Cannot continue.", pathToCheck);
+            doCrash(ex, "Couldn't get real path of '" + pathToCheck + "'.");
         }
         return false;
     }
 
-    public static void logExceptionAsError(Exception ex) {
-        TemperatureBands.LOGGER.error(ex.toString());
-        for (StackTraceElement element : ex.getStackTrace()) {
-            TemperatureBands.LOGGER.error(element.toString());
-        }
+    public static <T> T doCrash(String msg) throws ReportedException {
+        return doCrash(new RuntimeException(), msg);
+    }
+
+    public static <T> T doCrash(Throwable throwable, String msg) throws ReportedException {
+        CrashReport report = CrashReport.forThrowable(throwable, "Temperature Bands error: " + msg);
+        throw new ReportedException(report);
     }
 }

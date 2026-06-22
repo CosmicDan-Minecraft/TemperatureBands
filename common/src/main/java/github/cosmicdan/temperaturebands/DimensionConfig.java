@@ -135,13 +135,13 @@ public record DimensionConfig(
 
     private static void validateBandAlgorithmValue(int bandAlgorithm) {
         if (bandAlgorithm != 1) {
-            throw new RuntimeException("Unrecognized bandAlgorithm value '" + bandAlgorithm + "' on loading default config, did you downgrade the mod?");
+            TbUtils.doCrash("Unrecognized bandAlgorithm value '" + bandAlgorithm + "' on loading default config, did you downgrade the mod?");
         }
     }
 
     private static void validateHumidityAlgorithmValue(int humidityAlgorithm) {
         if (humidityAlgorithm < 0 || humidityAlgorithm > 2) {
-            throw new RuntimeException("Unrecognized humidityAlgorithm value '" + humidityAlgorithm + "' on loading default config, did you downgrade the mod?");
+            TbUtils.doCrash("Unrecognized humidityAlgorithm value '" + humidityAlgorithm + "' on loading default config, did you downgrade the mod?");
         }
     }
 
@@ -154,7 +154,7 @@ public record DimensionConfig(
         // gather info
         DimensionConfig dimConfig = null;
         if (worldPropFile == null)
-            throw new RuntimeException("worldPropFile must be provided!");
+            return TbUtils.doCrash("worldPropFile must be provided!");
         String worldName = worldPropFile.getParentFile().getName();
         boolean isTempProp = TbUtils.isFileInsideTemp(worldPropFile);
         String configTypeNameForLogging = isTempProp ? "temporary" : "base";
@@ -166,8 +166,8 @@ public record DimensionConfig(
                     // ... and config is set to copy source world config
                     @Nullable File sourceWorldPropFile = RECREATED_WORLD_SOURCE.worldPropFile;
                     if (sourceWorldPropFile == null)
-                        throw new RuntimeException("Null worldPropFile from source world during recreation, eh?");
-                    if (sourceWorldPropFile.exists()) {
+                        return TbUtils.doCrash("Null worldPropFile from source world during recreation, eh?");
+                    else if (sourceWorldPropFile.exists()) {
                         dimConfig = createConfigFromProp(sourceWorldPropFile, ConfigType.BASE, worldPropFile);
                         TemperatureBands.LOGGER.info("Loaded {} config for world '{}' from recreated world source '{}'", configTypeNameForLogging, worldName, sourceWorldPropFile.getParentFile().getName());
                     } else {
@@ -186,12 +186,14 @@ public record DimensionConfig(
             }
             // Save config to props if not temporary (after some sanity checks)
             if (!isTempProp) {
-                if (dimConfig.type.equals(ConfigType.TEMP))
-                    throw new RuntimeException("Fresh DimensionConfig config is TEMP type, eh?");
+                if (dimConfig == null)
+                    return TbUtils.doCrash("dimConfig is null");
+                else if (dimConfig.type.equals(ConfigType.TEMP))
+                    return TbUtils.doCrash("Fresh DimensionConfig config is TEMP type, eh?");
                 else if (dimConfig.worldPropFile == null)
-                    throw new RuntimeException("Fresh DimensionConfig worldPropFile is null, eh?");
+                    return TbUtils.doCrash("Fresh DimensionConfig worldPropFile is null, eh?");
                 else if (dimConfig.worldPropFile.exists())
-                    throw new RuntimeException("Fresh DimensionConfig worldPropFile already exists, eh?");
+                    return TbUtils.doCrash("Fresh DimensionConfig worldPropFile already exists, eh?");
                 saveConfigToProp(dimConfig, dimConfig.worldPropFile);
             } else {
                 TemperatureBands.logDebug("Not saving prop because config is temporary type");
@@ -207,6 +209,8 @@ public record DimensionConfig(
                 dimConfig = newBaseOrTempFromDefault(isTempProp, worldPropFile);
             }
         }
+        if (dimConfig == null)
+            return TbUtils.doCrash("dimConfig is null");
         logBlacklistConfig(worldName, dimConfig.dimBlacklist, dimConfig.dimBlacklistAsWhitelist);
         return dimConfig;
     }
@@ -293,8 +297,7 @@ public record DimensionConfig(
                     Integer.parseInt(prop.getProperty(CommonConfig.climateSamplerResolutionName, String.valueOf(DEFAULT.climateSamplerResolution)))
             );
         } catch (IOException ex) {
-            TbUtils.logExceptionAsError(ex);
-            throw new RuntimeException("Error reading world config, crashing-out intentionally to prevent corruption. Full error is above. If you modified the world config manually, please fix it. Otherwise, report this Temperature Bands error.");
+            return TbUtils.doCrash(ex, "Error reading world config, crashing-out intentionally to prevent corruption. Full error is above. If you modified the world config manually, please fix it. Otherwise, report this Temperature Bands error.");
         }
     }
 
@@ -320,7 +323,7 @@ public record DimensionConfig(
                 prop.setProperty(CommonConfig.algo1bandVarianceName, String.valueOf(configToSave.algo1bandVariance));
                 prop.setProperty(CommonConfig.algo1bandVarianceSteepnessName, String.valueOf(configToSave.algo1bandVarianceSteepness));
             } else {
-                throw new RuntimeException("Unhandled algorithm at config world save, fixme!");
+                TbUtils.doCrash("Unhandled algorithm at config world save, fixme!");
             }
             // Humidity
             prop.setProperty(CommonConfig.humidityAlgorithmName, String.valueOf(configToSave.humidityAlgorithm));
@@ -334,14 +337,13 @@ public record DimensionConfig(
                 prop.setProperty(CommonConfig.humidityRiverInfluenceName, String.valueOf(configToSave.humidityRiverInfluence));
                 prop.setProperty(CommonConfig.humiditySearchDistanceName, String.valueOf(configToSave.humiditySearchDistance));
             } else if (configToSave.humidityAlgorithm != 0) {
-                throw new RuntimeException("Unhandled humidity algorithm at config world save, fixme!");
+                TbUtils.doCrash("Unhandled humidity algorithm at config world save, fixme!");
             }
             prop.setProperty(CommonConfig.climateSamplerResolutionName, String.valueOf(configToSave.climateSamplerResolution));
 
             prop.store(worldPropOutputStream, "World-specific Temperature Bands settings. Do not edit!");
         } catch (IOException ex) {
-            TbUtils.logExceptionAsError(ex);
-            throw new RuntimeException("Error writing world-specific config. Crashing-out intentionally to prevent world corruption. Error details are above.");
+            TbUtils.doCrash(ex, "Couldn't save world-specific config. Crashing-out intentionally to prevent world corruption. Error details are above.");
         }
     }
 }

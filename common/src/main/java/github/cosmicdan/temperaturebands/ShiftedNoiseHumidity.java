@@ -139,7 +139,7 @@ public class ShiftedNoiseHumidity extends ShiftedNoiseEx {
     private void onFirstCompute() {
         owner = DIMENSION_DATA_CACHE.getIfPresent(dimensionName);
         if (owner == null)
-            throw new RuntimeException("Couldn't find DimensionData on first compute! Eh?");
+            TbUtils.doCrash("Couldn't find DimensionData on first compute! Eh?");
         final BiomeSource biomeSource = owner.getBiomeSource();
         if (biomeSource instanceof MultiNoiseBiomeSource biomeSourceNoise) {
             biomeSourceInvoker = (MultiNoiseBiomeSourceInvoker) biomeSourceNoise;
@@ -252,7 +252,7 @@ public class ShiftedNoiseHumidity extends ShiftedNoiseEx {
 
     private ClimateTargetPointEx sampleClimateFuture(Long packedBlockPos, CompletableFuture<ClimateTargetPointEx> future) {
         if (future.isCancelled()) {
-            throw new CancellationException("Load was cancelled by downstream");
+            TbUtils.doCrash("Load was cancelled by downstream");
         }
         return sampleClimate(packedBlockPos);
     }
