@@ -75,18 +75,11 @@ public abstract class ClientGuiHooks {
                 at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;drawCenteredString(Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/Component;III)V")
         )
         public void onDrawCenteredString(GuiGraphics guiGraphics, Font font, Component component, int middleX, int middleTopY, int color, Operation<Void> original) {
-            original.call(guiGraphics, font, component, middleX, middleTopY, color);
-            if (TemperatureBands.addLoadingScreenText) {
-                if (progressListener.getProgress() < 10) {
-                    TemperatureBands.updateActiveSamplers = true;
-                    int middleBottomY = (height / 2) + progressListener.getDiameter() + 9 + 2;
-                    guiGraphics.drawCenteredString(font, "Climate Sampler is warming up, standby...", middleX, middleBottomY, color);
-                    guiGraphics.drawCenteredString(font, "Active samplers = " + TemperatureBands.activeSamplers, middleX, middleBottomY + 13, color);
-                } else {
-                    TemperatureBands.updateActiveSamplers = false;
-                }
+            if (TemperatureBands.addLoadingScreenText && progressListener.getProgress() < 2) {
+                guiGraphics.drawCenteredString(font, "Climate Sampler is warming up, standby...", middleX, middleTopY, color);
+            } else {
+                original.call(guiGraphics, font, component, middleX, middleTopY, color);
             }
-
         }
     }
 }

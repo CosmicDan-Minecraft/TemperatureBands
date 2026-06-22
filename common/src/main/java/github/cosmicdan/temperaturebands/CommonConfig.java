@@ -40,23 +40,25 @@ public class CommonConfig {
     public final ModConfigSpec.IntValue climateSamplerCacheSize;
     public static final String climateSamplerCacheSizeTxt = """
 
-             [climateSamplerCacheSize] is the size of our custom climate sampler, in megabytes. Setting to zero will disable caching, which may result in better performance if your
-                memory is slow/exhausted (probably not) or your have a low thread-count CPU (maybe).
-              - The default of 5Mb can hold almost 50 thousand samples so should be more than enough for any environment.""";
+             [climateSamplerCacheSize] is the size of our custom climate sampler, in megabytes.
+              - The default of 5Mb can hold almost 50 thousand samples which should be more than enough for any environment.
+              - Setting to zero will disable caching, which is NOT recommended - you will have much higher CPU *and* memory usage without the cache.""";
     public final ModConfigSpec.IntValue climateSamplerCachePrefetchRadius;
     public static final String climateSamplerCachePrefetchRadiusTxt = """
 
              [climateSamplerCachePrefetchRadius] is, if non-zero (along with climateSamplerCacheSize also being non-zero), the rough radius to perform additional sampling (and
-                caching) while caching-and-sampling the climate. This will be done asynchronously as units of 'climateSamplerResolution' (which is in the climatesampler-world
-                section).
-              - Negative numbers refer to a fraction of available CPU threads; the default of -10 will use one-tenth of threads as radius (actual thread count will be higher
+                caching) while sampling. This will be done asynchronously as units of 'climateSamplerResolution' (which is in the climatesampler-world section).
+              - Negative numbers refer to a fraction of available CPU threads; the default of -8 will use one-eighth of threads as radius (actual thread count will be higher
                 but they're very short-lived - a few MS - and modern Java handles this well).
-              - Highly recommended to leave enabled as it drastically improves world generation speed, but there are diminishing returns if set too high.
-              - If you experience 'can't keep up' warnings while exploring new chunks, try reducing this value. A low fixed number like 1 or 2 could be better.
-              - Result is rounded-down, meaning setting it too far negative could result in 0 which will disable prefetching. The default of -10 will do this if your CPU has *less*
-                than 10 threads, which is probably appropriate.
-              - Do note that World Preview (and new world creation) will be much slower at the very start, but the speed will improve over time and actually generate quicker
-                overall, especially in high resolutions of World Preview and/or high chunk rendering distances. Reducing thread count in World Preview settings a little might help too.
+              - Highly recommended to leave enabled as it drastically improves world generation speed with advanced humidity, but there are diminishing returns if set too high.
+              - If you experience 'can't keep up' warnings while exploring new chunks, try reducing this value. A low fixed number like 1 should still be better than 0 (off).
+              - Result is rounded-down, meaning setting it too far negative could result in 0 which will disable prefetching. The default of -8 will do this if your CPU has *less*
+                than 8 threads, which seems appropriate based on my testing. Even on a 24-thread CPU, this would only result in a radius of 3, so keep that in mind if manually
+                setting to a positive number.
+              - Do note that World Preview (and new world creation) will be a bit slower at the very start, but the speed will improve over time and actually generate quicker
+                overall (compared to a disabled sampler cache), especially in high resolutions of World Preview and/or high chunk rendering distances. World Preview will remain
+                slower overall but this is only testing initial chunk generation which is always much faster than biome decoration (which World Preview doesn't simulate by default,
+                nor does Temperature Bands touch any part of biome decoration).
               - Finally, if you want to stress-test your CPU, disable this completely with 0 and keep max-1 (or max) threads in World Preview.""";
     public final ModConfigSpec.IntValue climateSamplerCacheDelay;
     public static final String climateSamplerCacheDelayTxt = """
@@ -158,9 +160,9 @@ public class CommonConfig {
 
     public static final String sectionAlgo1 = "algorithm1";
     public static final String sectionAlgo1Txt = """
-             [algorithm1] are settings for temperature algorithm 1, the 'simple' or 'default' algorithm.
+             [algorithm1] are settings for temperature algorithm 1, the 'standard bands' algorithm.
               - As before, these settings are only the defaults for new worlds - each world will remember its own settings.
-              - This algorithm is quite simple and produces jaggy lines that aren't too random or natural looking alone, but it looks pretty good as long as you keep noiseFactor.
+              - This algorithm is quite simple and produces jaggy lines that aren't too random or natural looking alone, but they look quite good as long as you keep noiseFactor.
               - Keeping the variance low but noiseFactor a decent amount (around 100 or so) will produce some decent looking curves/waves in the bands with some randomness, but if you
                 want something more predictable you can reduce noiseFactor while optionally increasing variance.
              --------""";
@@ -265,8 +267,8 @@ public class CommonConfig {
               - Currently only used by ocean/river search in the advanced humidity algorithm.
               - The default of -1 means automatic, which is the cube of humidityResolution. This seems to be the most logical balance between quality and performance - biome edges
                 look natural with sporadic patches of other biomes potential to the nearby humidity/temperature values to make blending a bit more exciting.
-              - Setting this a value equal to humidityResolution will provide maximum accuracy but will become VERY expensive on CPU/worldgen time, though that might be desirable
-                if you want biome edges to be smoother and defined with minimal biome 'patches'.
+              - Setting this to a value equal to humidityResolution will provide maximum accuracy but will become VERY expensive on CPU/worldgen time, though that might be desirable
+                if you want all biome edges to be smoother and defined with minimal biome 'patches'.
               - If you've raised humidityResolution (meaning less accuracy) for some performance, it might be useful to manually set this value to something closer to the new
                 humidityResolution rather than leaving on automatic; such a change could result in better overall smoothness without significant efficiency loss. Do note that
                 it's pointless to have this value lower than humidityResolution, though - all that will do is burn CPU time for no reason.'""";
@@ -293,7 +295,7 @@ public class CommonConfig {
                 .defineInRange("climateSamplerCacheSize", 5, 0, 128);
         climateSamplerCachePrefetchRadius = builder
                 .comment(climateSamplerCachePrefetchRadiusTxt)
-                .defineInRange("climateSamplerCachePrefetchRadius", -10, -32, 32);
+                .defineInRange("climateSamplerCachePrefetchRadius", -8, -32, 32);
         climateSamplerCacheDelay = builder
                 .comment(climateSamplerCacheDelayTxt)
                 .defineInRange("climateSamplerCacheDelay", 0, 0, Integer.MAX_VALUE);

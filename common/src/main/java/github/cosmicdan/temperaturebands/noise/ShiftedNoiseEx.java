@@ -1,18 +1,19 @@
-package github.cosmicdan.temperaturebands;
+package github.cosmicdan.temperaturebands.noise;
 
+import github.cosmicdan.temperaturebands.DimensionConfig;
 import net.minecraft.world.level.levelgen.DensityFunction;
 
 import java.util.Objects;
 
 public abstract class ShiftedNoiseEx implements DensityFunction {
-    final String dimensionName;
+    public final String dimensionName;
+    public final DensityFunction shiftX;
+    public final DensityFunction shiftY;
+    public final DensityFunction shiftZ;
+    public final double xzScale;
+    public final double yScale;
+    public final NoiseHolder noise;
     final DimensionConfig config;
-    final DensityFunction shiftX;
-    final DensityFunction shiftY;
-    final DensityFunction shiftZ;
-    final double xzScale;
-    final double yScale;
-    final NoiseHolder noise;
 
     public ShiftedNoiseEx(String dimensionName, DimensionConfig config, DensityFunction shiftX, DensityFunction shiftY, DensityFunction shiftZ, double xzScale, double yScale, NoiseHolder noise) {
         this.dimensionName = dimensionName;
@@ -24,8 +25,6 @@ public abstract class ShiftedNoiseEx implements DensityFunction {
         this.yScale = yScale;
         this.noise = noise;
     }
-
-    public abstract double computeOriginal(FunctionContext context);
 
     @Override
     public String toString() {

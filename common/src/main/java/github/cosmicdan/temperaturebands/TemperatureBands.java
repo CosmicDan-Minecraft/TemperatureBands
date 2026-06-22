@@ -2,6 +2,9 @@ package github.cosmicdan.temperaturebands;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import github.cosmicdan.temperaturebands.noise.ShiftedNoiseEx;
+import github.cosmicdan.temperaturebands.noise.ShiftedNoiseHumidity;
+import github.cosmicdan.temperaturebands.noise.ShiftedNoiseTemperature;
 import net.minecraft.core.Holder;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.DensityFunctions;
@@ -20,10 +23,6 @@ public final class TemperatureBands {
     public static final String MOD_ID = "temperaturebands";
     public static final Logger LOGGER = LogManager.getLogger(MOD_NAME);
     public static boolean addLoadingScreenText;
-    public static boolean updateActiveSamplers = false;
-    public static int sampleCount = 0;
-    public static final int sampleCountMax = 100;
-    public static int activeSamplers = 0;
     private static final boolean IS_IDEA_DEBUG = ManagementFactory.getRuntimeMXBean().getInputArguments().toString().contains("jdwp");
     private final CommonConfig modConfig;
 

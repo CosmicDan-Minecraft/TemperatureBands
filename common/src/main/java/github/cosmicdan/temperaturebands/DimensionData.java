@@ -1,5 +1,7 @@
 package github.cosmicdan.temperaturebands;
 
+import github.cosmicdan.temperaturebands.noise.ShiftedNoiseHumidity;
+import github.cosmicdan.temperaturebands.noise.ShiftedNoiseTemperature;
 import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BiomeTags;
@@ -9,6 +11,7 @@ import net.minecraft.world.level.biome.Climate;
 import net.minecraft.world.level.biome.MultiNoiseBiomeSource;
 import net.minecraft.world.level.levelgen.DensityFunctions;
 import net.minecraft.world.level.levelgen.NoiseRouter;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -19,13 +22,13 @@ import static github.cosmicdan.temperaturebands.TemperatureBands.LOGGER;
 public class DimensionData {
     public final boolean isLevelReady;
     public final DimensionConfig config;
-    public final ServerLevel level; // NOT thread safe because it's highly mutable, impossible to make it so
-    public final NoiseRouter noiseRouter; // Shallowly thread-safe
-    public final @Nullable DensityFunctions.HolderHolder noiseTemperature; // Shallowly thread-safe
-    public final @Nullable DensityFunctions.HolderHolder noiseHumidity; // Shallowly thread-safe
+    public final ServerLevel level;
+    public final NoiseRouter noiseRouter;
+    private final @Nullable DensityFunctions.HolderHolder noiseTemperature;
+    private final @Nullable DensityFunctions.HolderHolder noiseHumidity;
     // humidity-related things
-    public final Set<Holder<Biome>> biomeRivers = new HashSet<>();
     public final Set<Holder<Biome>> biomeOceans = new HashSet<>();
+    public final Set<Holder<Biome>> biomeRivers = new HashSet<>();
 
     private static final String noneStringForBiomeDump = " - [NONE]";
 
@@ -41,8 +44,7 @@ public class DimensionData {
         // sanity check
         if (config == null)
             TbUtils.doCrash("Tried to create new DimensionData but provided config is null, eh?");
-
-        if (isLevelReady) {
+        else if (isLevelReady) {
             // setup and verification for humidity
             if (config.humidityAlgorithm() != 0) {
                 if (!(level.getChunkSource().getGenerator().getBiomeSource() instanceof MultiNoiseBiomeSource)) {
@@ -95,30 +97,8 @@ public class DimensionData {
         else if (noiseName.equals(ShiftedNoiseHumidity.NAME))
             return noiseHumidity;
         else
-            TbUtils.doCrash("Attempted getting an invalid noise: " + noiseName);
+            return TbUtils.doCrash("Attempted getting an invalid noise: " + noiseName);
     }
-
-    /*
-    public static DimensionData finalizeDimensionConfigIfNeeded(String dimensionName, DimensionData dimDataToFinalize) {
-        DimensionData dimDataFinalized = null;
-        switch (dimDataToFinalize.config.type()) {
-            case DEFAULT -> {
-                throw new RuntimeException("Tried to ready or finalize the default config, eh?");
-            }
-            case DRAFT, FINAL -> { // always finalize even if final, because #createFinal is responsible for processing config (e.g. saving to props)
-                dimDataFinalized = new DimensionData(
-                        false,
-                        DimensionConfig.createFinal(dimensionName, dimDataToFinalize.config),
-                        dimDataToFinalize.level,
-                        dimDataToFinalize.noiseRouter,
-                        dimDataToFinalize.noiseTemperature,
-                        dimDataToFinalize.noiseHumidity
-                );
-            }
-        }
-        return dimDataFinalized;
-    }
-     */
 
     public static void recreateDimDataWithNewNoiseFunction(String dimensionName, DimensionData dimData, String noiseName, DensityFunctions.HolderHolder noiseFunction) {
         if (noiseName.equals(ShiftedNoiseTemperature.NAME))
