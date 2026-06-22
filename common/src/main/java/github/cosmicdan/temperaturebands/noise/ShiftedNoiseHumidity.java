@@ -1,6 +1,7 @@
 package github.cosmicdan.temperaturebands.noise;
 
 import github.cosmicdan.temperaturebands.*;
+import github.cosmicdan.temperaturebands.generator.BandsGenerator;
 import github.cosmicdan.temperaturebands.generator.BiomeProximityGenerator;
 import github.cosmicdan.temperaturebands.generator.BiomeProximityGeneratorOwner;
 import github.cosmicdan.temperaturebands.generator.IGenerator;
@@ -37,8 +38,17 @@ public class ShiftedNoiseHumidity extends ShiftedNoiseEx implements BiomeProximi
                     config.distanceFunction()
             ));
         } else if (config.humidityAlgorithm() == 1) {
-            // TODO: Bands
-            gen = null;
+            gen = new BandsGenerator(new BandsGenerator.Config(
+                    this,
+                    !config.useVerticalBands(), // opposite to configured temp band direction
+                    Math.round(config.bandSize() * config.humidityAlgo1MimicScale()),
+                    config.bandPositionShift(),
+                    config.tempRange(),
+                    config.tempGradeShift(),
+                    config.noiseFactor(),
+                    config.algo1bandVariance(),
+                    config.algo1bandVarianceSteepness()
+            ));
         } else {
             TbUtils.doCrash("Temperature Bands has an unrecognized '" + CommonConfig.humidityAlgorithmName + "' setting of '" + config.humidityAlgorithm() + "'");
             gen = null;

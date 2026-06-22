@@ -34,7 +34,6 @@ public record DimensionConfig(
         // Humidity config
         int humidityAlgorithm, // TODO, simple algorithm (value 1)
         // Humidity algo 1 (simple) config
-        boolean humidityAlgo1MimicTemp, // TODO, simple algorithm
         float humidityAlgo1MimicScale, // TODO, simple algorithm
         // Humidity algo 2 (advanced) config
         int humidityResolution,
@@ -124,7 +123,6 @@ public record DimensionConfig(
                 loadedConfig.algo1bandVariance.get(),
                 loadedConfig.algo1bandVarianceSteepness.get().floatValue(),
                 humidityAlgorithm,
-                loadedConfig.humidityAlgo1MimicTemp.get(),
                 loadedConfig.humidityAlgo1MimicScale.get().floatValue(),
                 loadedConfig.humidityResolution.get(),
                 loadedConfig.humidityRiverInfluence.get().floatValue(),
@@ -232,7 +230,6 @@ public record DimensionConfig(
                 DEFAULT.algo1bandVariance,
                 DEFAULT.algo1bandVarianceSteepness,
                 DEFAULT.humidityAlgorithm,
-                DEFAULT.humidityAlgo1MimicTemp,
                 DEFAULT.humidityAlgo1MimicScale,
                 DEFAULT.humidityResolution,
                 DEFAULT.humidityRiverInfluence,
@@ -288,7 +285,6 @@ public record DimensionConfig(
                     // Humidity
                     humidityAlgorithm,
                     // Humidity algo 1 (simple)
-                    Boolean.parseBoolean(prop.getProperty(CommonConfig.humidityAlgo1MimicTempName, String.valueOf(DEFAULT.humidityAlgo1MimicTemp))),
                     Float.parseFloat(prop.getProperty(CommonConfig.humidityAlgo1MimicScaleName, String.valueOf(DEFAULT.humidityAlgo1MimicScale))),
                     // Humidity algo 2 (advanced)
                     Integer.parseInt(prop.getProperty(CommonConfig.humidityResolutionName, String.valueOf(DEFAULT.humidityResolution))),
@@ -329,7 +325,6 @@ public record DimensionConfig(
             prop.setProperty(CommonConfig.humidityAlgorithmName, String.valueOf(configToSave.humidityAlgorithm));
             if (configToSave.humidityAlgorithm == 1) {
                 // Humidity algo 1 (simple)
-                prop.setProperty(CommonConfig.humidityAlgo1MimicTempName, String.valueOf(configToSave.humidityAlgo1MimicTemp));
                 prop.setProperty(CommonConfig.humidityAlgo1MimicScaleName, String.valueOf(configToSave.humidityAlgo1MimicScale));
             } else if (configToSave.humidityAlgorithm == 2) {
                 // Humidity algo 2 (advanced)

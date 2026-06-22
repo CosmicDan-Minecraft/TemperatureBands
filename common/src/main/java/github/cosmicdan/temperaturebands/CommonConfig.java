@@ -199,17 +199,8 @@ public class CommonConfig {
 
     public static final String sectionHumidityAlgo1 = "humidity-algorithm1";
     public static final String sectionHumidityAlgo1Txt = """
-             [humidity-algorithm1] are world-specific settings for the 'simple' humidity algorithm, i.e. humidity bands that run perpendicular to temperature.
+             [humidity-algorithm1] are world-specific settings for the 'simple' banding humidity algorithm, i.e. humidity bands that run perpendicular to temperature.
              --------""";
-    public final ModConfigSpec.BooleanValue humidityAlgo1MimicTemp;
-    public static final String humidityAlgo1MimicTempName = "configHumidityAlgo1MimicTemp";
-    public static final String humidityAlgo1MimicTempTxt = """
-
-             [humidityAlgo1MimicTemp] will, when true, make humidity bands use the same parameters as temperature bands, with optional scaling.
-              - Vanilla Minecraft generation has 5 humidity zones, just like temperature, so this works out well.
-              - Currently only allows true, I feel like y'all won't care about having different band behaviour for humidity. You can still scale it below.
-                Do note that the bands will still have their own randomness different to the temperature bands, assuming temperature noiseFactor is used (the vanilla humidity noise
-                function will be used, though - not temperature noise)""";
     public final ModConfigSpec.DoubleValue humidityAlgo1MimicScale;
     public static final String humidityAlgo1MimicScaleName = "configHumidityAlgo1MimicScale";
     public static final String humidityAlgo1MimicScaleTxt = """
@@ -353,9 +344,6 @@ public class CommonConfig {
         builder.pop();
 
         builder.push(sectionHumidityAlgo1).comment(sectionHumidityAlgo1Txt);
-        humidityAlgo1MimicTemp = builder
-                .comment(humidityAlgo1MimicTempTxt)
-                .define("humidityAlgo1MimicTemp", true);
         humidityAlgo1MimicScale = builder
                 .comment(humidityAlgo1MimicScaleTxt)
                 .defineInRange("humidityAlgo1MimicScale", 0.5, 0.1, 1.0);

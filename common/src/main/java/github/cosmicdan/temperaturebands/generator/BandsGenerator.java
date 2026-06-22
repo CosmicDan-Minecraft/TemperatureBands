@@ -46,12 +46,13 @@ public class BandsGenerator implements IGenerator {
     public double compute(DensityFunction.FunctionContext context, DimensionData dimData) {
         int bandShift;
         int bandPos;
+        int bandPosOffset = (int) (config.bandSize * (config.bandPositionShift * 8));
         if (config.swapBandAxis) {
             bandShift = Math.abs(context.blockZ());
-            bandPos = Math.abs(context.blockX() - (int) (config.bandSize * (config.bandPositionShift * 8)));
+            bandPos = Math.abs(context.blockX() - bandPosOffset);
         } else {
             bandShift = Math.abs(context.blockX());
-            bandPos = Math.abs(context.blockZ() - (int) (config.bandSize * (config.bandPositionShift * 8)));
+            bandPos = Math.abs(context.blockZ() - bandPosOffset);
         }
 
 
@@ -83,7 +84,7 @@ public class BandsGenerator implements IGenerator {
             // grade is descending, adjust accordingly
             grade = tempBandMid - (grade - tempBandMid);
         }
-        grade = grade / (tempGradeAdj);
+        grade = grade / tempGradeAdj;
         // shift grade because vanilla has a bias for cold
         grade = grade + config.tempGradeShift;
         if (grade < 0.0f)
