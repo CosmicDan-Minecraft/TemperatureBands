@@ -33,7 +33,8 @@ public class ShiftedNoiseTemperature extends ShiftedNoiseEx {
                     config.tempGradeShift(),
                     config.noiseFactor(),
                     config.algo1bandVariance(),
-                    config.algo1bandVarianceSteepness()
+                    config.algo1bandVarianceSteepness(),
+                    -1.0f // not used by temperature itself
             ));
         } else {
             TbUtils.doCrash("Temperature Bands has an unrecognized '" + CommonConfig.bandAlgorithmName + "' setting of '" + config.bandAlgorithm() + "'");

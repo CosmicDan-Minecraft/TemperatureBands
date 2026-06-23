@@ -66,33 +66,13 @@ public class TbUtils {
         TemperatureBands.LOGGER.error("    - Class dump: {}", func.toString());
     }
 
-    public static int batchesTotal = 0;
-    public static int batchesDone = -1;
-    private static Instant benchmarkStart;
-
-    public static void benchmarkReset() {
-        if (batchesTotal > 0) {
-            TemperatureBands.LOGGER.info("WorldPreview benchmark cancelled");
-        }
-        batchesTotal = 0;
-        batchesDone = -1;
-        benchmarkStart = Instant.now();
-    }
-
-    public static void benchmarkStart(int batchesSize) {
-        TemperatureBands.LOGGER.info("Starting WorldPreview benchmark, waiting for {} batches to finish...", batchesSize);
-        benchmarkStart = Instant.now();
-        batchesTotal = batchesSize;
-        batchesDone = 0;
-    }
-
-    public static void benchmarkBatchDone() {
-        batchesDone++;
-        if (batchesDone >= batchesTotal) {
-            TemperatureBands.LOGGER.info("WorldPreview benchmark finished, {} batches took {} seconds." , batchesTotal, String.format("%.2f", Duration.between(benchmarkStart, Instant.now()).abs().toMillis() / 1000.0));
-            batchesTotal = 0;
-            batchesDone = -1;
-        }
+    public static double pullTowardsZeroLinear(double value, double weight) {
+        double pullForce = weight * Math.abs(value);
+        if (value > 0)
+            return Math.max(0, value - pullForce);
+        else if (value < 0)
+            return Math.min(0, value + pullForce);
+        return 0;
     }
 
     public static long packBlockXZtoLong(int blockX, int blockZ) {
@@ -144,5 +124,34 @@ public class TbUtils {
     public static <T> T doCrash(Throwable throwable, String msg) throws ReportedException {
         CrashReport report = CrashReport.forThrowable(throwable, "Temperature Bands error: " + msg);
         throw new ReportedException(report);
+    }
+
+    public static int batchesTotal = 0;
+    public static int batchesDone = -1;
+    private static Instant benchmarkStart;
+
+    public static void benchmarkReset() {
+        if (batchesTotal > 0) {
+            TemperatureBands.LOGGER.info("WorldPreview benchmark cancelled");
+        }
+        batchesTotal = 0;
+        batchesDone = -1;
+        benchmarkStart = Instant.now();
+    }
+
+    public static void benchmarkStart(int batchesSize) {
+        TemperatureBands.LOGGER.info("Starting WorldPreview benchmark, waiting for {} batches to finish...", batchesSize);
+        benchmarkStart = Instant.now();
+        batchesTotal = batchesSize;
+        batchesDone = 0;
+    }
+
+    public static void benchmarkBatchDone() {
+        batchesDone++;
+        if (batchesDone >= batchesTotal) {
+            TemperatureBands.LOGGER.info("WorldPreview benchmark finished, {} batches took {} seconds." , batchesTotal, String.format("%.2f", Duration.between(benchmarkStart, Instant.now()).abs().toMillis() / 1000.0));
+            batchesTotal = 0;
+            batchesDone = -1;
+        }
     }
 }

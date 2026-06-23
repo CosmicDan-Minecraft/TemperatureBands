@@ -48,7 +48,9 @@ public class BiomeProximityGenerator implements IGenerator {
             float secondBiomeInfluence,
             int biomeSearchDistance,
             int distanceFunction,
-            float baseNoisePercent
+            float baseNoisePercent,
+            float middleWeight,
+            float tempWeight
     ) {}
 
     public BiomeProximityGenerator(Config config) {
@@ -144,9 +146,7 @@ public class BiomeProximityGenerator implements IGenerator {
         if (nearestFirstBiome >= 0.0) {
             // Determine noise (e.g. humidity) as a percentage (0.0 to 1.0)
             noiseValue = 1.0 - (nearestFirstBiome / config.biomeSearchDistance);
-            // Then apply some "middle weightiness"
-            //noiseValue = calcMiddleWeightedValue(noiseValue);
-            // Finally, clamp it to the range MC wants (vanilla expects -1.0 to +1.0)
+            // Convert from percentage to the range MC wants (vanilla expects -1.0 to +1.0)
             noiseValue = (noiseValue * 2.0) - 1.0;
         }
 
@@ -159,6 +159,16 @@ public class BiomeProximityGenerator implements IGenerator {
         if (config.baseNoisePercent > 0.0)
             // use humidityNoiseFactor for this point to soften the edges a bit
             noiseValue += (computeOriginal(context) * config.baseNoisePercent);
+
+        // apply some "middle weightiness"
+        if (config.middleWeight > 0.0)
+            noiseValue = TbUtils.pullTowardsZeroLinear(noiseValue, config.middleWeight);
+
+        // finally do temperature adjustment
+        if (config.tempWeight > 0.0) {
+            double tempValue = dimData.getTemperatureNoise().compute(context);
+            noiseValue += (tempValue * config.tempWeight);
+        }
 
         return noiseValue;
     }
@@ -176,17 +186,6 @@ public class BiomeProximityGenerator implements IGenerator {
         int posPreScaled = (pos >> config.noiseResolution);
         return (posPreScaled * noisePartSize) + noisePartSizeMiddleOffset;
     }
-
-
-    /*
-    private double calcMiddleWeightedValue(double value) {
-        if (value < 0.5) {
-            return Math.pow(value * 2, humidityCenterWeight) * 0.5;
-        } else {
-            return 1.0 - Math.pow((1.0 - value) * 2, humidityCenterWeight) * 0.5;
-        }
-    }
-     */
 
     // Simple 2D Archimedean spiral check
     private Pair<Double, Double> getDistanceToNearestBiomes(int originX, int originZ, Set<Holder<Biome>> firstBiomes, Set<Holder<Biome>> secondBiomes, int searchRadiusXZ, int searchStep) {

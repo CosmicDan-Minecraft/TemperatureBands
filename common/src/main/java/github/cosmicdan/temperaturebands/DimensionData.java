@@ -133,6 +133,12 @@ public class DimensionData {
         return level.getChunkSource().randomState().sampler();
     }
 
+    public @NotNull DensityFunctions.HolderHolder getTemperatureNoise() {
+        if (noiseTemperature == null)
+            return TbUtils.doCrash("noiseTemperature must not be null");
+        return noiseTemperature;
+    }
+
     public void clearCaches() {
         if (noiseHumidity != null) {
             if (noiseHumidity.function().value() instanceof ShiftedNoiseHumidity humidityFunc) {

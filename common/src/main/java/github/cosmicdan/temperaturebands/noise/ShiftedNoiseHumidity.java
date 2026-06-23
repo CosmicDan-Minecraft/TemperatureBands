@@ -36,7 +36,9 @@ public class ShiftedNoiseHumidity extends ShiftedNoiseEx implements BiomeProximi
                     config.humidityRiverInfluence(),
                     config.humiditySearchDistance(),
                     config.distanceFunction(),
-                    config.humidityBaseNoisePercent()
+                    config.humidityBaseNoisePercent(),
+                    config.humidityMiddleWeight(),
+                    config.humidityTempWeight()
             ));
         } else if (config.humidityAlgorithm() == 1) {
             gen = new BandsGenerator(new BandsGenerator.Config(
@@ -48,7 +50,8 @@ public class ShiftedNoiseHumidity extends ShiftedNoiseEx implements BiomeProximi
                     config.tempGradeShift(),
                     config.noiseFactor(),
                     config.algo1bandVariance(),
-                    config.algo1bandVarianceSteepness()
+                    config.algo1bandVarianceSteepness(),
+                    config.humidityTempWeight()
             ));
         } else {
             TbUtils.doCrash("Temperature Bands has an unrecognized '" + CommonConfig.humidityAlgorithmName + "' setting of '" + config.humidityAlgorithm() + "'");

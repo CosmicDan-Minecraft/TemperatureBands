@@ -32,14 +32,16 @@ public record DimensionConfig(
         int algo1bandVariance,
         float algo1bandVarianceSteepness,
         // Humidity config
-        int humidityAlgorithm, // TODO, simple algorithm (value 1)
+        int humidityAlgorithm,
+        float humidityTempWeight,
         // Humidity algo 1 (simple) config
-        float humidityAlgo1MimicScale, // TODO, simple algorithm
+        float humidityAlgo1MimicScale,
         // Humidity algo 2 (advanced) config
         int humidityResolution,
         float humidityRiverInfluence,
         int humiditySearchDistance,
         float humidityBaseNoisePercent,
+        float humidityMiddleWeight,
         //public static float humidityRange = 2.0f, // Vanilla clamps humidity between -1.0 and +1.0. If you want that same clamping range, set this to 2.0. The default of 1.6 means it will be clamped to between -0.8 and +0.8 which takes
         //public static float humidityCenterWeight = 3.0f, // The "weightiness" towards middle values for humidity. Vanilla humidity generation tends to favour values closer to the middle, so this is used reduce the amount of humidity extremes (e.g. too much Jungle and Savanna). The default value seems good to me.
         // Climate sampler settings (world-specific)
@@ -123,11 +125,13 @@ public record DimensionConfig(
                 loadedConfig.algo1bandVariance.get(),
                 loadedConfig.algo1bandVarianceSteepness.get().floatValue(),
                 humidityAlgorithm,
+                loadedConfig.humidityTempWeight.get().floatValue(),
                 loadedConfig.humidityAlgo1MimicScale.get().floatValue(),
                 loadedConfig.humidityResolution.get(),
                 loadedConfig.humidityRiverInfluence.get().floatValue(),
                 loadedConfig.humiditySearchDistance.get(),
                 loadedConfig.humidityBaseNoisePercent.get().floatValue(),
+                loadedConfig.humidityMiddleWeight.get().floatValue(),
                 loadedConfig.climateSamplerResolution.get()
         );
     }
@@ -231,11 +235,13 @@ public record DimensionConfig(
                 DEFAULT.algo1bandVariance,
                 DEFAULT.algo1bandVarianceSteepness,
                 DEFAULT.humidityAlgorithm,
+                DEFAULT.humidityTempWeight,
                 DEFAULT.humidityAlgo1MimicScale,
                 DEFAULT.humidityResolution,
                 DEFAULT.humidityRiverInfluence,
                 DEFAULT.humiditySearchDistance,
                 DEFAULT.humidityBaseNoisePercent,
+                DEFAULT.humidityMiddleWeight,
                 DEFAULT.climateSamplerResolution
         );
     }
@@ -286,6 +292,7 @@ public record DimensionConfig(
                     Float.parseFloat(prop.getProperty(CommonConfig.algo1bandVarianceSteepnessName)),
                     // Humidity
                     humidityAlgorithm,
+                    Float.parseFloat(prop.getProperty(CommonConfig.humidityTempWeightName, String.valueOf(DEFAULT.humidityTempWeight))),
                     // Humidity algo 1 (simple)
                     Float.parseFloat(prop.getProperty(CommonConfig.humidityAlgo1MimicScaleName, String.valueOf(DEFAULT.humidityAlgo1MimicScale))),
                     // Humidity algo 2 (advanced)
@@ -293,6 +300,7 @@ public record DimensionConfig(
                     Float.parseFloat(prop.getProperty(CommonConfig.humidityRiverInfluenceName, String.valueOf(DEFAULT.humidityRiverInfluence))),
                     Integer.parseInt(prop.getProperty(CommonConfig.humiditySearchDistanceName, String.valueOf(DEFAULT.humiditySearchDistance))),
                     Float.parseFloat(prop.getProperty(CommonConfig.humidityBaseNoisePercentName, String.valueOf(DEFAULT.humidityBaseNoisePercent))),
+                    Float.parseFloat(prop.getProperty(CommonConfig.humidityMiddleWeightName, String.valueOf(DEFAULT.humidityMiddleWeight))),
                     Integer.parseInt(prop.getProperty(CommonConfig.climateSamplerResolutionName, String.valueOf(DEFAULT.climateSamplerResolution)))
             );
         } catch (IOException ex) {
@@ -326,6 +334,7 @@ public record DimensionConfig(
             }
             // Humidity
             prop.setProperty(CommonConfig.humidityAlgorithmName, String.valueOf(configToSave.humidityAlgorithm));
+            prop.setProperty(CommonConfig.humidityTempWeightName, String.valueOf(configToSave.humidityTempWeight));
             if (configToSave.humidityAlgorithm == 1) {
                 // Humidity algo 1 (simple)
                 prop.setProperty(CommonConfig.humidityAlgo1MimicScaleName, String.valueOf(configToSave.humidityAlgo1MimicScale));
@@ -335,6 +344,7 @@ public record DimensionConfig(
                 prop.setProperty(CommonConfig.humidityRiverInfluenceName, String.valueOf(configToSave.humidityRiverInfluence));
                 prop.setProperty(CommonConfig.humiditySearchDistanceName, String.valueOf(configToSave.humiditySearchDistance));
                 prop.setProperty(CommonConfig.humidityBaseNoisePercentName, String.valueOf(configToSave.humidityBaseNoisePercent));
+                prop.setProperty(CommonConfig.humidityMiddleWeightName, String.valueOf(configToSave.humidityMiddleWeight));
             } else if (configToSave.humidityAlgorithm != 0) {
                 TbUtils.doCrash("Unhandled humidity algorithm at config world save, fixme!");
             }

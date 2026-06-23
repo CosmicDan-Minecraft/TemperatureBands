@@ -196,6 +196,16 @@ public class CommonConfig {
                 worldgen mods, and it's definitely worth it (in my opinion).
               - A value of 1 uses a much simpler 'humidity bands' algorithm that run perpendicular to temperature bands.
               - A value of 0 will disable humidity feature entirely, keeping vanilla random noise humidity.""";
+    public final ModConfigSpec.DoubleValue humidityTempWeight;
+    public static final String humidityTempWeightName = "humidityTempWeight";
+    public static final String humidityTempWeightTxt = """
+             
+             [humidityTempWeight] is how much the temperature will additionally influence humidity.
+              - Applies to all humidity algorithms, and is the final adjustment to the humidity value.
+              - For humidity algorithm 2 (advanced) it introduces some biome variation between the warmer and cooler sides of the temperate (middle temperature) bands.
+              - For humidity algorithm 1 (bands perpendicular to temperature), it applies some angle via narrowing/widening on the humidity bands - as you approach the cold
+                band, lower-humidity biomes will become wider; as you approach the hot band, higher-humidity biomes will become wider.
+              - Setting to 0.0 will disable this function.""";
 
     public static final String sectionHumidityAlgo1 = "humidity-algorithm1";
     public static final String sectionHumidityAlgo1Txt = """
@@ -253,6 +263,15 @@ public class CommonConfig {
               - This is not based on the resolution of humidity nor sampler so helps to provide a little random variation to the final result.
               - You'll probably want to keep this either fairly low (close to 0.0) or fairly high (close to 1.0), otherwise biome placement becomes very 'noisy', though
                 setting higher values might defeat the purpose of using this algorithm at all.""";
+    public final ModConfigSpec.DoubleValue humidityMiddleWeight;
+    public static final String humidityMiddleWeightName = "humidityMiddleWeight";
+    public static final String humidityMiddleWeightTxt = """
+             
+             [humidityMiddleWeight] is how much the near-final humidity value will be pulled towards the center.
+              - The default value of 0.2 provides some nicer transitions between biomes while slightly reducing the sizes of the extreme-humidity biomes for middle
+                temperatures (e.g. Dark Forest).
+              - This adjustment happens before humidityTempWeight but after everything else.
+              - Setting to 0.0 will disable this function, though it won't provide any performance benefit and biome transitions will be (subjectively) worse.""";
 
     public static final String sectionClimateSamplerWorld = "climatesampler-world";
     public static final String sectionClimateSamplerWorldTxt = """
@@ -350,6 +369,9 @@ public class CommonConfig {
         humidityAlgorithm = builder
                 .comment(humidityAlgorithmTxt)
                 .defineInRange("humidityAlgorithm", 2, 0, 2);
+        humidityTempWeight = builder
+                .comment(humidityTempWeightTxt)
+                .defineInRange("humidityTempWeight", 0.4, 0.0, 1.0);
         builder.pop();
 
         builder.push(sectionHumidityAlgo1).comment(sectionHumidityAlgo1Txt);
@@ -371,6 +393,9 @@ public class CommonConfig {
         humidityBaseNoisePercent = builder
                 .comment(humidityBaseNoisePercentTxt)
                 .defineInRange("humidityBaseNoisePercent", 0.1, 0.0, 1.0);
+        humidityMiddleWeight = builder
+                .comment(humidityMiddleWeightTxt)
+                .defineInRange("humidityMiddleWeight", 0.3, 0.0, 1.0);
         builder.pop();
 
         builder.push(sectionClimateSamplerWorld).comment(sectionClimateSamplerWorldTxt);

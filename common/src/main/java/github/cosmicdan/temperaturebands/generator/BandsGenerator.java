@@ -25,7 +25,8 @@ public class BandsGenerator implements IGenerator {
             float tempGradeShift,
             int noiseFactor,
             int algo1bandVariance,
-            float algo1bandVarianceSteepness
+            float algo1bandVarianceSteepness,
+            float tempWeight
     ) {}
 
     public BandsGenerator(Config config) {
@@ -92,6 +93,12 @@ public class BandsGenerator implements IGenerator {
         float tempLimit = grade - config.tempRange;
         // invert to match vanilla lower = colder
         tempLimit = -tempLimit;
+
+        if (config.tempWeight > 0.0 ) {
+            // Only relevant for humidity
+            double tempValue = dimData.getTemperatureNoise().compute(context);
+            tempLimit += (float) (tempValue * config.tempWeight);
+        }
 
         return tempLimit;
     }
