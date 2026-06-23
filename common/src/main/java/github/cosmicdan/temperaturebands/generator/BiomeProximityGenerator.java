@@ -27,12 +27,14 @@ public class BiomeProximityGenerator implements IGenerator {
 
     private final Config config;
     // initialized in constructor and/or derived from config arg
-    private final int climateSamplerResolution;
+    private final int samplerResolution;
     private final ConcurrentMap<Long, CompletableFuture<ClimateTargetPointEx>> climateSamplerCacheActiveFutures;
     private final AsyncLoadingCache<Long, ClimateTargetPointEx> climateSamplerCache;
     private final boolean firstBiomeOnly;
     private final int noisePartSize;
     private final int noisePartSizeMiddleOffset;
+    private final int samplerPartSize;
+    private final int samplerMiddleOffset;
 
     private DimensionData dimData;
     private boolean biomeSourceError = false;
@@ -44,7 +46,7 @@ public class BiomeProximityGenerator implements IGenerator {
             String dimensionName,
             boolean isTempDimension,
             int noiseResolution,
-            int climateSamplerResolution,
+            int climateSamplerResolutionRaw,
             float secondBiomeInfluence,
             int biomeSearchDistance,
             int distanceFunction,
@@ -55,7 +57,9 @@ public class BiomeProximityGenerator implements IGenerator {
 
     public BiomeProximityGenerator(Config config) {
         this.config = config;
-        this.climateSamplerResolution = (config.climateSamplerResolution < 0) ? config.noiseResolution * config.noiseResolution * config.noiseResolution : config.climateSamplerResolution;
+        this.samplerResolution = (config.climateSamplerResolutionRaw < 0) ? config.noiseResolution * config.noiseResolution * config.noiseResolution : config.climateSamplerResolutionRaw;
+        this.samplerPartSize = samplerResolution * samplerResolution;
+        this.samplerMiddleOffset = (int)Math.round(samplerPartSize * 0.5);
 
         if (CONFIG_GLOBAL.climateSamplerCacheSize() > 0) {
             climateSamplerCacheActiveFutures = new ConcurrentHashMap<>();
@@ -121,8 +125,8 @@ public class BiomeProximityGenerator implements IGenerator {
             return computeOriginal(context);
         if (this.dimData == null)
             onFirstCompute(dimData);
-        int originPosX = scalePosForNoiseResolution(context.blockX());
-        int originPosZ = scalePosForNoiseResolution(context.blockZ());
+        int originPosX = scalePosForResolution(context.blockX(), config.noiseResolution, noisePartSize, noisePartSizeMiddleOffset);
+        int originPosZ = scalePosForResolution(context.blockZ(), config.noiseResolution, noisePartSize, noisePartSizeMiddleOffset);
 
         // default value if biome wasn't found
         double noiseValue = -1.0;
@@ -132,7 +136,7 @@ public class BiomeProximityGenerator implements IGenerator {
                 config.owner.getBiomesFirst(),
                 config.owner.getBiomesSecond(),
                 config.biomeSearchDistance,
-                climateSamplerResolution
+                samplerResolution
         );
         double nearestFirstBiome = nearestFirstAndMaybeSecondBiomeDistance.getLeft();
         double nearestSecondBiomeMaybe = nearestFirstAndMaybeSecondBiomeDistance.getRight();
@@ -181,10 +185,9 @@ public class BiomeProximityGenerator implements IGenerator {
         return config.owner.getNoise().getValue(d, e, f);
     }
 
-    private int scalePosForNoiseResolution(int pos) {
-        // TODO: replicate for sampler spiral
-        int posPreScaled = (pos >> config.noiseResolution);
-        return (posPreScaled * noisePartSize) + noisePartSizeMiddleOffset;
+    private int scalePosForResolution(int pos, int resolution, int partSize, int partSizeMid) {
+        int posPreScaled = (pos >> resolution);
+        return (posPreScaled * partSize) + partSizeMid;
     }
 
     // Simple 2D Archimedean spiral check
@@ -245,9 +248,12 @@ public class BiomeProximityGenerator implements IGenerator {
                 double zOffset = radius * Math.sin(angle);
                 int thisX = (int) Math.round(blockX + xOffset);
                 int thisZ = (int) Math.round(blockZ + zOffset);
+                // rescale to ensure cache hits
+                thisX = scalePosForResolution(thisX, samplerResolution, samplerPartSize, samplerMiddleOffset);
+                thisZ = scalePosForResolution(thisZ, samplerResolution, samplerPartSize, samplerMiddleOffset);
                 points.add(TbUtils.packBlockXZtoLong(thisX, thisZ));
                 angle += 0.5;
-                radius += climateSamplerResolution / 6.28; // 6.28 = 2π
+                radius += samplerResolution / 6.28; // 6.28 = 2π
             }
             climateSamplerCache.getAll(points);
         }
