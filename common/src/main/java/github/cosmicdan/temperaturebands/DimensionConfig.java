@@ -39,8 +39,8 @@ public record DimensionConfig(
         int humidityResolution,
         float humidityRiverInfluence,
         int humiditySearchDistance,
+        float humidityBaseNoisePercent,
         //public static float humidityRange = 2.0f, // Vanilla clamps humidity between -1.0 and +1.0. If you want that same clamping range, set this to 2.0. The default of 1.6 means it will be clamped to between -0.8 and +0.8 which takes
-        //public static float humidityNoiseFactor = 0.5f,
         //public static float humidityCenterWeight = 3.0f, // The "weightiness" towards middle values for humidity. Vanilla humidity generation tends to favour values closer to the middle, so this is used reduce the amount of humidity extremes (e.g. too much Jungle and Savanna). The default value seems good to me.
         // Climate sampler settings (world-specific)
         int climateSamplerResolution
@@ -127,6 +127,7 @@ public record DimensionConfig(
                 loadedConfig.humidityResolution.get(),
                 loadedConfig.humidityRiverInfluence.get().floatValue(),
                 loadedConfig.humiditySearchDistance.get(),
+                loadedConfig.humidityBaseNoisePercent.get().floatValue(),
                 loadedConfig.climateSamplerResolution.get()
         );
     }
@@ -234,6 +235,7 @@ public record DimensionConfig(
                 DEFAULT.humidityResolution,
                 DEFAULT.humidityRiverInfluence,
                 DEFAULT.humiditySearchDistance,
+                DEFAULT.humidityBaseNoisePercent,
                 DEFAULT.climateSamplerResolution
         );
     }
@@ -290,6 +292,7 @@ public record DimensionConfig(
                     Integer.parseInt(prop.getProperty(CommonConfig.humidityResolutionName, String.valueOf(DEFAULT.humidityResolution))),
                     Float.parseFloat(prop.getProperty(CommonConfig.humidityRiverInfluenceName, String.valueOf(DEFAULT.humidityRiverInfluence))),
                     Integer.parseInt(prop.getProperty(CommonConfig.humiditySearchDistanceName, String.valueOf(DEFAULT.humiditySearchDistance))),
+                    Float.parseFloat(prop.getProperty(CommonConfig.humidityBaseNoisePercentName, String.valueOf(DEFAULT.humidityBaseNoisePercent))),
                     Integer.parseInt(prop.getProperty(CommonConfig.climateSamplerResolutionName, String.valueOf(DEFAULT.climateSamplerResolution)))
             );
         } catch (IOException ex) {
@@ -331,6 +334,7 @@ public record DimensionConfig(
                 prop.setProperty(CommonConfig.humidityResolutionName, String.valueOf(configToSave.humidityResolution));
                 prop.setProperty(CommonConfig.humidityRiverInfluenceName, String.valueOf(configToSave.humidityRiverInfluence));
                 prop.setProperty(CommonConfig.humiditySearchDistanceName, String.valueOf(configToSave.humiditySearchDistance));
+                prop.setProperty(CommonConfig.humidityBaseNoisePercentName, String.valueOf(configToSave.humidityBaseNoisePercent));
             } else if (configToSave.humidityAlgorithm != 0) {
                 TbUtils.doCrash("Unhandled humidity algorithm at config world save, fixme!");
             }

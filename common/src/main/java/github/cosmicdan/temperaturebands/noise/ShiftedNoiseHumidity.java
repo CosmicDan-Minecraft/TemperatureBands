@@ -35,7 +35,8 @@ public class ShiftedNoiseHumidity extends ShiftedNoiseEx implements BiomeProximi
                     config.climateSamplerResolution(),
                     config.humidityRiverInfluence(),
                     config.humiditySearchDistance(),
-                    config.distanceFunction()
+                    config.distanceFunction(),
+                    config.humidityBaseNoisePercent()
             ));
         } else if (config.humidityAlgorithm() == 1) {
             gen = new BandsGenerator(new BandsGenerator.Config(

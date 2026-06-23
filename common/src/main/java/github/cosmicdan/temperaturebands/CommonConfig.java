@@ -244,6 +244,15 @@ public class CommonConfig {
                 climateSamplerResolution at the expense of worldgen quality (you'll see more "chunkyness" in biome borders). Alternatively, you can try adjusting
                 climatesampler-performance settings to *maybe* improve efficiency at the expense of increased CPU/RAM load, which may actually end up reducing
                 throughput/worldgen speed anyway.""";
+    public final ModConfigSpec.DoubleValue humidityBaseNoisePercent;
+    public static final String humidityBaseNoisePercentName = "humidityBaseNoisePercent";
+    public static final String humidityBaseNoisePercentTxt = """
+             
+             [humidityBaseNoisePercent] is how much the original humidity noise will contribute to calculated proximity-based humidity. Default value of 0.1 means 10%.
+              - Setting to 0.0 will disable use of the base noise, and provide a *very small* performance improvement (probably not even measurable).
+              - This is not based on the resolution of humidity nor sampler so helps to provide a little random variation to the final result.
+              - You'll probably want to keep this either fairly low (close to 0.0) or fairly high (close to 1.0), otherwise biome placement becomes very 'noisy', though
+                setting higher values might defeat the purpose of using this algorithm at all.""";
 
     public static final String sectionClimateSamplerWorld = "climatesampler-world";
     public static final String sectionClimateSamplerWorldTxt = """
@@ -359,6 +368,9 @@ public class CommonConfig {
         humiditySearchDistance = builder
                 .comment(humiditySearchDistanceTxt)
                 .defineInRange("humiditySearchDistance", 512, 16, 16384);
+        humidityBaseNoisePercent = builder
+                .comment(humidityBaseNoisePercentTxt)
+                .defineInRange("humidityBaseNoisePercent", 0.1, 0.0, 1.0);
         builder.pop();
 
         builder.push(sectionClimateSamplerWorld).comment(sectionClimateSamplerWorldTxt);

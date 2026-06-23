@@ -47,7 +47,8 @@ public class BiomeProximityGenerator implements IGenerator {
             int climateSamplerResolution,
             float secondBiomeInfluence,
             int biomeSearchDistance,
-            int distanceFunction
+            int distanceFunction,
+            float baseNoisePercent
     ) {}
 
     public BiomeProximityGenerator(Config config) {
@@ -155,8 +156,9 @@ public class BiomeProximityGenerator implements IGenerator {
             noiseValue = noiseValue + (noiseValueSecondBiome * config.secondBiomeInfluence);
         }
 
-        // use humidityNoiseFactor for this point to soften the edges a bit
-        //double noiseOriginal = computeNoise(context) * humidityNoiseFactor;
+        if (config.baseNoisePercent > 0.0)
+            // use humidityNoiseFactor for this point to soften the edges a bit
+            noiseValue += (computeOriginal(context) * config.baseNoisePercent);
 
         return noiseValue;
     }
