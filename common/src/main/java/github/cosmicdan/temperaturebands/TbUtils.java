@@ -1,5 +1,6 @@
 package github.cosmicdan.temperaturebands;
 
+import github.cosmicdan.temperaturebands.generator.BiomeProximityGenerator;
 import net.minecraft.CrashReport;
 import net.minecraft.ReportedException;
 import net.minecraft.world.level.levelgen.DensityFunction;
@@ -126,6 +127,7 @@ public class TbUtils {
         throw new ReportedException(report);
     }
 
+    public static volatile boolean benchmarkActive = false;
     public static int batchesTotal = 0;
     public static int batchesDone = -1;
     private static Instant benchmarkStart;
@@ -134,22 +136,32 @@ public class TbUtils {
         if (batchesTotal > 0) {
             TemperatureBands.LOGGER.info("WorldPreview benchmark cancelled");
         }
+        benchmarkActive = false;
         batchesTotal = 0;
         batchesDone = -1;
-        benchmarkStart = Instant.now();
+        BiomeProximityGenerator.benchmarkSampleTotalCount.set(0);
+        BiomeProximityGenerator.benchmarkSampleCacheHitCount.set(0);
     }
 
     public static void benchmarkStart(int batchesSize) {
         TemperatureBands.LOGGER.info("Starting WorldPreview benchmark, waiting for {} batches to finish...", batchesSize);
+        benchmarkActive = true;
         benchmarkStart = Instant.now();
         batchesTotal = batchesSize;
         batchesDone = 0;
+        BiomeProximityGenerator.benchmarkSampleTotalCount.set(0);
+        BiomeProximityGenerator.benchmarkSampleCacheHitCount.set(0);
     }
 
     public static void benchmarkBatchDone() {
         batchesDone++;
         if (batchesDone >= batchesTotal) {
-            TemperatureBands.LOGGER.info("WorldPreview benchmark finished, {} batches took {} seconds." , batchesTotal, String.format("%.2f", Duration.between(benchmarkStart, Instant.now()).abs().toMillis() / 1000.0));
+            benchmarkActive = false;
+            int cacheHitCount = BiomeProximityGenerator.benchmarkSampleCacheHitCount.get();
+            int cacheTotalCount = BiomeProximityGenerator.benchmarkSampleTotalCount.get();
+            String cacheHitrate = String.format("%.2f", (cacheHitCount / (double) cacheTotalCount) * 100);
+            TemperatureBands.LOGGER.info("WorldPreview benchmark finished. {} batches finished in {} seconds. Cache hit-rate was {}% ({}/{})." ,
+                    batchesTotal, String.format("%.2f", Duration.between(benchmarkStart, Instant.now()).abs().toMillis() / 1000.0), cacheHitrate, cacheHitCount, cacheTotalCount);
             batchesTotal = 0;
             batchesDone = -1;
         }

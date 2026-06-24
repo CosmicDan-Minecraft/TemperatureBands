@@ -12,6 +12,7 @@ public record GlobalConfig(
         // Global climate sampler settings (not per-world)
         int climateSamplerCacheSize,
         int climateSamplerCachePrefetchRadius,
+        int climateSamplerMax,
         int climateSamplerCacheDelay,
         boolean climateSamplerWarmupMsg
 ) {
@@ -39,6 +40,7 @@ public record GlobalConfig(
                 loadedConfig.dumpRiverAndOceanBiomes.get(),
                 loadedConfig.climateSamplerCacheSize.get(),
                 climateSamplerCachePrefetchRadius,
+                loadedConfig.climateSamplerMax.get(),
                 loadedConfig.climateSamplerCacheDelay.get(),
                 loadedConfig.climateSamplerWarmupMsg.get()
         );

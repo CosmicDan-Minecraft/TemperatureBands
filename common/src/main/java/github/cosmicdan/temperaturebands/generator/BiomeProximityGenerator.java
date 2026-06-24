@@ -19,11 +19,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static github.cosmicdan.temperaturebands.TemperatureBands.CONFIG_GLOBAL;
 
 public class BiomeProximityGenerator implements IGenerator {
     public static final int blockY = 64;
+
+    public static AtomicInteger benchmarkSampleCacheHitCount = new AtomicInteger(0);
+    public static AtomicInteger benchmarkSampleTotalCount = new AtomicInteger(0);
 
     private final Config config;
     // initialized in constructor and/or derived from config arg
@@ -220,7 +224,7 @@ public class BiomeProximityGenerator implements IGenerator {
     private Holder<Biome> getNoiseBiome(int blockX, int blockZ) {
         final ClimateTargetPointEx targetPointEx;
         if (CONFIG_GLOBAL.climateSamplerCacheSize() > 0 && samplerCacheCooldownElapsed) {
-            targetPointEx = sampleClimateAndMaybePrefetch(blockX, blockZ);
+            targetPointEx = sampleClimateCachedAndMaybePrefetch(blockX, blockZ);
         } else {
             targetPointEx = config.owner.sampleClimate(TbUtils.packBlockXZtoLong(blockX, blockZ), firstBiomeOnly);
             if (!samplerCacheCooldownElapsed) {
@@ -231,14 +235,17 @@ public class BiomeProximityGenerator implements IGenerator {
         return biomeSourceInvoker.getParameters().findValue(targetPointEx.targetPoint());
     }
 
-    public ClimateTargetPointEx sampleClimateAndMaybePrefetch(int blockX, int blockZ) {
+    public ClimateTargetPointEx sampleClimateCachedAndMaybePrefetch(int blockX, int blockZ) {
         long packedPos = TbUtils.packBlockXZtoLong(blockX, blockZ);
+        if (TbUtils.benchmarkActive)
+            benchmarkSampleTotalCount.getAndIncrement();
         ClimateTargetPointEx result = climateSamplerCache.synchronous().getIfPresent(packedPos);
         if (result == null) {
             result = config.owner.sampleClimate(packedPos, firstBiomeOnly);
             climateSamplerCache.synchronous().put(packedPos, result);
-        }
-        if (CONFIG_GLOBAL.climateSamplerCachePrefetchRadius() > 0 && CONFIG_GLOBAL.climateSamplerCacheSize() > 0) {
+        } else if (TbUtils.benchmarkActive)
+            benchmarkSampleCacheHitCount.getAndIncrement();
+        if (CONFIG_GLOBAL.climateSamplerCachePrefetchRadius() > 0 && CONFIG_GLOBAL.climateSamplerCacheSize() > 0 && climateSamplerCacheActiveFutures.size() < CONFIG_GLOBAL.climateSamplerMax()) {
             // another spiral. Cbf making the methods common.
             double angle = 0;
             double radius = 0;

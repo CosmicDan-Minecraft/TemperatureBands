@@ -53,13 +53,19 @@ public class CommonConfig {
               - Highly recommended to leave enabled as it drastically improves world generation speed with advanced humidity, but there are diminishing returns if set too high.
               - If you experience 'can't keep up' warnings while exploring new chunks, try reducing this value. A low fixed number like 1 should still be better than 0 (off).
               - Result is rounded-down, meaning setting it too far negative could result in 0 which will disable prefetching. The default of -8 will do this if your CPU has *less*
-                than 8 threads, which seems appropriate based on my testing. Even on a 24-thread CPU, this would only result in a radius of 3, so keep that in mind if manually
-                setting to a positive number.
+                than 8 threads, which seems appropriate based on my testing. Even on a 24-thread CPU, this default would only result in a radius of 3, so keep that in mind if
+                manually setting to a positive number - there are sharply diminishing returns if this is set too high (relative to your available threads).
               - Do note that World Preview (and new world creation) will be a bit slower at the very start, but the speed will improve over time and actually generate quicker
                 overall (compared to a disabled sampler cache), especially in high resolutions of World Preview and/or high chunk rendering distances. World Preview will remain
-                slower overall but this is only testing initial chunk generation which is always much faster than biome decoration (which World Preview doesn't simulate by default,
-                nor does Temperature Bands touch any part of biome decoration).
+                slower overall but World Preview is only doing initial chunk generation which is practically never the bottleneck in actual gameplay, even for heavy modpacks
+                (that main bottleneck is chunk carving and decoration, i.e. digging-out caves and placing of trees/structures/etc.).
               - Finally, if you want to stress-test your CPU, disable this completely with 0 and keep max-1 (or max) threads in World Preview.""";
+
+    public final ModConfigSpec.IntValue climateSamplerMax;
+    public static final String climateSamplerMaxTxt = """
+             
+             [climateSamplerMax] specifies the hard limit on maximum active climate samplers.
+              - This setting is only really necessary for World Preview; without this limit, prefetching ends up with too much backpressure which results in a large memory "leak".""";
     public final ModConfigSpec.IntValue climateSamplerCacheDelay;
     public static final String climateSamplerCacheDelayTxt = """
              
@@ -315,6 +321,9 @@ public class CommonConfig {
         climateSamplerCachePrefetchRadius = builder
                 .comment(climateSamplerCachePrefetchRadiusTxt)
                 .defineInRange("climateSamplerCachePrefetchRadius", -8, -32, 32);
+        climateSamplerMax = builder
+                .comment(climateSamplerMaxTxt)
+                .defineInRange("climateSamplerMax", 1000, 1, 10000);
         climateSamplerCacheDelay = builder
                 .comment(climateSamplerCacheDelayTxt)
                 .defineInRange("climateSamplerCacheDelay", 0, 0, Integer.MAX_VALUE);
