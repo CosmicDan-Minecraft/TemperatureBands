@@ -4,6 +4,7 @@ import github.cosmicdan.temperaturebands.generator.BiomeProximityGenerator;
 import net.minecraft.CrashReport;
 import net.minecraft.ReportedException;
 import net.minecraft.world.level.levelgen.DensityFunction;
+import net.minecraft.world.level.levelgen.DensityFunctions;
 
 import java.io.File;
 import java.io.IOException;
@@ -64,6 +65,10 @@ public class TbUtils {
 
     static void dumpExtraClassInfo(DensityFunction func) {
         TemperatureBands.LOGGER.error("    - Class type is '{}'", func.getClass().getCanonicalName());
+        if (func instanceof DensityFunctions.HolderHolder holderHolder) {
+            DensityFunction funcInner = holderHolder.function().value();
+            TemperatureBands.LOGGER.error("    - HolderHolder class type is '{}'", funcInner.getClass().getCanonicalName());
+        }
         TemperatureBands.LOGGER.error("    - Class dump: {}", func.toString());
     }
 

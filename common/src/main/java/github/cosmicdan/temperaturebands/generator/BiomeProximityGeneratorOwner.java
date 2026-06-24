@@ -9,12 +9,8 @@ import java.util.Set;
 
 public interface BiomeProximityGeneratorOwner {
     ClimateTargetPointEx sampleClimate(long packedBlockPos, boolean firstBiomeOnly);
+    double computeOriginal(DensityFunction.FunctionContext context);
     Set<Holder<Biome>> getBiomesFirst();
     Set<Holder<Biome>> getBiomesSecond();
-    DensityFunction getShiftX();
-    DensityFunction getShiftY();
-    DensityFunction getShiftZ();
-    double getXZScale();
-    double getYScale();
     DensityFunction.NoiseHolder getNoise();
 }

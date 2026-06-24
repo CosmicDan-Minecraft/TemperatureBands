@@ -2,7 +2,7 @@ package github.cosmicdan.temperaturebands.generator;
 
 import github.cosmicdan.temperaturebands.DimensionData;
 import github.cosmicdan.temperaturebands.TbUtils;
-import github.cosmicdan.temperaturebands.noise.ShiftedNoiseEx;
+import github.cosmicdan.temperaturebands.densityfunctions.ShiftedNoiseEx;
 import net.minecraft.world.level.levelgen.DensityFunction;
 
 public class BandsGenerator implements IGenerator {
@@ -44,7 +44,7 @@ public class BandsGenerator implements IGenerator {
     }
 
     @Override
-    public double compute(DensityFunction.FunctionContext context, DimensionData dimData) {
+    public double onCompute(DensityFunction.FunctionContext context, DimensionData dimData) {
         int bandShift;
         int bandPos;
         int bandPosOffset = (int) (config.bandSize * (config.bandPositionShift * 8));
@@ -74,7 +74,7 @@ public class BandsGenerator implements IGenerator {
         bandPos /= 8;
 
         if (config.noiseFactor > 0) {
-            bandPos += (int) (computeOriginal(context) * config.noiseFactor);
+            bandPos += (int) (config.owner.computeOriginal(context) * config.noiseFactor);
         }
 
         // calculate grade
@@ -101,13 +101,6 @@ public class BandsGenerator implements IGenerator {
         }
 
         return tempLimit;
-    }
-
-    public double computeOriginal(DensityFunction.FunctionContext context) {
-        double d = context.blockX() * config.owner.xzScale + config.owner.shiftX.compute(context);
-        double e = context.blockY() * config.owner.yScale + config.owner.shiftY.compute(context);
-        double f = context.blockZ() * config.owner.xzScale + config.owner.shiftZ.compute(context);
-        return config.owner.noise.getValue(d, e, f);
     }
 
     @Override

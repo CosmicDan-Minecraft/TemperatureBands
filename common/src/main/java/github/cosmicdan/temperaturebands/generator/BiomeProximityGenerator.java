@@ -124,9 +124,9 @@ public class BiomeProximityGenerator implements IGenerator {
     }
 
     @Override
-    public double compute(DensityFunction.FunctionContext context, DimensionData dimData) {
+    public double onCompute(DensityFunction.FunctionContext context, DimensionData dimData) {
         if (biomeSourceError)
-            return computeOriginal(context);
+            return config.owner.computeOriginal(context);
         if (this.dimData == null)
             onFirstCompute(dimData);
         int originPosX = scalePosForResolution(context.blockX(), config.noiseResolution, noisePartSize, noisePartSizeMiddleOffset);
@@ -152,7 +152,7 @@ public class BiomeProximityGenerator implements IGenerator {
         // Level 4 = +0.30 to +1.00
 
         if (nearestFirstBiome >= 0.0) {
-            // Determine noise (e.g. humidity) as a percentage (0.0 to 1.0)
+            // Determine densityfunctions (e.g. humidity) as a percentage (0.0 to 1.0)
             noiseValue = 1.0 - (nearestFirstBiome / config.biomeSearchDistance);
             // Convert from percentage to the range MC wants (vanilla expects -1.0 to +1.0)
             noiseValue = (noiseValue * 2.0) - 1.0;
@@ -166,7 +166,7 @@ public class BiomeProximityGenerator implements IGenerator {
 
         if (config.baseNoisePercent > 0.0)
             // use humidityNoiseFactor for this point to soften the edges a bit
-            noiseValue += (computeOriginal(context) * config.baseNoisePercent);
+            noiseValue += (config.owner.computeOriginal(context) * config.baseNoisePercent);
 
         // apply some "middle weightiness"
         if (config.middleWeight > 0.0)
@@ -179,14 +179,6 @@ public class BiomeProximityGenerator implements IGenerator {
         }
 
         return noiseValue;
-    }
-
-    @Override
-    public double computeOriginal(DensityFunction.FunctionContext context) {
-        double d = context.blockX() * config.owner.getXZScale() + config.owner.getShiftX().compute(context);
-        double e = context.blockY() * config.owner.getYScale() + config.owner.getShiftY().compute(context);
-        double f = context.blockZ() * config.owner.getXZScale() + config.owner.getShiftZ().compute(context);
-        return config.owner.getNoise().getValue(d, e, f);
     }
 
     private int scalePosForResolution(int pos, int resolution, int partSize, int partSizeMid) {

@@ -1,7 +1,7 @@
 package github.cosmicdan.temperaturebands;
 
-import github.cosmicdan.temperaturebands.noise.ShiftedNoiseHumidity;
-import github.cosmicdan.temperaturebands.noise.ShiftedNoiseTemperature;
+import github.cosmicdan.temperaturebands.densityfunctions.HumidityShiftedNoise;
+import github.cosmicdan.temperaturebands.densityfunctions.TemperatureShiftedNoise;
 import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BiomeTags;
@@ -92,21 +92,21 @@ public class DimensionData {
     }
 
     public @Nullable DensityFunctions.HolderHolder getNoiseFunctionForName(String noiseName) {
-        if (noiseName.equals(ShiftedNoiseTemperature.NAME))
+        if (noiseName.equals(TemperatureShiftedNoise.NAME))
             return noiseTemperature;
-        else if (noiseName.equals(ShiftedNoiseHumidity.NAME))
+        else if (noiseName.equals(HumidityShiftedNoise.NAME))
             return noiseHumidity;
         else
-            return TbUtils.doCrash("Attempted getting an invalid noise: " + noiseName);
+            return TbUtils.doCrash("Attempted getting an invalid densityfunctions: " + noiseName);
     }
 
     public static void recreateDimDataWithNewNoiseFunction(String dimensionName, DimensionData dimData, String noiseName, DensityFunctions.HolderHolder noiseFunction) {
-        if (noiseName.equals(ShiftedNoiseTemperature.NAME))
+        if (noiseName.equals(TemperatureShiftedNoise.NAME))
             dimData = new DimensionData(false, dimData.config, dimData.level, dimData.noiseRouter, noiseFunction, dimData.noiseHumidity);
-        else if (noiseName.equals(ShiftedNoiseHumidity.NAME))
+        else if (noiseName.equals(HumidityShiftedNoise.NAME))
             dimData = new DimensionData(false, dimData.config, dimData.level, dimData.noiseRouter, dimData.noiseTemperature, noiseFunction);
         else
-            TbUtils.doCrash("Attempted recreating with invalid noise: " + noiseName);
+            TbUtils.doCrash("Attempted recreating with invalid densityfunctions: " + noiseName);
 
         TemperatureBands.DIMENSION_DATA_CACHE.put(dimensionName, dimData);
     }
@@ -141,7 +141,7 @@ public class DimensionData {
 
     public void clearCaches() {
         if (noiseHumidity != null) {
-            if (noiseHumidity.function().value() instanceof ShiftedNoiseHumidity humidityFunc) {
+            if (noiseHumidity.function().value() instanceof HumidityShiftedNoise humidityFunc) {
                 humidityFunc.cancelAllCacheTasks();
             }
         }

@@ -13,6 +13,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class RandomStateHooks {
     @Inject(method = "<init>", at = @At("RETURN"))
     private void init(NoiseGeneratorSettings chunkGeneratorSettings, HolderGetter<NormalNoise.NoiseParameters> arg, long seed, CallbackInfo ci) {
-        // We have the seed. I might use this if I ever introduce newer noise algorithms.
+        // We have the seed. I might use this if I ever introduce newer densityfunctions algorithms.
     }
 }

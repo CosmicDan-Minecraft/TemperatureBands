@@ -2,9 +2,9 @@ package github.cosmicdan.temperaturebands;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import github.cosmicdan.temperaturebands.noise.ShiftedNoiseEx;
-import github.cosmicdan.temperaturebands.noise.ShiftedNoiseHumidity;
-import github.cosmicdan.temperaturebands.noise.ShiftedNoiseTemperature;
+import github.cosmicdan.temperaturebands.densityfunctions.ShiftedNoiseEx;
+import github.cosmicdan.temperaturebands.densityfunctions.HumidityShiftedNoise;
+import github.cosmicdan.temperaturebands.densityfunctions.TemperatureShiftedNoise;
 import net.minecraft.core.Holder;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.DensityFunctions;
@@ -83,12 +83,12 @@ public final class TemperatureBands {
         } else if (currentFunction instanceof DensityFunctions.HolderHolder currentFunctionHolder && currentFunctionHolder.function().value() instanceof DensityFunctions.ShiftedNoise currentFunctionActual) {
             // Probably vanilla function, replace it
             ShiftedNoiseEx newNoise = null;
-            if (functionName.equals(ShiftedNoiseTemperature.NAME))
-                newNoise = new ShiftedNoiseTemperature(dimensionName, dimData.config, currentFunctionActual.shiftX(), currentFunctionActual.shiftY(), currentFunctionActual.shiftZ(), currentFunctionActual.xzScale(), currentFunctionActual.yScale(), currentFunctionActual.noise());
-            else if (functionName.equals(ShiftedNoiseHumidity.NAME))
-                newNoise = new ShiftedNoiseHumidity(dimensionName, dimData.config, currentFunctionActual.shiftX(), currentFunctionActual.shiftY(), currentFunctionActual.shiftZ(), currentFunctionActual.xzScale(), currentFunctionActual.yScale(), currentFunctionActual.noise());
+            if (functionName.equals(TemperatureShiftedNoise.NAME))
+                newNoise = new TemperatureShiftedNoise(dimensionName, dimData.config, currentFunctionActual.shiftX(), currentFunctionActual.shiftY(), currentFunctionActual.shiftZ(), currentFunctionActual.xzScale(), currentFunctionActual.yScale(), currentFunctionActual.noise());
+            else if (functionName.equals(HumidityShiftedNoise.NAME))
+                newNoise = new HumidityShiftedNoise(dimensionName, dimData.config, currentFunctionActual.shiftX(), currentFunctionActual.shiftY(), currentFunctionActual.shiftZ(), currentFunctionActual.xzScale(), currentFunctionActual.yScale(), currentFunctionActual.noise());
             else
-                TbUtils.doCrash("Unhandled noise type: " + functionName + ". Please add this dimension to blacklist, and/or report the error so support for this dimension might be added (if it's a mod-added dimension).");
+                TbUtils.doCrash("Unhandled densityfunctions type: " + functionName + ". Fixme! [Noise type should've already been verified via LevelHooks$NoiseRouterHooks#onMapDensityFunction]");
             DensityFunctions.HolderHolder newFunction = new DensityFunctions.HolderHolder(new Holder.Direct<>(newNoise));
             currentFunction = new DensityFunctions.HolderHolder(new Holder.Direct<>(newFunction));
             DimensionData.recreateDimDataWithNewNoiseFunction(dimensionName, dimData, functionName, (DensityFunctions.HolderHolder) currentFunction);

@@ -3,8 +3,8 @@ package github.cosmicdan.temperaturebands.mixin;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import github.cosmicdan.temperaturebands.*;
-import github.cosmicdan.temperaturebands.noise.ShiftedNoiseHumidity;
-import github.cosmicdan.temperaturebands.noise.ShiftedNoiseTemperature;
+import github.cosmicdan.temperaturebands.densityfunctions.HumidityShiftedNoise;
+import github.cosmicdan.temperaturebands.densityfunctions.TemperatureShiftedNoise;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.core.RegistryAccess;
@@ -155,7 +155,7 @@ public abstract class LevelHooks {
         }
 
         /**
-         * Third hook that's used during level (world) creation/load, after ChunkMapHooks. Will be called many times, once for each noise function. Level still not ready.
+         * Third hook that's used during level (world) creation/load, after ChunkMapHooks. Will be called many times, once for each densityfunctions function. Level still not ready.
          * Responsible for overriding relevant DensityFunctions in NoiseRouter if applicable (i.e. has an entry in TemperatureBands.NOISEROUTER_TEMP_OVERRIDES)
          */
         @WrapOperation(
@@ -174,9 +174,9 @@ public abstract class LevelHooks {
                         String dimensionName = dimDataEntry.getKey();
                         DimensionData dimensionData = dimDataEntry.getValue();
                         if (currentFunction.equals(temperature))
-                            currentFunction = TemperatureBands.replaceNoiseIfNeeded(dimensionData, dimensionName, currentFunction, ShiftedNoiseTemperature.NAME);
+                            currentFunction = TemperatureBands.replaceNoiseIfNeeded(dimensionData, dimensionName, currentFunction, TemperatureShiftedNoise.NAME);
                         else if (currentFunction.equals(vegetation) && dimensionData.config.humidityAlgorithm() != 0)
-                            currentFunction = TemperatureBands.replaceNoiseIfNeeded(dimensionData, dimensionName, currentFunction, ShiftedNoiseHumidity.NAME);
+                            currentFunction = TemperatureBands.replaceNoiseIfNeeded(dimensionData, dimensionName, currentFunction, HumidityShiftedNoise.NAME);
                         break;
                     }
                 }
