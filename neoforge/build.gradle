@@ -1,5 +1,5 @@
 plugins {
-    id 'com.github.johnrengelman.shadow'
+    id 'com.gradleup.shadow'
 }
 
 apply from: '../modprops.gradle'
@@ -45,6 +45,7 @@ dependencies {
     
     // Caffeine library (fast LruCache) - https://github.com/ben-manes/caffeine
     forgeRuntimeLibrary("com.github.ben-manes.caffeine:caffeine:3.2.4")
+    include "com.github.ben-manes.caffeine:caffeine:3.2.4"
     
     // World Preview (NeoForge port via Modrinth)
     modImplementation("maven.modrinth:world-preview-neoforged-(unofficial):y3St0do0")

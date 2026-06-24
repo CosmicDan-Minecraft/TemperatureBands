@@ -1,5 +1,5 @@
 plugins {
-    id 'com.github.johnrengelman.shadow'
+    id 'com.gradleup.shadow'
 }
 
 apply from: '../modprops.gradle'
@@ -38,6 +38,9 @@ dependencies {
 
     common(project(path: ':common', configuration: 'namedElements')) { transitive false }
     shadowBundle project(path: ':common', configuration: 'transformProductionFabric')
+    
+    // Caffeine library (fast LruCache) - https://github.com/ben-manes/caffeine
+    include "com.github.ben-manes.caffeine:caffeine:3.2.4"
 
     // Forge config API port
     modApi "fuzs.forgeconfigapiport:forgeconfigapiport-fabric:21.1.3"
