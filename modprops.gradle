@@ -1,6 +1,6 @@
 project.ext {
     modid = "temperaturebands"
     archives_base_name = "TemperatureBands"
-    mod_version = "1.0.0"
+    mod_version = "2.0.0"
     maven_group = "github.cosmicdan.temperaturebands"
 }
