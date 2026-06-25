@@ -1,8 +1,10 @@
 package github.cosmicdan.temperaturebands.generator;
 
+import github.cosmicdan.temperaturebands.DimensionConfig;
 import github.cosmicdan.temperaturebands.DimensionData;
 import github.cosmicdan.temperaturebands.TbUtils;
-import github.cosmicdan.temperaturebands.densityfunctions.ShiftedNoiseEx;
+import github.cosmicdan.temperaturebands.TemperatureBands;
+import github.cosmicdan.temperaturebands.densityfunctions.OwnerFunction;
 import net.minecraft.world.level.levelgen.DensityFunction;
 
 public class BandsGenerator implements IGenerator {
@@ -17,7 +19,7 @@ public class BandsGenerator implements IGenerator {
     public final boolean bandVarianceIsPowerOfTwo;
 
     public record Config(
-            ShiftedNoiseEx owner,
+            OwnerFunction owner,
             boolean swapBandAxis,
             int bandSize,
             float bandPositionShift,
@@ -28,6 +30,21 @@ public class BandsGenerator implements IGenerator {
             float algo1bandVarianceSteepness,
             float tempWeight
     ) {}
+
+    public static BandsGenerator create(OwnerFunction owner, DimensionConfig config, boolean isHumidity, float tempWeight) {
+        return new BandsGenerator(new BandsGenerator.Config(
+                owner,
+                isHumidity != config.useVerticalBands(),
+                isHumidity ? Math.round(config.bandSize() * config.humidityAlgo1MimicScale()) : config.bandSize(),
+                config.bandPositionShift(),
+                config.tempRange(),
+                config.tempGradeShift(),
+                config.noiseFactor(),
+                config.algo1bandVariance(),
+                config.algo1bandVarianceSteepness(),
+                tempWeight // pass in -1.0 if not used (e.g. temperature function)
+        ));
+    }
 
     public BandsGenerator(Config config) {
         this.config = config;

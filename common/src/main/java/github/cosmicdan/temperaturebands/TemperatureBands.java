@@ -2,9 +2,7 @@ package github.cosmicdan.temperaturebands;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import github.cosmicdan.temperaturebands.densityfunctions.ShiftedNoiseEx;
-import github.cosmicdan.temperaturebands.densityfunctions.HumidityShiftedNoise;
-import github.cosmicdan.temperaturebands.densityfunctions.TemperatureShiftedNoise;
+import github.cosmicdan.temperaturebands.densityfunctions.*;
 import net.minecraft.core.Holder;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.DensityFunctions;
@@ -70,7 +68,7 @@ public final class TemperatureBands {
     }
 
     /**
-     * Reminder the passed-in dimDataFinal reference might be destroyed upon exit of this method
+     * Reminder: the passed-in dimData reference might be destroyed upon exit of this method
      */
     public static DensityFunction replaceNoiseIfNeeded(DimensionData dimData, String dimensionName, DensityFunction currentFunction, String functionName) {
         // first check if we already made modded function, return it if so
@@ -80,26 +78,31 @@ public final class TemperatureBands {
             currentFunction = dimDataModdedFunction;
             //TemperatureBands.LOGGER.info("...returned already-replaced function");
             TemperatureBands.logDebug("DimensionData for {} already has modded {}, no need to replace/recreate", dimensionName, functionName);
-        } else if (currentFunction instanceof DensityFunctions.HolderHolder currentFunctionHolder && currentFunctionHolder.function().value() instanceof DensityFunctions.ShiftedNoise currentFunctionActual) {
-            // Probably vanilla function, replace it
-            ShiftedNoiseEx newNoise = null;
-            if (functionName.equals(TemperatureShiftedNoise.NAME))
-                newNoise = new TemperatureShiftedNoise(dimensionName, dimData.config, currentFunctionActual.shiftX(), currentFunctionActual.shiftY(), currentFunctionActual.shiftZ(), currentFunctionActual.xzScale(), currentFunctionActual.yScale(), currentFunctionActual.noise());
-            else if (functionName.equals(HumidityShiftedNoise.NAME))
-                newNoise = new HumidityShiftedNoise(dimensionName, dimData.config, currentFunctionActual.shiftX(), currentFunctionActual.shiftY(), currentFunctionActual.shiftZ(), currentFunctionActual.xzScale(), currentFunctionActual.yScale(), currentFunctionActual.noise());
-            else
-                TbUtils.doCrash("Unhandled densityfunctions type: " + functionName + ". Fixme! [Noise type should've already been verified via LevelHooks$NoiseRouterHooks#onMapDensityFunction]");
-            DensityFunctions.HolderHolder newFunction = new DensityFunctions.HolderHolder(new Holder.Direct<>(newNoise));
-            currentFunction = new DensityFunctions.HolderHolder(new Holder.Direct<>(newFunction));
-            DimensionData.recreateDimDataWithNewNoiseFunction(dimensionName, dimData, functionName, (DensityFunctions.HolderHolder) currentFunction);
-            TemperatureBands.LOGGER.info("Succeeded in hooking {} for dimension '{}'", functionName, dimensionName);
+        } else if (currentFunction instanceof DensityFunctions.HolderHolder currentFunctionHolder) {
+            // verification
+            if (!functionName.equals(OwnerFunction.TEMPERATURE_NAME) && !functionName.equals(OwnerFunction.HUMIDITY_NAME))
+                TbUtils.doCrash("Unhandled DensityFunction name: " + functionName + ". Fixme! [Noise type should've already been verified via LevelHooks$NoiseRouterHooks#onMapDensityFunction]");
+            DensityFunction newNoise = DimensionData.createModdedFunction(functionName, currentFunctionHolder.function().value(), dimensionName, dimData.config);
+            if (newNoise == null) {
+                Set<String> failedDimensionEntry = failedDimensionNoiseReplacements.computeIfAbsent(dimensionName, k -> new HashSet<>());
+                if (!failedDimensionEntry.contains(functionName)) {
+                    TemperatureBands.LOGGER.error("Failed hooking {} for dimension '{}' because the inner noise is an unrecognized type. Please report this to CosmicDan so support for this custom dimension noise might be added.", functionName, dimensionName);
+                    failedDimensionEntry.add(functionName);
+                    TbUtils.dumpExtraClassInfo(currentFunction);
+                }
+            } else {
+                DensityFunctions.HolderHolder newFunction = new DensityFunctions.HolderHolder(new Holder.Direct<>(newNoise));
+                currentFunction = new DensityFunctions.HolderHolder(new Holder.Direct<>(newFunction));
+                DimensionData.recreateDimDataWithNewNoiseFunction(dimensionName, dimData, functionName, (DensityFunctions.HolderHolder) currentFunction);
+                TemperatureBands.LOGGER.info("Succeeded in hooking {} for dimension '{}'", functionName, dimensionName);
+            }
         } else {
-            // function is not ShiftedNoise
+            // function is not a HolderHolder
             if (CONFIG_GLOBAL.ignoreDimensionFailures().contains(dimensionName))
                 return currentFunction;
             Set<String> failedDimensionEntry = failedDimensionNoiseReplacements.computeIfAbsent(dimensionName, k -> new HashSet<>());
             if (!failedDimensionEntry.contains(functionName)) {
-                TemperatureBands.LOGGER.error("Failed hooking {} for dimension '{}' because it is not a Holder of ShiftedNoise type. Please report this to CosmicDan so support for this custom dimension might be added.", functionName, dimensionName);
+                TemperatureBands.LOGGER.error("Failed hooking {} for dimension '{}' because it is not a HolderHolder type. Please report this to CosmicDan so support for this custom dimension might be added.", functionName, dimensionName);
                 failedDimensionEntry.add(functionName);
                 TbUtils.dumpExtraClassInfo(currentFunction);
             }

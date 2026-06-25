@@ -4,8 +4,10 @@ import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import github.cosmicdan.temperaturebands.ClimateTargetPointEx;
+import github.cosmicdan.temperaturebands.DimensionConfig;
 import github.cosmicdan.temperaturebands.DimensionData;
 import github.cosmicdan.temperaturebands.TbUtils;
+import github.cosmicdan.temperaturebands.densityfunctions.OwnerFunction;
 import github.cosmicdan.temperaturebands.mixin.MultiNoiseBiomeSourceInvoker;
 import net.minecraft.core.Holder;
 import net.minecraft.world.level.biome.Biome;
@@ -46,8 +48,7 @@ public class BiomeProximityGenerator implements IGenerator {
     private boolean samplerCacheCooldownElapsed = false;
 
     public record Config(
-            BiomeProximityGeneratorOwner owner,
-            String dimensionName,
+            OwnerFunction owner,
             boolean isTempDimension,
             int noiseResolution,
             int climateSamplerResolutionRaw,
@@ -58,6 +59,21 @@ public class BiomeProximityGenerator implements IGenerator {
             float middleWeight,
             float tempWeight
     ) {}
+
+    public static BiomeProximityGenerator create(OwnerFunction owner, DimensionConfig config) {
+        return new BiomeProximityGenerator(new BiomeProximityGenerator.Config(
+                owner,
+                config.type().equals(DimensionConfig.ConfigType.TEMP),
+                config.humidityResolution(),
+                config.climateSamplerResolution(),
+                config.humidityRiverInfluence(),
+                config.humiditySearchDistance(),
+                config.distanceFunction(),
+                config.humidityBaseNoisePercent(),
+                config.humidityMiddleWeight(),
+                config.humidityTempWeight()
+        ));
+    }
 
     public BiomeProximityGenerator(Config config) {
         this.config = config;

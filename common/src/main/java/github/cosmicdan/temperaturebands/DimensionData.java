@@ -1,7 +1,6 @@
 package github.cosmicdan.temperaturebands;
 
-import github.cosmicdan.temperaturebands.densityfunctions.HumidityShiftedNoise;
-import github.cosmicdan.temperaturebands.densityfunctions.TemperatureShiftedNoise;
+import github.cosmicdan.temperaturebands.densityfunctions.*;
 import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BiomeTags;
@@ -9,6 +8,7 @@ import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeSource;
 import net.minecraft.world.level.biome.Climate;
 import net.minecraft.world.level.biome.MultiNoiseBiomeSource;
+import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.DensityFunctions;
 import net.minecraft.world.level.levelgen.NoiseRouter;
 import org.jetbrains.annotations.NotNull;
@@ -92,18 +92,33 @@ public class DimensionData {
     }
 
     public @Nullable DensityFunctions.HolderHolder getNoiseFunctionForName(String noiseName) {
-        if (noiseName.equals(TemperatureShiftedNoise.NAME))
+        if (noiseName.equals(OwnerFunction.TEMPERATURE_NAME))
             return noiseTemperature;
-        else if (noiseName.equals(HumidityShiftedNoise.NAME))
+        else if (noiseName.equals(OwnerFunction.HUMIDITY_NAME))
             return noiseHumidity;
         else
             return TbUtils.doCrash("Attempted getting an invalid densityfunctions: " + noiseName);
     }
 
+    public static @Nullable DensityFunction createModdedFunction(String functionName, DensityFunction originalFunction, String dimensionName, DimensionConfig config) {
+        if (originalFunction instanceof DensityFunctions.ShiftedNoise originalFunctionShiftedNoise) {
+            if (functionName.equals(OwnerFunction.TEMPERATURE_NAME))
+                return new TemperatureShiftedNoise(dimensionName, config, originalFunctionShiftedNoise);
+            else if (functionName.equals(OwnerFunction.HUMIDITY_NAME))
+                return new HumidityShiftedNoise(dimensionName, config, originalFunctionShiftedNoise);
+        } else if (originalFunction instanceof DensityFunctions.TwoArgumentSimpleFunction originalFunctionAp2) {
+            if (functionName.equals(OwnerFunction.TEMPERATURE_NAME))
+                return new TemperatureAp2(dimensionName, config, originalFunctionAp2);
+            else if (functionName.equals(OwnerFunction.HUMIDITY_NAME))
+                return new HumidityAp2(dimensionName, config, originalFunctionAp2);
+        }
+        return null;
+    }
+
     public static void recreateDimDataWithNewNoiseFunction(String dimensionName, DimensionData dimData, String noiseName, DensityFunctions.HolderHolder noiseFunction) {
-        if (noiseName.equals(TemperatureShiftedNoise.NAME))
+        if (noiseName.equals(OwnerFunction.TEMPERATURE_NAME))
             dimData = new DimensionData(false, dimData.config, dimData.level, dimData.noiseRouter, noiseFunction, dimData.noiseHumidity);
-        else if (noiseName.equals(HumidityShiftedNoise.NAME))
+        else if (noiseName.equals(OwnerFunction.HUMIDITY_NAME))
             dimData = new DimensionData(false, dimData.config, dimData.level, dimData.noiseRouter, dimData.noiseTemperature, noiseFunction);
         else
             TbUtils.doCrash("Attempted recreating with invalid densityfunctions: " + noiseName);
@@ -140,9 +155,14 @@ public class DimensionData {
     }
 
     public void clearCaches() {
+        if (noiseTemperature != null) {
+            if (noiseTemperature.function().value() instanceof OwnerFunction func) {
+                func.cancelAllCacheTasks();
+            }
+        }
         if (noiseHumidity != null) {
-            if (noiseHumidity.function().value() instanceof HumidityShiftedNoise humidityFunc) {
-                humidityFunc.cancelAllCacheTasks();
+            if (noiseHumidity.function().value() instanceof OwnerFunction func) {
+                func.cancelAllCacheTasks();
             }
         }
     }

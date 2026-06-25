@@ -3,8 +3,7 @@ package github.cosmicdan.temperaturebands.mixin;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import github.cosmicdan.temperaturebands.*;
-import github.cosmicdan.temperaturebands.densityfunctions.HumidityShiftedNoise;
-import github.cosmicdan.temperaturebands.densityfunctions.TemperatureShiftedNoise;
+import github.cosmicdan.temperaturebands.densityfunctions.OwnerFunction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.core.RegistryAccess;
@@ -45,28 +44,6 @@ import java.util.function.Supplier;
  * TODO: Separate server/client objects.
  */
 public abstract class LevelHooks {
-    /**
-     * Dummy hook to manually "verify" that ShiftedNoise is unchanged between MC updates.
-     * Doesn't actually do anything, just blocks compile if signatures and such have changed.
-     */
-    @Mixin(DensityFunctions.ShiftedNoise.class)
-    public static abstract class DensityFunctionsHooks {
-
-        @Inject(
-                method = "<init>",
-                at = @At("TAIL")
-        )
-        private void onConstruct(DensityFunction shiftX, DensityFunction shiftY, DensityFunction shiftZ, double xzScale, double yScale, DensityFunction.NoiseHolder noise, CallbackInfo ci) {
-        }
-
-        @Inject(
-                method = "compute",
-                at = @At("TAIL")
-        )
-        private void onCompute(DensityFunction.FunctionContext functionContext, CallbackInfoReturnable<Double> cir) {
-        }
-    }
-
     @Mixin(LevelStorageSource.class)
     public static abstract class LevelStorageSourceHooks {
         @Shadow public abstract Path getBaseDir();
@@ -174,9 +151,9 @@ public abstract class LevelHooks {
                         String dimensionName = dimDataEntry.getKey();
                         DimensionData dimensionData = dimDataEntry.getValue();
                         if (currentFunction.equals(temperature))
-                            currentFunction = TemperatureBands.replaceNoiseIfNeeded(dimensionData, dimensionName, currentFunction, TemperatureShiftedNoise.NAME);
+                            currentFunction = TemperatureBands.replaceNoiseIfNeeded(dimensionData, dimensionName, currentFunction, OwnerFunction.TEMPERATURE_NAME);
                         else if (currentFunction.equals(vegetation) && dimensionData.config.humidityAlgorithm() != 0)
-                            currentFunction = TemperatureBands.replaceNoiseIfNeeded(dimensionData, dimensionName, currentFunction, HumidityShiftedNoise.NAME);
+                            currentFunction = TemperatureBands.replaceNoiseIfNeeded(dimensionData, dimensionName, currentFunction, OwnerFunction.HUMIDITY_NAME);
                         break;
                     }
                 }

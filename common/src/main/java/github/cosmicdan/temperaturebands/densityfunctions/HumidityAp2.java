@@ -1,6 +1,9 @@
 package github.cosmicdan.temperaturebands.densityfunctions;
 
-import github.cosmicdan.temperaturebands.*;
+import github.cosmicdan.temperaturebands.ClimateTargetPointEx;
+import github.cosmicdan.temperaturebands.CommonConfig;
+import github.cosmicdan.temperaturebands.DimensionConfig;
+import github.cosmicdan.temperaturebands.TbUtils;
 import github.cosmicdan.temperaturebands.generator.BandsGenerator;
 import github.cosmicdan.temperaturebands.generator.BiomeProximityGenerator;
 import github.cosmicdan.temperaturebands.generator.IGenerator;
@@ -13,8 +16,8 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Set;
 
-public class HumidityShiftedNoise extends ShiftedNoiseEx implements OwnerFunction {
-    public HumidityShiftedNoise(String dimensionName, DimensionConfig config, DensityFunctions.ShiftedNoise funcOriginal) {
+public class HumidityAp2 extends Ap2NoiseEx {
+    public HumidityAp2(String dimensionName, DimensionConfig config, DensityFunctions.TwoArgumentSimpleFunction funcOriginal) {
         super(dimensionName, config, funcOriginal);
     }
 
@@ -30,7 +33,7 @@ public class HumidityShiftedNoise extends ShiftedNoiseEx implements OwnerFunctio
 
     @Override
     public @NotNull DensityFunction mapAll(Visitor visitor) {
-        return visitor.apply(new HumidityShiftedNoise(dimensionName, config, (DensityFunctions.ShiftedNoise) funcOriginal.mapAll(visitor)));
+        return visitor.apply(new HumidityAp2(dimensionName, config, (DensityFunctions.TwoArgumentSimpleFunction) funcOriginal.mapAll(visitor)));
     }
 
     @Override

@@ -1,9 +1,6 @@
 package github.cosmicdan.temperaturebands.densityfunctions;
 
-import github.cosmicdan.temperaturebands.ClimateTargetPointEx;
-import github.cosmicdan.temperaturebands.CommonConfig;
-import github.cosmicdan.temperaturebands.DimensionConfig;
-import github.cosmicdan.temperaturebands.TbUtils;
+import github.cosmicdan.temperaturebands.*;
 import github.cosmicdan.temperaturebands.generator.BandsGenerator;
 import github.cosmicdan.temperaturebands.generator.IGenerator;
 import net.minecraft.core.Holder;
@@ -14,8 +11,8 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Set;
 
-public class TemperatureShiftedNoise extends ShiftedNoiseEx implements OwnerFunction {
-    public TemperatureShiftedNoise(String dimensionName, DimensionConfig config, DensityFunctions.ShiftedNoise funcOriginal) {
+public class TemperatureAp2 extends Ap2NoiseEx {
+    public TemperatureAp2(String dimensionName, DimensionConfig config, DensityFunctions.TwoArgumentSimpleFunction funcOriginal) {
         super(dimensionName, config, funcOriginal);
     }
 
@@ -29,7 +26,7 @@ public class TemperatureShiftedNoise extends ShiftedNoiseEx implements OwnerFunc
 
     @Override
     public @NotNull DensityFunction mapAll(Visitor visitor) {
-        return visitor.apply(new TemperatureShiftedNoise(dimensionName, config, (DensityFunctions.ShiftedNoise) funcOriginal.mapAll(visitor)));
+        return visitor.apply(new TemperatureAp2(dimensionName, config, (DensityFunctions.TwoArgumentSimpleFunction) funcOriginal.mapAll(visitor)));
     }
 
     @Override

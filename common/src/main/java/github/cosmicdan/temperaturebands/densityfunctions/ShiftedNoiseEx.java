@@ -3,6 +3,8 @@ package github.cosmicdan.temperaturebands.densityfunctions;
 import github.cosmicdan.temperaturebands.DimensionConfig;
 import github.cosmicdan.temperaturebands.DimensionData;
 import github.cosmicdan.temperaturebands.TbUtils;
+import github.cosmicdan.temperaturebands.TemperatureBands;
+import github.cosmicdan.temperaturebands.generator.IGenerator;
 import net.minecraft.util.KeyDispatchDataCodec;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.DensityFunctions;
@@ -12,30 +14,20 @@ import java.util.Objects;
 
 import static github.cosmicdan.temperaturebands.TemperatureBands.DIMENSION_DATA_CACHE;
 
-public abstract class ShiftedNoiseEx implements DensityFunction {
+public abstract class ShiftedNoiseEx implements DensityFunction,OwnerFunction {
     public final String dimensionName;
     public final DimensionConfig config;
-    public final DensityFunction shiftX;
-    public final DensityFunction shiftY;
-    public final DensityFunction shiftZ;
-    public final double xzScale;
-    public final double yScale;
-    public final NoiseHolder noise;
+    public final DensityFunctions.ShiftedNoise funcOriginal;
+    public final IGenerator gen;
 
     public DimensionData dimData = null;
 
-    public ShiftedNoiseEx(String dimensionName, DimensionConfig config, DensityFunction shiftX, DensityFunction shiftY, DensityFunction shiftZ, double xzScale, double yScale, NoiseHolder noise) {
+    public ShiftedNoiseEx(String dimensionName, DimensionConfig config, DensityFunctions.ShiftedNoise funcOriginal) {
         this.dimensionName = dimensionName;
         this.config = config;
-        this.shiftX = shiftX;
-        this.shiftY = shiftY;
-        this.shiftZ = shiftZ;
-        this.xzScale = xzScale;
-        this.yScale = yScale;
-        this.noise = noise;
+        this.funcOriginal = funcOriginal;
+        this.gen = createGen();
     }
-
-    abstract double onCompute(FunctionContext context);
 
     @Override
     public final double compute(FunctionContext context) {
@@ -44,68 +36,34 @@ public abstract class ShiftedNoiseEx implements DensityFunction {
             if (dimData == null)
                 TbUtils.doCrash("Couldn't find DimensionData on first compute! Eh?");
         }
-        return onCompute(context);
-    }
-
-    public double computeOriginal(DensityFunction.FunctionContext context) {
-        double d = context.blockX() * xzScale + shiftX.compute(context);
-        double e = context.blockY() * yScale + shiftY.compute(context);
-        double f = context.blockZ() * xzScale + shiftZ.compute(context);
-        return noise.getValue(d, e, f);
+        return gen.onCompute(context, dimData);
     }
 
     @Override
-    public double minValue() {
-        return -this.maxValue();
+    public final double computeOriginal(DensityFunction.FunctionContext context) {
+        double d = context.blockX() * funcOriginal.xzScale() + funcOriginal.shiftX().compute(context);
+        double e = context.blockY() * funcOriginal.yScale() + funcOriginal.shiftY().compute(context);
+        double f = context.blockZ() * funcOriginal.xzScale() + funcOriginal.shiftZ().compute(context);
+        return funcOriginal.noise().getValue(d, e, f);
     }
 
     @Override
-    public double maxValue() {
-        return this.noise.maxValue();
+    public final void fillArray(double[] ds, ContextProvider contextProvider) {
+        funcOriginal.fillArray(ds, contextProvider);
     }
 
     @Override
-    public @NotNull KeyDispatchDataCodec<? extends DensityFunction> codec() {
-        return DensityFunctions.ShiftedNoise.CODEC;
+    public final double minValue() {
+        return funcOriginal.minValue();
     }
 
     @Override
-    public String toString() {
-        String normalNoiseConfigString = null;
-        if (noise.noise() == null) {
-            normalNoiseConfigString = "null";
-        } else {
-            StringBuilder sb = new StringBuilder();
-            noise.noise().parityConfigString(sb);
-            normalNoiseConfigString = sb.toString();
-        }
-        return "ShiftedNoiseEx{" +
-                "dimensionName='" + dimensionName + '\'' +
-                ", shiftX=" + shiftX +
-                ", shiftY=" + shiftY +
-                ", shiftZ=" + shiftZ +
-                ", xzScale=" + xzScale +
-                ", yScale=" + yScale +
-                ", densityfunctions={NoiseHolder{NoiseParameters=" + noise.noiseData().value() + ",NormalNoise=" + normalNoiseConfigString + "}}" +
-                '}';
+    public final double maxValue() {
+        return funcOriginal.noise().maxValue();
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        ShiftedNoiseEx that = (ShiftedNoiseEx) o;
-        return Double.compare(xzScale, that.xzScale) == 0 &&
-                Double.compare(yScale, that.yScale) == 0 &&
-                Objects.equals(dimensionName, that.dimensionName) &&
-                Objects.equals(shiftX, that.shiftX) &&
-                Objects.equals(shiftY, that.shiftY) &&
-                Objects.equals(shiftZ, that.shiftZ) &&
-                Objects.equals(noise, that.noise);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(dimensionName, shiftX, shiftY, shiftZ, xzScale, yScale, noise);
+    public final @NotNull KeyDispatchDataCodec<? extends DensityFunction> codec() {
+        return funcOriginal.codec();
     }
 }
