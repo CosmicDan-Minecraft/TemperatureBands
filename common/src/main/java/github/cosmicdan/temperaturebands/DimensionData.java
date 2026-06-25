@@ -111,6 +111,11 @@ public class DimensionData {
                 return new TemperatureAp2(dimensionName, config, originalFunctionAp2);
             else if (functionName.equals(OwnerFunction.HUMIDITY_NAME))
                 return new HumidityAp2(dimensionName, config, originalFunctionAp2);
+        } else if (originalFunction instanceof DensityFunctions.MarkerOrMarked originalFunctionMarked) {
+            if (functionName.equals(OwnerFunction.TEMPERATURE_NAME))
+                return new TemperatureMarked(dimensionName, config, originalFunctionMarked);
+            else if (functionName.equals(OwnerFunction.HUMIDITY_NAME))
+                return new HumidityMarked(dimensionName, config, originalFunctionMarked);
         }
         return null;
     }
