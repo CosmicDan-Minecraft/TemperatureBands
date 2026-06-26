@@ -3,8 +3,7 @@ package github.cosmicdan.temperaturebands.generator;
 import github.cosmicdan.temperaturebands.DimensionConfig;
 import github.cosmicdan.temperaturebands.DimensionData;
 import github.cosmicdan.temperaturebands.TbUtils;
-import github.cosmicdan.temperaturebands.TemperatureBands;
-import github.cosmicdan.temperaturebands.densityfunctions.OwnerFunction;
+import github.cosmicdan.temperaturebands.DensityFunctionEx;
 import net.minecraft.world.level.levelgen.DensityFunction;
 
 public class BandsGenerator implements IGenerator {
@@ -19,7 +18,7 @@ public class BandsGenerator implements IGenerator {
     public final boolean bandVarianceIsPowerOfTwo;
 
     public record Config(
-            OwnerFunction owner,
+            DensityFunctionEx owner,
             boolean swapBandAxis,
             int bandSize,
             float bandPositionShift,
@@ -31,7 +30,7 @@ public class BandsGenerator implements IGenerator {
             float tempWeight
     ) {}
 
-    public static BandsGenerator create(OwnerFunction owner, DimensionConfig config, boolean isHumidity, float tempWeight) {
+    public static BandsGenerator create(DensityFunctionEx owner, DimensionConfig config, boolean isHumidity, float tempWeight) {
         return new BandsGenerator(new BandsGenerator.Config(
                 owner,
                 isHumidity != config.useVerticalBands(),

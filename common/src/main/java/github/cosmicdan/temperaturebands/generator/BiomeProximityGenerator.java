@@ -7,7 +7,7 @@ import github.cosmicdan.temperaturebands.ClimateTargetPointEx;
 import github.cosmicdan.temperaturebands.DimensionConfig;
 import github.cosmicdan.temperaturebands.DimensionData;
 import github.cosmicdan.temperaturebands.TbUtils;
-import github.cosmicdan.temperaturebands.densityfunctions.OwnerFunction;
+import github.cosmicdan.temperaturebands.DensityFunctionEx;
 import github.cosmicdan.temperaturebands.mixin.MultiNoiseBiomeSourceInvoker;
 import net.minecraft.core.Holder;
 import net.minecraft.world.level.biome.Biome;
@@ -48,7 +48,7 @@ public class BiomeProximityGenerator implements IGenerator {
     private boolean samplerCacheCooldownElapsed = false;
 
     public record Config(
-            OwnerFunction owner,
+            DensityFunctionEx owner,
             boolean isTempDimension,
             int noiseResolution,
             int climateSamplerResolutionRaw,
@@ -60,7 +60,7 @@ public class BiomeProximityGenerator implements IGenerator {
             float tempWeight
     ) {}
 
-    public static BiomeProximityGenerator create(OwnerFunction owner, DimensionConfig config) {
+    public static BiomeProximityGenerator create(DensityFunctionEx owner, DimensionConfig config) {
         return new BiomeProximityGenerator(new BiomeProximityGenerator.Config(
                 owner,
                 config.type().equals(DimensionConfig.ConfigType.TEMP),

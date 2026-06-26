@@ -2,7 +2,6 @@ package github.cosmicdan.temperaturebands;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import github.cosmicdan.temperaturebands.densityfunctions.*;
 import net.minecraft.core.Holder;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.DensityFunctions;
@@ -80,7 +79,7 @@ public final class TemperatureBands {
             TemperatureBands.logDebug("DimensionData for {} already has modded {}, no need to replace/recreate", dimensionName, functionName);
         } else if (currentFunction instanceof DensityFunctions.HolderHolder currentFunctionHolder) {
             // verification
-            if (!functionName.equals(OwnerFunction.TEMPERATURE_NAME) && !functionName.equals(OwnerFunction.HUMIDITY_NAME))
+            if (!functionName.equals(DensityFunctionEx.TEMPERATURE_NAME) && !functionName.equals(DensityFunctionEx.HUMIDITY_NAME))
                 TbUtils.doCrash("Unhandled DensityFunction name: " + functionName + ". Fixme! [Noise type should've already been verified via LevelHooks$NoiseRouterHooks#onMapDensityFunction]");
             DensityFunction newNoise = DimensionData.createModdedFunction(functionName, currentFunctionHolder.function().value(), dimensionName, dimData.config);
             if (newNoise == null) {

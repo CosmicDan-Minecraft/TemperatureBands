@@ -3,7 +3,7 @@ package github.cosmicdan.temperaturebands.mixin;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import github.cosmicdan.temperaturebands.*;
-import github.cosmicdan.temperaturebands.densityfunctions.OwnerFunction;
+import github.cosmicdan.temperaturebands.DensityFunctionEx;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.core.RegistryAccess;
@@ -151,9 +151,9 @@ public abstract class LevelHooks {
                         String dimensionName = dimDataEntry.getKey();
                         DimensionData dimensionData = dimDataEntry.getValue();
                         if (currentFunction.equals(temperature))
-                            currentFunction = TemperatureBands.replaceNoiseIfNeeded(dimensionData, dimensionName, currentFunction, OwnerFunction.TEMPERATURE_NAME);
+                            currentFunction = TemperatureBands.replaceNoiseIfNeeded(dimensionData, dimensionName, currentFunction, DensityFunctionEx.TEMPERATURE_NAME);
                         else if (currentFunction.equals(vegetation) && dimensionData.config.humidityAlgorithm() != 0)
-                            currentFunction = TemperatureBands.replaceNoiseIfNeeded(dimensionData, dimensionName, currentFunction, OwnerFunction.HUMIDITY_NAME);
+                            currentFunction = TemperatureBands.replaceNoiseIfNeeded(dimensionData, dimensionName, currentFunction, DensityFunctionEx.HUMIDITY_NAME);
                         break;
                     }
                 }
