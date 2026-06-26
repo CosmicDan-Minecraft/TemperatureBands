@@ -8,6 +8,8 @@ import net.minecraft.util.KeyDispatchDataCodec;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.Climate;
 import net.minecraft.world.level.levelgen.DensityFunction;
+import net.minecraft.world.level.levelgen.DensityFunctions;
+import net.minecraft.world.level.levelgen.synth.NormalNoise;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Set;
@@ -104,6 +106,11 @@ public class DensityFunctionEx implements DensityFunction {
 
     @Override
     public final @NotNull DensityFunction mapAll(Visitor visitor) {
+        if (funcOriginal instanceof DensityFunctions.ShiftedNoise funcOriginalShifted) {
+            if (funcOriginalShifted.noise().noiseData() instanceof Holder.Direct<NormalNoise.NoiseParameters>)
+                // funcOriginal is a re-created vanilla-style noise; don't attempt to map it
+                return visitor.apply(new DensityFunctionEx(dimensionName, functionName, config, funcOriginal));
+        }
         return visitor.apply(new DensityFunctionEx(dimensionName, functionName, config, funcOriginal.mapAll(visitor)));
     }
 

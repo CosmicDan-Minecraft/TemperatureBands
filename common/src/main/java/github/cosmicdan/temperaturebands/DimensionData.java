@@ -3,6 +3,8 @@ package github.cosmicdan.temperaturebands;
 import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BiomeTags;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.RandomSequence;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeSource;
 import net.minecraft.world.level.biome.Climate;
@@ -10,6 +12,7 @@ import net.minecraft.world.level.biome.MultiNoiseBiomeSource;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.DensityFunctions;
 import net.minecraft.world.level.levelgen.NoiseRouter;
+import net.minecraft.world.level.levelgen.synth.NormalNoise;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -99,9 +102,33 @@ public class DimensionData {
             return TbUtils.doCrash("Attempted getting an invalid densityfunctions: " + noiseName);
     }
 
-    public static @Nullable DensityFunction createModdedFunction(String functionName, DensityFunction originalFunction, String dimensionName, DimensionConfig config) {
-        if (functionName.equals(DensityFunctionEx.TEMPERATURE_NAME) || functionName.equals(DensityFunctionEx.HUMIDITY_NAME))
+    public static @Nullable DensityFunction createModdedFunction(String functionName, DensityFunction originalFunction, String dimensionName, DimensionConfig config, long seed) {
+        if (functionName.equals(DensityFunctionEx.TEMPERATURE_NAME) || functionName.equals(DensityFunctionEx.HUMIDITY_NAME)) {
+            if (config.vanillaNoiseOverride() > 0) {
+                if (config.vanillaNoiseOverride() == 2 || !(originalFunction instanceof DensityFunctions.ShiftedNoise)) {
+                    RandomSource vanillaRandom = new RandomSequence(seed, Optional.empty()).random();
+                    NormalNoise vanillaNoiseShift = NormalNoise.create(vanillaRandom, new NormalNoise.NoiseParameters(-3, List.of(1.0, 1.0, 1.0, 0.0)));
+                    DensityFunction.NoiseHolder vanillaShiftShared = new DensityFunction.NoiseHolder(new Holder.Direct<>(vanillaNoiseShift.parameters()), vanillaNoiseShift);
+                    NormalNoise vanillaNoise;
+
+                    if (functionName.equals(DensityFunctionEx.TEMPERATURE_NAME))
+                        vanillaNoise = NormalNoise.create(vanillaRandom, new NormalNoise.NoiseParameters(-10, List.of(1.5, 0.0, 1.0, 0.0, 0.0, 0.0)));
+                    else
+                        vanillaNoise = NormalNoise.create(vanillaRandom, new NormalNoise.NoiseParameters(-8, List.of(1.0, 1.0, 0.0, 0.0, 0.0, 0.0)));
+
+                    LOGGER.info("Replaced base {} noise with vanilla-like noise (because vanillaNoiseOverride is {}{})", functionName, config.vanillaNoiseOverride(), config.vanillaNoiseOverride() == 1 ? " and original noise was type was '" + originalFunction.getClass().getSimpleName() + "'" : "");
+                    originalFunction = new DensityFunctions.ShiftedNoise(
+                            new DensityFunctions.ShiftA(vanillaShiftShared),
+                            DensityFunctions.constant(0.0),
+                            new DensityFunctions.ShiftB(vanillaShiftShared),
+                            0.25,
+                            0.0,
+                            new DensityFunction.NoiseHolder(new Holder.Direct<>(vanillaNoise.parameters()), vanillaNoise)
+                    );
+                }
+            }
             return new DensityFunctionEx(dimensionName, functionName, config, originalFunction);
+        }
         return null;
     }
 

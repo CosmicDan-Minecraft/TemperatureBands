@@ -12,7 +12,9 @@ public class CommonConfig {
              
              [doBenchmark] is only available for (Neo)Forge right now. If true and World Preview is installed, a benchmark will be performed when opening the 'Preview' tab
                 (and after closing the World Preview settings menu, i.e. whenever chunk previews start to generate).
-              - Refer to the mod description page for details and tips on benchmarking and stress-testing.""";
+              - Do not scroll or resize the window while World Preview is active, it will cause the benchmark to fail or never complete. To restart benchmark, simply enter
+                the World Preview settings menu then exit out. Wait for all visible chunks to generate to see results.
+              - If Humidity algorithm is not advanced, or the climate sampler cache is disabled, the 'cache hit-rate' part of results will be incorrect - ignore it.""";
     public final ModConfigSpec.BooleanValue copyConfigOnRecreateWorld;
     public static final String copyConfigOnRecreateWorldTxt = """
              
@@ -149,6 +151,21 @@ public class CommonConfig {
              - Recommended to leave on 1 (octile). While Euclidean distance is only about 3% slower, it doesn't look any better - just "different".
                Although Euclidean might give better smoothness if you're using very high accuracy for humidity and climate sampler. Manhattan distance is about 5%
                faster than octile but looks kinda bad - can be very "noisy" and regularly "skips" biome transitions.""";
+    public final ModConfigSpec.IntValue vanillaNoiseOverride;
+    public static final String vanillaNoiseOverrideName = "configVanillaNoiseOverride";
+    public static final String vanillaNoiseOverrideTxt = """
+             
+             [vanillaNoiseOverride] is used to override the base noise with vanilla-like Shifted Noise.
+              - The default value of 1 will only replace the noise if it's not already a ShiftedNoise type. Recommended.
+              - A value of 2 will always replace the noise. Only recommended if you're using a world gen mod that happens to keep ShiftedNoise for
+                temperature and humidity, but NOT for vanilla world generation (see last point for why).
+              - A value of 0 will disable this function. Not recommended (see next point why).
+              - This is implemented to help re-introduce some variation to various worldgen mods, and usually improve performance. Without it, biomes can become extremely large
+                and boring, and sometimes extremely slow to generate. Lithosphere is the best example of this.
+              - Setting to 2 (to always replace) is only recommended for non-vanilla worldgen because the replacement is *not* a 1:1 recreation of vanilla noise given the same seed.
+                General terrain shape will be the same, but the temperature and humidity values will not be the same.
+              - This function is particularly useful for many world gen mods like Larion where the base temperature/humidity noise generators are very soft and result in very-straight bands.
+                In some mods you may want to increase noiseFactor above the defaults.""";
     public final ModConfigSpec.ConfigValue<String> dimBlacklist;
     public static final String dimBlacklistName = "configDimBlacklist";
     public static final String dimBlacklistTxt = """
@@ -201,7 +218,9 @@ public class CommonConfig {
               - A value of 2 (default) uses a "realistic" humidity calculation based on proximity to rivers and/or oceans. Can be a little slow, but still not as slow as many
                 worldgen mods, and it's definitely worth it (in my opinion).
               - A value of 1 uses a much simpler 'humidity bands' algorithm that run perpendicular to temperature bands.
-              - A value of 0 will disable humidity feature entirely, keeping vanilla random noise humidity.""";
+              - A value of 0 will disable humidity feature entirely, keeping vanilla random noise humidity.
+              - Do note that with advanced humidity, some worldgen mods may become extremely slow. One example of this is Lithosphere. In these cases it might be best to use
+                simple humidity, or at least turning off river influence (Lithosphere in particular doesn't generate many rivers anyway).""";
     public final ModConfigSpec.DoubleValue humidityTempWeight;
     public static final String humidityTempWeightName = "humidityTempWeight";
     public static final String humidityTempWeightTxt = """
@@ -363,6 +382,9 @@ public class CommonConfig {
         dimBlacklistAsWhitelist = builder
                 .comment(dimBlacklistAsWhitelistTxt)
                 .define("dimBlacklistAsWhitelist", false);
+        vanillaNoiseOverride = builder
+                .comment(vanillaNoiseOverrideTxt)
+                .defineInRange("vanillaNoiseOverride", 1, 0, 2);
         builder.pop();
 
         builder.push(sectionAlgo1).comment(sectionAlgo1Txt);

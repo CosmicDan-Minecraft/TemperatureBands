@@ -25,6 +25,7 @@ public record DimensionConfig(
         int bandAlgorithm,
         int noiseFactor,
         int distanceFunction,
+        int vanillaNoiseOverride,
         // Blacklist config
         Set<String> dimBlacklist,
         boolean dimBlacklistAsWhitelist,
@@ -120,6 +121,7 @@ public record DimensionConfig(
                 bandAlgorithm,
                 loadedConfig.noiseFactor.get(),
                 loadedConfig.distanceFunction.get(),
+                loadedConfig.vanillaNoiseOverride.get(),
                 dimBlacklist,
                 loadedConfig.dimBlacklistAsWhitelist.get(),
                 loadedConfig.algo1bandVariance.get(),
@@ -230,6 +232,7 @@ public record DimensionConfig(
                 DEFAULT.bandAlgorithm,
                 DEFAULT.noiseFactor,
                 DEFAULT.distanceFunction,
+                DEFAULT.vanillaNoiseOverride,
                 DEFAULT.dimBlacklist,
                 DEFAULT.dimBlacklistAsWhitelist,
                 DEFAULT.algo1bandVariance,
@@ -284,11 +287,12 @@ public record DimensionConfig(
                     bandAlgorithm,
                     Integer.parseInt(prop.getProperty(CommonConfig.noiseFactorName)),
                     Integer.parseInt(prop.getProperty(CommonConfig.distanceFunctionName, String.valueOf(DEFAULT.distanceFunction))),
+                    Integer.parseInt(prop.getProperty(CommonConfig.vanillaNoiseOverrideName, String.valueOf(DEFAULT.vanillaNoiseOverride))),
                     // Blacklist
                     dimBlacklist,
-                    Boolean.parseBoolean(prop.getProperty(CommonConfig.dimBlacklistAsWhitelistName)),
+                    Boolean.parseBoolean(prop.getProperty(CommonConfig.dimBlacklistAsWhitelistName, String.valueOf(DEFAULT.dimBlacklistAsWhitelist))),
                     // Temperature algo1
-                    Integer.parseInt(prop.getProperty(CommonConfig.algo1bandVarianceName)),
+                    Integer.parseInt(prop.getProperty(CommonConfig.algo1bandVarianceName, String.valueOf(DEFAULT.algo1bandVariance))),
                     Float.parseFloat(prop.getProperty(CommonConfig.algo1bandVarianceSteepnessName)),
                     // Humidity
                     humidityAlgorithm,
@@ -320,6 +324,7 @@ public record DimensionConfig(
             prop.setProperty(CommonConfig.bandAlgorithmName, String.valueOf(configToSave.bandAlgorithm));
             prop.setProperty(CommonConfig.noiseFactorName, String.valueOf(configToSave.noiseFactor));
             prop.setProperty(CommonConfig.distanceFunctionName, String.valueOf(configToSave.distanceFunction));
+            prop.setProperty(CommonConfig.vanillaNoiseOverrideName, String.valueOf(configToSave.vanillaNoiseOverride));
             // Blacklist
             if (!configToSave.dimBlacklist.isEmpty()) {
                 prop.setProperty(CommonConfig.dimBlacklistName, TbUtils.convertSetToCsv(configToSave.dimBlacklist));

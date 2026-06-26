@@ -81,7 +81,7 @@ public final class TemperatureBands {
             // verification
             if (!functionName.equals(DensityFunctionEx.TEMPERATURE_NAME) && !functionName.equals(DensityFunctionEx.HUMIDITY_NAME))
                 TbUtils.doCrash("Unhandled DensityFunction name: " + functionName + ". Fixme! [Noise type should've already been verified via LevelHooks$NoiseRouterHooks#onMapDensityFunction]");
-            DensityFunction newNoise = DimensionData.createModdedFunction(functionName, currentFunctionHolder.function().value(), dimensionName, dimData.config);
+            DensityFunction newNoise = DimensionData.createModdedFunction(functionName, currentFunctionHolder.function().value(), dimensionName, dimData.config, dimData.level.getSeed());
             if (newNoise == null) {
                 Set<String> failedDimensionEntry = failedDimensionNoiseReplacements.computeIfAbsent(dimensionName, k -> new HashSet<>());
                 if (!failedDimensionEntry.contains(functionName)) {
