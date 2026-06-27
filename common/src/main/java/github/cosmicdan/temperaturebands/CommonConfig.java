@@ -13,7 +13,7 @@ public class CommonConfig {
              [doBenchmark] is only available for (Neo)Forge right now. If true and World Preview is installed, a benchmark will be performed when opening the 'Preview' tab
                 (and after closing the World Preview settings menu, i.e. whenever chunk previews start to generate).
               - Do not scroll or resize the window while World Preview is active, it will cause the benchmark to fail or never complete. To restart benchmark, simply enter
-                the World Preview settings menu then exit out. Wait for all visible chunks to generate to see results.
+                the World Preview settings menu then exit out. Wait for all visible chunks to generate to see the results in the log/console.
               - If Humidity algorithm is not advanced, or the climate sampler cache is disabled, the 'cache hit-rate' part of results will be incorrect - ignore it.""";
     public final ModConfigSpec.BooleanValue copyConfigOnRecreateWorld;
     public static final String copyConfigOnRecreateWorldTxt = """
@@ -156,7 +156,7 @@ public class CommonConfig {
     public static final String vanillaNoiseOverrideName = "configVanillaNoiseOverride";
     public static final String vanillaNoiseOverrideTxt = """
              
-             [vanillaNoiseOverride] is used to override the base noise with vanilla-like Shifted Noise.
+             [vanillaNoiseOverride] is used to override the base noise with vanilla-like Shifted Noise. I.e. the noise used with noiseFactor and humidityBaseNoisePercent.
               - The default value of 1 will only replace the noise if it's not already a ShiftedNoise type. Recommended.
               - A value of 2 will always replace the noise. Only recommended if you're using a world gen mod that happens to keep ShiftedNoise for
                 temperature and humidity, but NOT recommended for vanilla world generation (see second-last point for why).
