@@ -1,0 +1,7 @@
+classTweaker               v1      official
+transitive-accessible      class   net/minecraft/world/level/levelgen/DensityFunctions$ShiftedNoise
+transitive-accessible      method  net/minecraft/world/level/levelgen/DensityFunctions$ShiftedNoise <init> (Lnet/minecraft/world/level/levelgen/DensityFunction;Lnet/minecraft/world/level/levelgen/DensityFunction;Lnet/minecraft/world/level/levelgen/DensityFunction;DDLnet/minecraft/world/level/levelgen/DensityFunction$NoiseHolder;)V
+transitive-accessible      class   net/minecraft/world/level/levelgen/DensityFunctions$ShiftA
+transitive-accessible      method  net/minecraft/world/level/levelgen/DensityFunctions$ShiftA <init> (Lnet/minecraft/world/level/levelgen/DensityFunction$NoiseHolder;)V
+transitive-accessible      class   net/minecraft/world/level/levelgen/DensityFunctions$ShiftB
+transitive-accessible      method  net/minecraft/world/level/levelgen/DensityFunctions$ShiftB <init> (Lnet/minecraft/world/level/levelgen/DensityFunction$NoiseHolder;)V

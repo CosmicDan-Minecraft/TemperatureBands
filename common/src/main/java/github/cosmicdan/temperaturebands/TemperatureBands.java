@@ -3,6 +3,7 @@ package github.cosmicdan.temperaturebands;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.DensityFunctions;
 import net.neoforged.neoforge.common.ModConfigSpec;
@@ -90,8 +91,8 @@ public final class TemperatureBands {
                     TbUtils.dumpExtraClassInfo(currentFunction);
                 }
             } else {
-                DensityFunctions.HolderHolder newFunction = new DensityFunctions.HolderHolder(new Holder.Direct<>(newNoise));
-                currentFunction = new DensityFunctions.HolderHolder(new Holder.Direct<>(newFunction));
+                DensityFunctions.HolderHolder newFunction = new DensityFunctions.HolderHolder(new Holder.Direct<>(newNoise, DataComponentMap.EMPTY));
+                currentFunction = new DensityFunctions.HolderHolder(new Holder.Direct<>(newFunction, DataComponentMap.EMPTY));
                 DimensionData.recreateDimDataWithNewNoiseFunction(dimensionName, dimData, functionName, (DensityFunctions.HolderHolder) currentFunction);
                 TemperatureBands.LOGGER.info("Succeeded in hooking {} for dimension '{}'", functionName, dimensionName);
             }

@@ -4,14 +4,13 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import github.cosmicdan.temperaturebands.TemperatureBands;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.LevelLoadingScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.worldselection.CreateWorldScreen;
 import net.minecraft.client.gui.screens.worldselection.WorldSelectionList;
+import net.minecraft.client.multiplayer.LevelLoadTracker;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.progress.StoringChunkProgressListener;
-import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -59,22 +58,20 @@ public abstract class ClientGuiHooks {
     @Mixin(LevelLoadingScreen.class)
     public static abstract class LevelLoadingScreenHooks extends Screen {
         @Shadow
-        @Final
-        private StoringChunkProgressListener progressListener;
+        private LevelLoadTracker loadTracker;
 
         protected LevelLoadingScreenHooks(Component component) {
             super(component);
         }
-
         @WrapOperation(
-                method = "render",
-                at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;drawCenteredString(Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/Component;III)V")
+                method = "extractRenderState",
+                at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;centeredText(Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/Component;III)V")
         )
-        public void onDrawCenteredString(GuiGraphics guiGraphics, Font font, Component component, int middleX, int middleTopY, int color, Operation<Void> original) {
-            if (TemperatureBands.addLoadingScreenText && progressListener.getProgress() < 2) {
-                guiGraphics.drawCenteredString(font, "Climate Sampler is warming up, standby...", middleX, middleTopY, color);
+        public void onDrawCenteredString(GuiGraphicsExtractor instance, Font font, Component text, int x, int y, int color, Operation<Void> original) {
+            if (TemperatureBands.addLoadingScreenText && loadTracker.serverProgress() < 0.20f) {
+                instance.centeredText(font, "Climate Sampler is warming up, standby...", x, y, color);
             } else {
-                original.call(guiGraphics, font, component, middleX, middleTopY, color);
+                original.call(instance, font, text, x, y, color);
             }
         }
     }

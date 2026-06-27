@@ -18,14 +18,14 @@ logoFile = "logo.png"
 [[dependencies.temperaturebands]]
 modId = "neoforge"
 type = "required"
-versionRange = "[21.1,)"
+versionRange = "[26.1.2,)"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.temperaturebands]]
 modId = "minecraft"
 type = "required"
-versionRange = "[1.21.1,)"
+versionRange = "[26.1.2,)"
 ordering = "NONE"
 side = "BOTH"
 
@@ -38,6 +38,3 @@ side = "BOTH"
 
 [[mixins]]
 config = "temperaturebands.mixins.json"
-
-[[mixins]]
-config = "temperaturebands-neoforge.mixins.json"

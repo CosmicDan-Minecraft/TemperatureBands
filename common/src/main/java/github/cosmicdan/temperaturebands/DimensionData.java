@@ -1,6 +1,7 @@
 package github.cosmicdan.temperaturebands;
 
 import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BiomeTags;
 import net.minecraft.util.RandomSource;
@@ -50,8 +51,8 @@ public class DimensionData {
             // setup and verification for humidity
             if (config.humidityAlgorithm() != 0) {
                 if (!(level.getChunkSource().getGenerator().getBiomeSource() instanceof MultiNoiseBiomeSource)) {
-                    if (!CONFIG_GLOBAL.ignoreDimensionFailures().contains(level.dimension().location().toString()))
-                        LOGGER.error("Error: The dimension {} does not use a MultiNoiseBiomeSource; humidity modification cannot continue. Please report this to CosmicDan so support for this custom dimension might be added.", level.dimension().location());
+                    if (!CONFIG_GLOBAL.ignoreDimensionFailures().contains(level.dimension().identifier().toString()))
+                        LOGGER.error("Error: The dimension {} does not use a MultiNoiseBiomeSource; humidity modification cannot continue. Please report this to CosmicDan so support for this custom dimension might be added.", level.dimension().identifier());
                 } else {
                     // fetch appropriate biomes for humidity
                     Set<Holder<Biome>> possibleBiomes = level.getChunkSource().getGenerator().getBiomeSource().possibleBiomes();
@@ -63,23 +64,23 @@ public class DimensionData {
                         }
                     }
                     if (TemperatureBands.CONFIG_GLOBAL.dumpRiverAndOceanBiomes()) {
-                        LOGGER.info("List of all biomes with 'minecraft:is_river' tag for dimension '{}':", level.dimension().location());
+                        LOGGER.info("List of all biomes with 'minecraft:is_river' tag for dimension '{}':", level.dimension().identifier());
                         if (biomeRivers.isEmpty())
                             LOGGER.info(noneStringForBiomeDump);
                         else {
                             for (Holder<Biome> biomeHolder : biomeRivers) {
                                 if (biomeHolder.unwrapKey().isPresent()) {
-                                    LOGGER.info(" - {}", biomeHolder.unwrapKey().get().location());
+                                    LOGGER.info(" - {}", biomeHolder.unwrapKey().get().identifier());
                                 }
                             }
                         }
-                        LOGGER.info("List of all biomes with 'minecraft:is_ocean' tag for dimension '{}':", level.dimension().location());
+                        LOGGER.info("List of all biomes with 'minecraft:is_ocean' tag for dimension '{}':", level.dimension().identifier());
                         if (biomeOceans.isEmpty())
                             LOGGER.info(noneStringForBiomeDump);
                         else {
                             for (Holder<Biome> biomeHolder : biomeOceans) {
                                 if (biomeHolder.unwrapKey().isPresent()) {
-                                    LOGGER.info(" - {}", biomeHolder.unwrapKey().get().location());
+                                    LOGGER.info(" - {}", biomeHolder.unwrapKey().get().identifier());
                                 }
                             }
                         }
@@ -108,7 +109,7 @@ public class DimensionData {
                 if (config.vanillaNoiseOverride() == 2 || !(originalFunction instanceof DensityFunctions.ShiftedNoise)) {
                     RandomSource vanillaRandom = new RandomSequence(seed, Optional.empty()).random();
                     NormalNoise vanillaNoiseShift = NormalNoise.create(vanillaRandom, new NormalNoise.NoiseParameters(-3, List.of(1.0, 1.0, 1.0, 0.0)));
-                    DensityFunction.NoiseHolder vanillaShiftShared = new DensityFunction.NoiseHolder(new Holder.Direct<>(vanillaNoiseShift.parameters()), vanillaNoiseShift);
+                    DensityFunction.NoiseHolder vanillaShiftShared = new DensityFunction.NoiseHolder(new Holder.Direct<>(vanillaNoiseShift.parameters(), DataComponentMap.EMPTY), vanillaNoiseShift);
                     NormalNoise vanillaNoise;
 
                     if (functionName.equals(DensityFunctionEx.TEMPERATURE_NAME))
@@ -123,7 +124,7 @@ public class DimensionData {
                             new DensityFunctions.ShiftB(vanillaShiftShared),
                             0.25,
                             0.0,
-                            new DensityFunction.NoiseHolder(new Holder.Direct<>(vanillaNoise.parameters()), vanillaNoise)
+                            new DensityFunction.NoiseHolder(new Holder.Direct<>(vanillaNoise.parameters(), DataComponentMap.EMPTY), vanillaNoise)
                     );
                 }
             }

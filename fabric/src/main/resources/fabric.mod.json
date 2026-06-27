@@ -25,12 +25,12 @@
   "mixins": [
     "temperaturebands.mixins.json"
   ],
-  "accessWidener": "temperaturebands.accesswidener",
+  "accessWidener": "temperaturebands.classtweaker",
   "depends": {
-    "fabricloader": ">=0.16.14",
-    "minecraft": "~1.21.1",
-    "java": ">=21",
-    "forgeconfigapiport": ">=21.1.3"
+    "fabricloader": ">=0.19.3",
+    "minecraft": "~26.1.2",
+    "java": ">=25",
+    "forgeconfigapiport": ">=26.1.5"
   },
   "suggests": {
     "world_preview": "*"

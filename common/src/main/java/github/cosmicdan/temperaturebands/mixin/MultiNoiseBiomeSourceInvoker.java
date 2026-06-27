@@ -10,5 +10,5 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 @Mixin(MultiNoiseBiomeSource.class)
 public interface MultiNoiseBiomeSourceInvoker {
     @Invoker("parameters")
-    public Climate.ParameterList<Holder<Biome>> getParameters();
+    Climate.ParameterList<Holder<Biome>> getParameters();
 }

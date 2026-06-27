@@ -79,7 +79,7 @@ public record DimensionConfig(
     }
 
     public static boolean isPendingWorldDimensionWhitelisted(String dimensionName) {
-        if (dimensionName.equals(Level.OVERWORLD.location().toString()))
+        if (dimensionName.equals(Level.OVERWORLD.identifier().toString()))
             return true;
         boolean isWhitelistedDim = false;
         if (PENDING_WORLD.dimBlacklistAsWhitelist()) {

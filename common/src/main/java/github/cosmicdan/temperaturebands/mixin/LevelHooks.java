@@ -11,10 +11,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.progress.ChunkProgressListener;
 import net.minecraft.util.profiling.ProfilerFiller;
-import net.minecraft.world.RandomSequences;
-import net.minecraft.world.level.CustomSpawner;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.dimension.LevelStem;
@@ -94,7 +91,7 @@ public abstract class LevelHooks {
                 at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/levelgen/RandomState;create(Lnet/minecraft/world/level/levelgen/NoiseGeneratorSettings;Lnet/minecraft/core/HolderGetter;J)Lnet/minecraft/world/level/levelgen/RandomState;")
         )
         public RandomState onNewRandomState(NoiseGeneratorSettings noiseGeneratorSettings, HolderGetter<NormalNoise.NoiseParameters> holderGetter, long seed, Operation<RandomState> original) {
-            final String dimensionName = level.dimension().location().toString();
+            final String dimensionName = level.dimension().identifier().toString();
             if (DimensionConfig.isPendingWorldDimensionWhitelisted(dimensionName)) {
                 // Check if dimensiondata already exists. Some mods (e.g. World Preview) create multiple RandomStates for whatever reason (assuming multiple threads)
                 //boolean dimDataAlreadyMade = false;
@@ -170,21 +167,22 @@ public abstract class LevelHooks {
      */
     @Mixin(ServerLevel.class)
     public static abstract class ServerLevelHooks extends Level {
+        protected ServerLevelHooks(WritableLevelData levelData, ResourceKey<Level> dimension, RegistryAccess registryAccess, Holder<DimensionType> dimensionTypeRegistration, boolean isClientSide, boolean isDebug, long biomeZoomSeed, int maxChainedNeighborUpdates) {
+            super(levelData, dimension, registryAccess, dimensionTypeRegistration, isClientSide, isDebug, biomeZoomSeed, maxChainedNeighborUpdates);
+        }
+
         @Shadow
         public abstract ServerLevel getLevel();
 
-        protected ServerLevelHooks(WritableLevelData writableLevelData, ResourceKey<Level> resourceKey, RegistryAccess registryAccess, Holder<DimensionType> holder, Supplier<ProfilerFiller> supplier, boolean bl, boolean bl2, long l, int i) {
-            super(writableLevelData, resourceKey, registryAccess, holder, supplier, bl, bl2, l, i);
-        }
         @Inject(
                 method = "<init>",
                 at = @At("RETURN")
         )
-        private void onCreationDone(MinecraftServer minecraftServer, Executor executor, LevelStorageSource.LevelStorageAccess levelStorageAccess, ServerLevelData serverLevelData, ResourceKey<Level> resourceKey, LevelStem levelStem, ChunkProgressListener chunkProgressListener, boolean bl, long l, List<CustomSpawner> list, boolean bl2, RandomSequences randomSequences, CallbackInfo ci) {
-            final String dimensionName = dimension().location().toString();
+        private void onCreationDone(MinecraftServer server, Executor executor, LevelStorageSource.LevelStorageAccess levelStorage, ServerLevelData levelData, ResourceKey<Level> dimension, LevelStem levelStem, boolean isDebug, long biomeZoomSeed, List customSpawners, boolean tickTime, CallbackInfo ci) {
+            final String dimensionName = dimension().identifier().toString();
             DimensionData dimData = TemperatureBands.DIMENSION_DATA_CACHE.getIfPresent(dimensionName);
             if (dimData != null) {
-                if (dimensionName.equals(OVERWORLD.location().toString()) && TemperatureBands.CONFIG_GLOBAL.climateSamplerWarmupMsg() && dimData.config.humidityAlgorithm() == 2) {
+                if (dimensionName.equals(OVERWORLD.identifier().toString()) && TemperatureBands.CONFIG_GLOBAL.climateSamplerWarmupMsg() && dimData.config.humidityAlgorithm() == 2) {
                     // using advanced humidity and we're loading the overworld, set flag for loading screen
                     TemperatureBands.addLoadingScreenText = true;
                 }
@@ -197,7 +195,7 @@ public abstract class LevelHooks {
                 at = @At("RETURN")
         )
         private void onClose(CallbackInfo ci) {
-            TemperatureBands.clearDimensionDataAndConfig(getLevel().dimension().location().toString());
+            TemperatureBands.clearDimensionDataAndConfig(getLevel().dimension().identifier().toString());
         }
     }
 }
