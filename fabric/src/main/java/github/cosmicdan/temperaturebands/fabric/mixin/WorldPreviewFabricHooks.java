@@ -1,8 +1,8 @@
-package github.cosmicdan.temperaturebands.neoforge.mixin;
+package github.cosmicdan.temperaturebands.fabric.mixin;
 
-import com.caeruleusTait.world.preview.backend.WorkManager;
-import com.caeruleusTait.world.preview.backend.worker.WorkBatch;
-import com.caeruleusTait.world.preview.backend.worker.WorkResult;
+import caeruleusTait.world.preview.backend.WorkManager;
+import caeruleusTait.world.preview.backend.worker.WorkBatch;
+import caeruleusTait.world.preview.backend.worker.WorkResult;
 import com.llamalad7.mixinextras.sugar.Local;
 import github.cosmicdan.temperaturebands.TbUtils;
 import github.cosmicdan.temperaturebands.TemperatureBands;
@@ -16,7 +16,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.List;
 
-abstract class WorldPreviewForgeHooks {
+abstract class WorldPreviewFabricHooks {
     @Mixin(WorkManager.class)
     abstract static class WorkManagerHooks {
         @Shadow(remap = false)
@@ -57,6 +57,5 @@ abstract class WorldPreviewForgeHooks {
                 TbUtils.benchmarkBatchDone();
         }
     }
-
 
 }

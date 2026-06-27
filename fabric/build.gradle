@@ -41,6 +41,9 @@ dependencies {
     
     // Caffeine library (fast LruCache) - https://github.com/ben-manes/caffeine
     include "com.github.ben-manes.caffeine:caffeine:3.2.4"
+    
+    // World Preview
+    modImplementation "curse.maven:world-preview-891429:5686700"
 
     // Forge config API port
     modApi "fuzs.forgeconfigapiport:forgeconfigapiport-fabric:$rootProject.forgeconfigapiport_version"
