@@ -1,0 +1,9 @@
+This is for MC versions without World Preview.
+
+- Add Chunky and JourneyMap
+- Set bandSize to 512
+- Run following commands:
+chunky spawn
+chunky corners -200 -1000 200 1000
+chunky start
+- Use JourneyMap automap function

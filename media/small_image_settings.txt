@@ -1,0 +1,3 @@
+ - Canvas size to 1800x1100 (center)
+ - Resize to 50%
+ - Font is Calibri, size 48, White with Black 2.0 stroke

@@ -1,0 +1,189 @@
+<h2>🌡️ About</h2>
+<p>Don't like how cold and hot or wet and dry biomes are kinda randomly placed? This mod changes world generation to place biomes into repeating temperature bands, or "climate zones" if you prefer. Automatically compatible with most worldgen mods (see Compatibility section for details). 
+2.0 adds an advanced humidity algorithm to make wetter biomes appear closer to rivers and/or oceans, or a simpler/faster humidity bands option that are perpendicular to the temperature bands.</p><br/>
+<br/>
+<br/>
+<h2>📜 Changelogs (Update history)</h2>
+<div class="spoiler"><p>
+<h5>2.0.0</h5>
+ - NEW: Humidity settings that modify biome placement even more. The default is the "advanced" algorithm that calculates humidity based on proximity to rivers and/or oceans. The other "simple" option generates bands that are perpendicular to temperature bands. Existing worlds will keep their vanilla humidity, see the "Upgrading" section on mod description page for more info.<br/>
+ - OPTIMIZED: The core system was completely rewritten to replace the temperature/humidity density functions and check for success/failure instead of dynamically modifying them and assuming they worked. More robust, more reliable, more gooder. Most of the below changes are made possible thanks to this rewrite.<br/>
+ - NEW: Ability to blacklist/whitelist dimensions. The default config will exclude The Nether and The End. This new default will only apply to NEW worlds, see the "Upgrading" section on mod description page for more info.<br/>
+ - NEW: Benchmark option if World Preview is installed. Forge/NeoForge only (for now, will add Fabric support if it's desired). See config to enable it.<br/>
+ - IMPROVED: When recreating a world, the Temperature Bands config will now properly copy from the old world by default. This function can be disabled to make world recreation use the current mod defaults, see the "Upgrading" section on mod description page for more info.<br/>
+ - IMPROVED: Better compatibility with worldgen mods. Tested with Larion, Tectonic and Lithosphere - they *really* work now, and it should work with every worldgen mod (assuming they still use Density Functions that are named "temperature" and "humidity").<br/>
+ - IMPROVED: More config options, better comments and reworked defaults.<br/>
+<h5>1.1.0</h5>
+ - Added dimension blacklist/whitelist config. Only applies to new worlds, see "Upgrading" section for details on how to apply this change to existing worlds.<br/>
+ - Major refactor/optimization. Instead of hooking every ShiftedNoise instance, we now hook a the specific NoiseRouter for a whitelisted dimension and replace the relevant ShiftedNoise.<br/>
+ <h5>1.0.0</h5>
+ - Initial release<br/>
+</p></div><br/>
+<br/>
+<br/>
+<br/>
+<h2>⭐ Highlights</h2>
+ - Modifies worldgen to place biomes into repeating temperature bands from coldest through to hottest, back to coldest, and so on;<br/>
+ - <strong>NEW</strong>: Additionally modifies biome placement to put high humidity biomes closer to rivers and/or oceans (default, configurable) or in bands ;<br/>
+ - <strong>NEW</strong>: Dimension blacklist/whitelist. By default, The Nether and The End are blacklisted;<br/>
+ - Compatible with most worldgen mods (see Compatibility section for details);<br/>
+ - Each world will remember its own settings, mod config will only apply to new worlds;<br/>
+ - Configurable band size, choice of vertical bands;<br/>
+ - By default the world spawn (near origin; i.e. block X,Z coordinates 0,0) will act like a "northern hemisphere temperate zone start", meaning cold is North and hot is South (NOTE: Only guaranteed on vanilla worldgen, some mods e.g. Larion and Tectonic are much more random with origin - see Tips section to solve this with another mod);<br/>
+ - Ability to benchmark chunk generation if World Preview is installed (Forge/NeoForge only right now).
+<br/>
+<p>Example world before mod:</p><p><img src="https://media.forgecdn.net/attachments/1177/352/before_small-png.png" alt="Picture of Example world before mod" width="500" height="350" />
+</p>
+<p>Same world seed after mod (notice the cold at the top, hot at the bottom):</p><p><img src="https://media.forgecdn.net/attachments/1177/351/after_small-png.png" alt="Picture of same world after mod (notice the cold at the top, hot at the bottom)" width="500" height="350" />
+</p>
+<p>(Screenshots taken with World Preview mod, highly recommended if you want to test any config changes)</p>
+<br/>
+<br/>
+<br/>
+<br/>
+<h2>🏷️ Usage & Config</h2>
+<p>After installing the mod, simply start Minecraft to let the config generate. Jump into a NEW world if you're happy with the default config, as detailed below. By default each band is about 2048 blocks wide on average, and the player will start "above the equator" with cold biomes North and warm biomes South, but this can all be changed in config.</p>
+<h3><em><strong>temperaturebands-common.toml:</strong></em></h3>
+<div class="spoiler"><p>
+<strong>[world]</strong><br/>
+Default world settings. These will apply to newly-generated worlds only, existing worlds will remember their own settings.<br/>
+<br/><strong>bandSize:</strong><br/>
+ - The average size of each temperature band in blocks.<br/>
+ - Vanilla Minecraft generation has 5 temperature zones - Freezing, Cool, Temperate, Warm and Hot - every biome fits into one of these five temperature ranges.<br/>
+ - So for example, if this value is 2048 (default), the distance from the *center* of one one Hot band to the next Hot band center will be about 16384 (2048 * 8) blocks (Hot through to Freezing and back again).<br/>
+ - If there are any worldgen mods that add biomes with a different 'temperature range' for placement, they should be incorporated within existing bands normally.<br/>
+<br/><strong>useVerticalBands:</strong><br/>
+ - If true, bands will be vertical instead of horizontal.<br/>
+<br/><strong>bandPositionShift:</strong><br/>
+ - Shift the bands by this percentage.<br/>
+ - Normally the Hot band (Desert and such) will generate at origin (0,0) so the default shift of 0.25 (meaning 25%) will make the origin temperate (middle temp) instead, shifted downwards to simulate a 'Northern hemisphere' start (Colder will be North, or East if Vertical bands, and Hotter will be South or West). A value of 0.75 (meaning 75%) would simulate southern hemisphere start instead.<br/>
+ - NOTE: Some world gen mods like Tectonic and Larion seem to have their own idea about initial world spawn and don't use origin, you might want a different mod like 'Biome Spawn Point' instead.<br/>
+<br/><strong>tempRange:</strong><br/>
+ - Absolute min/max temperature range. Increasing this will make the coldest and hottest bands larger while reducing others, lowering this value will have the opposite effect.<br/>
+ - The default value (0.65) makes the hottest/coldest bands a tiny bit smaller than the others.<br/>
+ - Be careful, setting this value too high or too low could result in some bands not generating at all.<br/>
+<br/><strong>tempGradeShift:</strong><br/>
+ - Vanilla temperature has a bias towards cold, this value is used to make the hottest and coldest roughly the same size.<br/>
+ - If you set it to zero, the coldest band will be larger than all other bands and the hottest would be smaller than all others.<br/>
+ - You probably wont want to change this, but I made it configurable anyway.<br/>
+<br/><strong>bandAlgorithm:</strong><br/>
+ - Algorithm to use. You can configure and read more about each algorithm in their own section below. Recommended to use World Preview if you want to change things around.<br/>
+ - Note: There is only 1 algorithm currently, this config is here just in case I add more later.<br/>
+<br/><strong>noiseFactor:</strong><br/>
+ - If above zero, will use original noise generation to help make the edges between bands a bit nicer.<br/>
+ - See each algorithm for details on how noiseFactor is used.<br/>
+ - The unit is arbitrary and very dependent on bandSize. For e.g. 100 (default) is nice for a bandSize of 2048 but might be too wild if bandSize is decreased, or too tame if bandSize is increased.<br/>
+<br/><strong>dimBlacklist:</strong><br/>
+ - Specify a blacklist of dimensions, separated by commas. Default excludes the_nether and the_end.<br/>
+<br/><strong>dimBlacklistAsWhitelist:</strong><br/>
+ - If true (not default), the above blacklist will be treated as a whitelist instead.<br/>
+<br/>
+<br/>
+<strong>[algorithm1]</strong><br/>
+Settings for algorithm 1, the 'simple' or 'default' algorithm.<br/>
+This algorithm is very simple and produces jaggy lines that aren't very random or natural looking, but it looks OK as long as you keep useNoise enabled.<br/>
+Keeping the variance low but noiseFactor a decent amount (around 100 or so) will produce some OK looking curves/waves in the bands, but if you want something more predictable you can reduce noiseFactor and increase variance.<br/>
+<br/><strong>bandVariance:</strong><br/>
+ - Band variance in blocks (roughly). If below 10, each band will have a completely straight edge across the world and disables all remaining algo1 features.<br/>
+ - You will want to keep this a fairly small value. Making it too large could result in weirdness, especially if it's too close to the bandSize.<br/>
+<br/><strong>algo1bandVarianceSteepness:</strong><br/>
+ - Steepness of band variance. Unit is arbitrary, you'll want to experiment and test if you change it. Probably best left alone though.<br/>
+</p></div>
+<br/>
+<br/>
+<br/>
+<h2>💡 Tips</h2>
+<ul>
+<li><a title="World Preview on CurseForge" href="https://www.curseforge.com/minecraft/mc-mods/world-preview">World Preview</a> mod allows you to preview settings before making the world. Highly recommended if you want to tune configs. (Note: A port for NeoForge 1.21.1 can be found on Modrinth)</li>
+<li><a title="World Preview Temperature Addon on CurseForge" href="https://www.curseforge.com/minecraft/mc-mods/world-preview-temperature-addon">World Preview Temperature Addon</a> adds a "heatmap" view to World Preview, providing some focused detail to changed configs.</li>
+<li><a title="Biome Spawn Point on CurseForge" href="https://www.curseforge.com/minecraft/mc-mods/biome-spawn-point">Biome Spawn Point</a> might be desired if using some worldgen mods like Tectonic or Larion, which have their own idea about initial world spawn (rather than origin).</li>
+</ul>
+<br/>
+<br/>
+<br/>
+<h2>⤴️ Upgrading</h2>
+New versions of the mod may add new features, these new features will be configurable but WILL NOT apply to existing worlds (to avoid world generation issues). In some cases, however, you may want to retroactively apply the new changes to the old world. Here's the easiest way to do that (be sure to read this whole section before starting):<br/>
+<ol>
+<li>Upgrade to the new version of Temperature Bands;</li>
+<li>Start Minecraft, generate a new world, then Save and Quit (no need to quit the whole game);</li>
+<li>Browse to your instance Save folder. If you don't know how to do this, I can't help sorry - do a web search;</li>
+<li>Each folder here are your worlds. Inside, there will be a 'temperaturebands.prop' file - this is a plain text file with the Temperature Bands config for that world;</li>
+<li>You can "simply" open these files with Notepad (or whatever) and compare the prop file contents from the newly-generated world with your old world, and copy-and-paste the appropriate new lines over.</li>
+</ol>
+You can of course backup your existing world if you want to be careful. Now, sometimes you don't need to copy the lines EXACTLY, you might want to change them. You may have already noticed that each line in this prop file already corresponds to a setting in the usual (default world) config, so it's important not to change anything in the prop unless you're absolutely sure. Here I will detail new config options and any tips regarding them:
+<h5>2.0.0</h5>
+Added config entries "configDimBlacklist" and "configDimBlacklistAsWhitelist". You can read about these in the Usage & Config section above, but they should be mostly self-explanatory. A couple important notes regarding these, though:
+<ul>
+<li>The "configDimBlacklist" lists blacklisted dimensions, with each dimension entry separated by commas. Do NOT remove the '\' characters, these are necessary. I.e. the default of "configDimBlacklist=minecraft\:the_nether,minecraft\:the_end" is correct.</li>
+<li>If you do end up moving the blacklist over to your old world, you may need to delete those dimensions or chunks so they regenerate correctly. You can delete the whole dimensions by deleting the "DIM1" and "DIM-1" folders inside your save folder (make sure you've saved and quit your world first).</li>
+<li>The "configDimBlacklistAsWhitelist" option is not strictly necessary to copy if you want to keep it as a blacklist, since the default is already false.</li>
+<li>You can verify the blacklist worked by looking at the log after loading into a world - you'll see something like "Using dimension blacklist: minecraft:the_nether,minecraft:the_end" (or whitelist instead of blacklist if you set configDimBlacklistAsWhitelist to true).</li>
+</ul>
+<br/>
+<br/>
+<br/>
+<h2>✔️ Compatibility and Known Issues</h2>
+The mod should be compatible with most world generator mods, since in modern Minecraft they are often based on datapacks which still use the vanilla-style temperature noise function. This includes the following (personally tested, confirmed working in 2.0):<br/>
+<ul>
+<li>Tectonic and/or Terralith;</li>
+<li>Larion World Generation;</li>
+<li>Lithosphere;</li>
+</ul>
+...everything should work with most worldgen mods, as long as they still use DensityFunctions that are named "temperature" and "humidity". Do note that the default mod config might not be ideal for some mods, though - read the config comments for details. Most notable is vanillaNoiseOverride.
+<br/>
+The following are examples of worldgen mods NOT compatible, most likely because they completely replace Minecraft generation with their own system (e.g. they don't use the vanilla NoiseRouter):<br/>
+<ul>
+<li>TerraFirmaCraft;</li>
+</ul>
+<br/>
+No support will be added for these incompatible mods. Please report any and all other issues not mentioned so I can improve the mod 😁<br/>
+<br/>
+<br/>
+<br/>
+<h2>🛎️ Support</h2>
+<p>Hopefully, the mod is simple enough to use, but you are encouraged to:</p>
+<ul>
+<li>Report any bugs you find;</li>
+<li>Report any incompatibilities with other mods;</li>
+<li>Request any features you want to see</li>
+</ul>
+<p>...so I can keep improving the mod 😊 be sure to mention your loader (e.g. Forge, Fabric) and Minecraft version too!</p>
+<br/>
+<br/>
+<br/>
+<h2>⁉️ FAQ / Troubleshooting</h2>
+<p><strong>Q. <em>Can I use this in my modpack?</em></strong></p>
+<p>A. Of course! As long as you consider reporting any mod compatibility issues, and feature/config requests too 😁</p>
+<br/>
+<p><strong>Q. <em>Does this mod slow down world generation?</em></strong></p>
+<p>A. Yes and No. If you've turned off advanced humidity, the performance impact is negligible. If you are using advanced humidity, the *initial* phase of chunk generation will be significantly slower, as can be seen in World Preview. HOWEVER, in modern Minecraft, this initial noise-generation
+and biome placement is multi-threaded and is very rarely the bottleneck in actual gameplay. The final phases of chunk generation - decoration and carving - generally remain the bottleneck since they run on the main (server) thread. Also note that, even though World Preview seems much slower, if
+you enable to benchmark config you'll see that chunk generation is still quite fast - on my 3900X I'm able to achieve around 2000 chunks per second.</p>
+<br/>
+<p><strong>Q. <em>Can I make World Preview faster?</em></strong></p>
+<p>A. Yes, assuming you're keeping advanced humidity enabled. In the settings menu (wrench icon on Preview tab), go to the "Resolution" tab and change the bottom bar, "samples per chunk", to the maximum value (farthest right). The preview will be a bit more pixelated, but will significantly improve the speed.</p>
+<br/>
+<p><strong>Q. <em>Is X worldgen mod compatible?</em></strong></p>
+<p>A. If it only adds new biomes, yes. If it actually changes worldgen and is not listed above in Compatibility, probably - try it out! Would appreciate reporting your results 😊 remember you can use World Preview mod to make testing quicker, though that's only for 1.20.x at time of writing (there is also an unofficial port for NeoForge 1.21.1 on Modrinth). 
+You should see log messages when temperature/humidity function replacement succeeds or fails for a given dimension.</p>
+<br/>
+<p><strong>Q. <em>Can you make the border between bands more organic rather than with the lines they currently are?</em></strong></p>
+<p>A. Not really, no. Doing so would require a separate mod/datapack that actually changes biome parameters to fit into those transition zones (or adds new biomes that fit there). This *might* be something I am working on, though 😉 Note regarding Oceans, there is no such biome as "Warm Deep Ocean" but Warm Oceans can still get as deep as the non-Warm deep variants.</p>
+<br/>
+<p><strong>Q. <em>I have another question...</em></strong></p>
+<p>A. ...ask away in the comments :)</em></p>
+<br/>
+<br/>
+<br/>
+<h2>🕹️ CosmicDan's Mods</h2>
+<a title="Sleeping Overhaul 2 CurseForge" href="https://www.curseforge.com/minecraft/mc-mods/sleepingoverhaul2">Sleeping Overhaul 2</a><br/>
+Replaces skip-to-day on sleep with a time lapse, and more!<br/><br/>
+<a title="Simple Day Length Extender on CurseForge" href="https://www.curseforge.com/minecraft/mc-mods/simpledaylengthextender">Simple Day Length Extender</a><br/>
+A simple, highly-compatible mod to extend the length of day and/or night.<br/><br/>
+<a title="Temperature Bands on CurseForge" href="https://www.curseforge.com/minecraft/mc-mods/temperaturebands">Temperature Bands</a><br/>
+Modifies world generation to place biomes into repeating temperature bands. Compatible with most worldgen mods.
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
