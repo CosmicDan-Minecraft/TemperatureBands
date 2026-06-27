@@ -100,3 +100,12 @@ subprojects {
         }
     }
 }
+
+tasks.register('clean', Delete) {
+    group = "build"
+    delete rootProject.layout.buildDirectory
+
+    doLast {
+        delete 'build/'
+    }
+}

@@ -85,3 +85,13 @@ sourcesJar {
     dependsOn commonSources
     from commonSources.archiveFile.map { zipTree(it) }
 }
+
+tasks.named('build') {
+    finalizedBy('copyJar')
+}
+
+tasks.register('copyJar', Copy) {
+    dependsOn tasks.shadowJar
+    from tasks.shadowJar.outputs.files
+    into layout.projectDirectory.dir("../build")
+}
