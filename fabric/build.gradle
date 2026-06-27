@@ -43,7 +43,7 @@ dependencies {
     include "com.github.ben-manes.caffeine:caffeine:3.2.4"
 
     // Forge config API port
-    modApi "fuzs.forgeconfigapiport:forgeconfigapiport-fabric:21.1.3"
+    modApi "fuzs.forgeconfigapiport:forgeconfigapiport-fabric:$rootProject.forgeconfigapiport_version"
 }
 
 processResources {
