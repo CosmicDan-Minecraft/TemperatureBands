@@ -16,6 +16,7 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class TbUtils {
     private static Path TEMP_PATH = null;
@@ -138,7 +139,7 @@ public class TbUtils {
     public static AtomicInteger batchesTotal = new AtomicInteger(0);
     public static AtomicInteger batchesDone = new AtomicInteger(-1);
     public static AtomicInteger chunksTotal = new AtomicInteger(0);
-    private static Instant benchmarkStart;
+    private static AtomicReference<Instant> benchmarkStart;
 
     public static void benchmarkReset() {
         if (batchesTotal.get() > 0) {
@@ -155,7 +156,7 @@ public class TbUtils {
     public static void benchmarkStart(int batchesSize, int chunks) {
         TemperatureBands.LOGGER.info("Starting WorldPreview benchmark, waiting for {} chunks via {} batches to finish...", chunks, batchesSize);
         benchmarkActive = true;
-        benchmarkStart = Instant.now();
+        benchmarkStart = new AtomicReference<>(Instant.now());
         batchesTotal.set(batchesSize);
         batchesDone.set(0);
         chunksTotal.set(chunks);
@@ -167,7 +168,7 @@ public class TbUtils {
         batchesDone.getAndIncrement();
         if (batchesDone.get() >= batchesTotal.get()) {
             benchmarkActive = false;
-            double timeMillis = Duration.between(benchmarkStart, Instant.now()).abs().toMillis();
+            double timeMillis = Duration.between(benchmarkStart.get(), Instant.now()).abs().toMillis();
             int cacheHitCount = BiomeProximityGenerator.benchmarkSampleCacheHitCount.get();
             int cacheTotalCount = BiomeProximityGenerator.benchmarkSampleTotalCount.get();
             TemperatureBands.LOGGER.info("WorldPreview benchmark finished. {} chunks via {} batches finished in {} seconds. Average generation speed of {} chunks per second. Sampler cache hit-rate was {}% ({} over {})." ,
