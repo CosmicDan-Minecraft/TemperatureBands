@@ -5,6 +5,7 @@ import net.minecraft.CrashReport;
 import net.minecraft.ReportedException;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.DensityFunctions;
+import org.spongepowered.asm.mixin.injection.At;
 
 import java.io.File;
 import java.io.IOException;
@@ -14,6 +15,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class TbUtils {
     private static Path TEMP_PATH = null;
@@ -63,11 +65,11 @@ public class TbUtils {
         return (n < 0) ? (n | -divisor) : (n & (divisor - 1));
     }
 
-    static void dumpExtraClassInfo(DensityFunction func) {
+    public static void dumpExtraClassInfo(DensityFunction func) {
         TemperatureBands.LOGGER.error("    - Class type is '{}'", func.getClass().getCanonicalName());
         if (func instanceof DensityFunctions.HolderHolder holderHolder) {
             DensityFunction funcInner = holderHolder.function().value();
-            TemperatureBands.LOGGER.error("    - HolderHolder class type is '{}'", funcInner.getClass().getCanonicalName());
+            TemperatureBands.LOGGER.error("    - Inner class type is '{}'", funcInner.getClass().getCanonicalName());
         }
         TemperatureBands.LOGGER.error("    - Class dump: {}", func.toString());
     }
@@ -133,42 +135,53 @@ public class TbUtils {
     }
 
     public static volatile boolean benchmarkActive = false;
-    public static int batchesTotal = 0;
-    public static int batchesDone = -1;
+    public static AtomicInteger batchesTotal = new AtomicInteger(0);
+    public static AtomicInteger batchesDone = new AtomicInteger(-1);
+    public static AtomicInteger chunksTotal = new AtomicInteger(0);
     private static Instant benchmarkStart;
 
     public static void benchmarkReset() {
-        if (batchesTotal > 0) {
+        if (batchesTotal.get() > 0) {
             TemperatureBands.LOGGER.info("WorldPreview benchmark cancelled");
         }
         benchmarkActive = false;
-        batchesTotal = 0;
-        batchesDone = -1;
+        batchesTotal.set(0);
+        batchesDone.set(-1);
+        chunksTotal.set(0);
         BiomeProximityGenerator.benchmarkSampleTotalCount.set(0);
         BiomeProximityGenerator.benchmarkSampleCacheHitCount.set(0);
     }
 
-    public static void benchmarkStart(int batchesSize) {
-        TemperatureBands.LOGGER.info("Starting WorldPreview benchmark, waiting for {} batches to finish...", batchesSize);
+    public static void benchmarkStart(int batchesSize, int chunks) {
+        TemperatureBands.LOGGER.info("Starting WorldPreview benchmark, waiting for {} chunks via {} batches to finish...", chunks, batchesSize);
         benchmarkActive = true;
         benchmarkStart = Instant.now();
-        batchesTotal = batchesSize;
-        batchesDone = 0;
+        batchesTotal.set(batchesSize);
+        batchesDone.set(0);
+        chunksTotal.set(chunks);
         BiomeProximityGenerator.benchmarkSampleTotalCount.set(0);
         BiomeProximityGenerator.benchmarkSampleCacheHitCount.set(0);
     }
 
     public static void benchmarkBatchDone() {
-        batchesDone++;
-        if (batchesDone >= batchesTotal) {
+        batchesDone.getAndIncrement();
+        if (batchesDone.get() >= batchesTotal.get()) {
             benchmarkActive = false;
+            double timeMillis = Duration.between(benchmarkStart, Instant.now()).abs().toMillis();
             int cacheHitCount = BiomeProximityGenerator.benchmarkSampleCacheHitCount.get();
             int cacheTotalCount = BiomeProximityGenerator.benchmarkSampleTotalCount.get();
-            String cacheHitrate = String.format("%.2f", (cacheHitCount / (double) cacheTotalCount) * 100);
-            TemperatureBands.LOGGER.info("WorldPreview benchmark finished. {} batches finished in {} seconds. Cache hit-rate was {}% ({}/{})." ,
-                    batchesTotal, String.format("%.2f", Duration.between(benchmarkStart, Instant.now()).abs().toMillis() / 1000.0), cacheHitrate, cacheHitCount, cacheTotalCount);
-            batchesTotal = 0;
-            batchesDone = -1;
+            TemperatureBands.LOGGER.info("WorldPreview benchmark finished. {} chunks via {} batches finished in {} seconds. Average generation speed of {} chunks per second. Sampler cache hit-rate was {}% ({} over {})." ,
+                    chunksTotal,
+                    batchesTotal,
+                    String.format("%.2f", timeMillis / 1000.0),
+                    String.format("%.2f", chunksTotal.get() / (timeMillis / 1000.0)),
+                    String.format("%.2f", (cacheHitCount / (double) cacheTotalCount) * 100),
+                    String.format("%,d", cacheHitCount) + " cached reads",
+                    String.format("%,d", cacheTotalCount) + " total sample count"
+            );
+            batchesTotal.set(0);
+            batchesDone.set(-1);
+            chunksTotal.set(0);
         }
     }
 }

@@ -3,6 +3,7 @@ package github.cosmicdan.temperaturebands.neoforge.mixin;
 import com.caeruleusTait.world.preview.backend.WorkManager;
 import com.caeruleusTait.world.preview.backend.worker.WorkBatch;
 import com.caeruleusTait.world.preview.backend.worker.WorkResult;
+import com.llamalad7.mixinextras.sugar.Local;
 import github.cosmicdan.temperaturebands.TbUtils;
 import github.cosmicdan.temperaturebands.TemperatureBands;
 import net.minecraft.core.BlockPos;
@@ -36,9 +37,9 @@ abstract class WorldPreviewForgeHooksWorkManager {
             method = "queueRangeReal",
             at = @At("RETURN")
     )
-    public void onQueueRangeEnd(BlockPos topLeftBlock, BlockPos bottomRightBlock, CallbackInfo ci) {
+    public void onQueueRangeEnd(BlockPos topLeftBlock, BlockPos bottomRightBlock, CallbackInfo ci, @Local int units) {
         if (TemperatureBands.CONFIG_GLOBAL.doBenchmark())
-            TbUtils.benchmarkStart(currentBatches.size());
+            TbUtils.benchmarkStart(currentBatches.size(), units);
     }
 }
 
