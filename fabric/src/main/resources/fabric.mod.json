@@ -25,6 +25,7 @@
   "mixins": [
     "temperaturebands.mixins.json"
   ],
+  "accessWidener": "temperaturebands.accesswidener",
   "depends": {
     "fabricloader": ">=0.16.14",
     "minecraft": "~1.21.1",

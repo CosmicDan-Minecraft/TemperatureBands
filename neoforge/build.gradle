@@ -49,8 +49,16 @@ dependencies {
     
     // World Preview (NeoForge port via Modrinth)
     modImplementation("maven.modrinth:world-preview-neoforged-(unofficial):y3St0do0")
-    
     modLocalRuntime("curse.maven:zfastnoise-1460602:7976498")
+    
+    // TESTING MODS
+    // Tectonic
+    //modImplementation("curse.maven:lithostitched-936015:8252082")
+    //modImplementation("curse.maven:tectonic-686836:7903156")
+    // Lithosphere
+    //modImplementation files('lithosphere 1.6 17.06.2025 (1.20.5 - 1.21.5).jar')
+    // Larion
+    //modImplementation "curse.maven:larion-world-generation-1150582:6315772"
 }
 
 processResources {
