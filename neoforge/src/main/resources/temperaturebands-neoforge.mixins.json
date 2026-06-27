@@ -5,8 +5,8 @@
   "compatibilityLevel": "JAVA_21",
   "plugin" : "github.cosmicdan.temperaturebands.neoforge.mixin.Plugin",
   "mixins": [
-    "WorldPreviewForgeHooksWorkManager",
-    "WorldPreviewHooksWorkBatch"
+    "WorldPreviewForgeHooks$WorkManagerHooks",
+    "WorldPreviewForgeHooks$WorkBatchHooks"
   ],
   "client": [
   ],

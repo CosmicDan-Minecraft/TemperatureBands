@@ -16,43 +16,44 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.List;
 
-abstract class WorldPreviewForgeHooks {}
+abstract class WorldPreviewForgeHooks {
+    @Mixin(WorkManager.class)
+    abstract static class WorkManagerHooks {
+        @Shadow
+        @Final
+        private List<WorkBatch> currentBatches;
 
-@Mixin(WorkManager.class)
-abstract class WorldPreviewForgeHooksWorkManager {
-    @Shadow
-    @Final
-    private List<WorkBatch> currentBatches;
+        @Inject(
+                method = "queueRangeReal",
+                at = @At("HEAD")
+        )
+        public void onQueueRangeStart(BlockPos topLeftBlock, BlockPos bottomRightBlock, CallbackInfo ci) {
+            if (TemperatureBands.CONFIG_GLOBAL.doBenchmark())
+                TbUtils.benchmarkReset();
+        }
 
-    @Inject(
-            method = "queueRangeReal",
-            at = @At("HEAD")
-    )
-    public void onQueueRangeStart(BlockPos topLeftBlock, BlockPos bottomRightBlock, CallbackInfo ci) {
-        if (TemperatureBands.CONFIG_GLOBAL.doBenchmark())
-            TbUtils.benchmarkReset();
+        @Inject(
+                method = "queueRangeReal",
+                at = @At("RETURN")
+        )
+        public void onQueueRangeEnd(BlockPos topLeftBlock, BlockPos bottomRightBlock, CallbackInfo ci, @Local int units) {
+            if (TemperatureBands.CONFIG_GLOBAL.doBenchmark())
+                TbUtils.benchmarkStart(currentBatches.size(), units);
+        }
     }
 
-    @Inject(
-            method = "queueRangeReal",
-            at = @At("RETURN")
-    )
-    public void onQueueRangeEnd(BlockPos topLeftBlock, BlockPos bottomRightBlock, CallbackInfo ci, @Local int units) {
-        if (TemperatureBands.CONFIG_GLOBAL.doBenchmark())
-            TbUtils.benchmarkStart(currentBatches.size(), units);
+    @Mixin(WorkBatch.class)
+    abstract static class WorkBatchHooks {
+
+        @Inject(
+                method = "applyChunkResult",
+                at = @At("RETURN")
+        )
+        public void onApplyChunkResultEnd(List<WorkResult> workResultList, CallbackInfo ci) {
+            if (TemperatureBands.CONFIG_GLOBAL.doBenchmark())
+                TbUtils.benchmarkBatchDone();
+        }
     }
+
+
 }
-
-@Mixin(WorkBatch.class)
-abstract class WorldPreviewHooksWorkBatch {
-
-    @Inject(
-            method = "applyChunkResult",
-            at = @At("RETURN")
-    )
-    public void onApplyChunkResultEnd(List<WorkResult> workResultList, CallbackInfo ci) {
-        if (TemperatureBands.CONFIG_GLOBAL.doBenchmark())
-            TbUtils.benchmarkBatchDone();
-    }
-}
-
