@@ -79,7 +79,7 @@ public class CommonConfig {
     public static final String climateSamplerWarmupMsgTxt = """
              
              [climateSamplerWarmupMsg] will, when true, show a message on the loading screen about the Climate Sampler needing to warm up.
-              - Only shown is advanced humidity is active for the overworld dimension
+              - Only shown if advanced humidity is active for the overworld dimension (not relevant for simple humidity)
               - The message is just some QoL because the progress will seem to be stuck on 0% for a few seconds while initial climate sampling occurs
               - Config is here to disable it just in case you use a custom loading screen that causes a crash or something.""";
     public static final String sectionWorld = "world";
@@ -94,7 +94,8 @@ public class CommonConfig {
               - Vanilla Minecraft generation has 5 temperature zones - Freezing, Cool, Temperate, Warm and Hot - every biome fits into one of these five temperature ranges.
                 For an example, when this value is 2048, the distance from the *center* of one one Hot band to the next Hot band center will be about 16384 (2048 * 8) blocks;
                 Hot through to Freezing then back again.
-              - If there are any worldgen mods that add biomes with a different 'temperature range' for placement, they should be incorporated within existing bands normally.""";
+              - If there are any worldgen mods that add biomes with a different 'temperature range' for placement, they should be incorporated within existing bands normally.
+              - If you want to maintain as much performance as possible, keep this as a power of two.""";
     public final ModConfigSpec.BooleanValue useVerticalBands;
     public static final String useVerticalBandsName = "configUseVerticalBands";
     public static final String useVerticalBandsTxt = """
@@ -158,14 +159,13 @@ public class CommonConfig {
              [vanillaNoiseOverride] is used to override the base noise with vanilla-like Shifted Noise.
               - The default value of 1 will only replace the noise if it's not already a ShiftedNoise type. Recommended.
               - A value of 2 will always replace the noise. Only recommended if you're using a world gen mod that happens to keep ShiftedNoise for
-                temperature and humidity, but NOT for vanilla world generation (see last point for why).
+                temperature and humidity, but NOT recommended for vanilla world generation (see second-last point for why).
               - A value of 0 will disable this function. Not recommended (see next point why).
-              - This is implemented to help re-introduce some variation to various worldgen mods, and usually improve performance. Without it, biomes can become extremely large
-                and boring, and sometimes extremely slow to generate. Lithosphere is the best example of this.
+              - This is implemented to help re-introduce some variation to various worldgen mods, and usually improves performance a little. Without it, biomes can become extremely large
+                and boring, and sometimes extremely slow to generate. Lithosphere is the best example of this (though Lithosphere is honestly not recommended in general because of how slow it is).
               - Setting to 2 (to always replace) is only recommended for non-vanilla worldgen because the replacement is *not* a 1:1 recreation of vanilla noise given the same seed.
-                General terrain shape will be the same, but the temperature and humidity values will not be the same.
-              - This function is particularly useful for many world gen mods like Larion where the base temperature/humidity noise generators are very soft and result in very-straight bands.
-                In some mods you may want to increase noiseFactor above the defaults.""";
+              - This function is particularly useful for many world gen mods like Larion where their original temperature/humidity noises are very "gentle" which results in extremely straight bands.
+                For some mods you may want to increase noiseFactor above the defaults.""";
     public final ModConfigSpec.ConfigValue<String> dimBlacklist;
     public static final String dimBlacklistName = "configDimBlacklist";
     public static final String dimBlacklistTxt = """
@@ -251,9 +251,9 @@ public class CommonConfig {
     public static final String humidityResolutionTxt = """
              
              [humidityResolution] is the accuracy or "resolution" for calculating the distance from river and/or ocean for a given area, where lower values means more accuracy.
-              - Represented as a square root, i.e. the default of 4 means each 16x16 area (each chunk) will use the same distance values.
-              - This is a performance vs accuracy choice but the default of 4 seems good; values lower than 4 start to become extremely expensive on CPU/worldgen time without
-                much improvement in smoothness, and values above 4 start to become a bit "chunky". The max value of 8 (each 64x64 area having same humidity) results in a
+              - Represented as a square root, i.e. the default of 3 means each 9x9 area will use the same distance values.
+              - This is a performance vs accuracy choice but the default of 3 seems decently balanced; values below 3 start to become extremely expensive on CPU/worldgen time
+                with only small improvements in smoothness, and values above 3 get a bit too "chunky". The max value of 8 (each 64x64 area having same humidity) results in a
                 silly checkerboard look (but is very fast).
               - If you change this, be sure to check out "climateSamplerResolution" in the "[climatesampler-world]" section too - these two settings are closely related.""";
     public final ModConfigSpec.DoubleValue humidityRiverInfluence;
@@ -275,10 +275,10 @@ public class CommonConfig {
              [humiditySearchDistance] is the maximal distance in blocks (on XZ/horizontal axes) from rivers and/or oceans to be considered as 'absolutely dry' (the
                 lowest humidity). In other words, higher numbers will make humidity drop slower as distance increases from river and/or ocean biomes.
               - In plain terms, it is how far we will search for rivers and/or oceans from any given point, with final humidity being based on actualDistance/searchDistance.
-              - Higher values will become exponentially more expensive on CPU/worldgen time, though it can be mitigated by reducing humidityResolution and/or
-                climateSamplerResolution at the expense of worldgen quality (you'll see more "chunkyness" in biome borders). Alternatively, you can try adjusting
-                climatesampler-performance settings to *maybe* improve efficiency at the expense of increased CPU/RAM load, which may actually end up reducing
-                throughput/worldgen speed anyway.""";
+              - Higher values are more expensive on CPU/worldgen time, though it can be mitigated by increasing the humidityResolution value and/or climateSamplerResolution
+                at the expense of worldgen quality (you'll see more "chunkyness" in biome borders). Alternatively, you can try adjusting climatesampler-performance settings
+                to *maybe* improve efficiency at the expense of increased CPU/RAM load, which may actually end up reducing throughput/worldgen speed anyway.
+              - The default value seems decent, but for worldgen mods that create larger landmasses and/or fewer rivers you will probably want to increase this.""";
     public final ModConfigSpec.DoubleValue humidityBaseNoisePercent;
     public static final String humidityBaseNoisePercentName = "humidityBaseNoisePercent";
     public static final String humidityBaseNoisePercentTxt = """
@@ -342,7 +342,7 @@ public class CommonConfig {
                 .defineInRange("climateSamplerCachePrefetchRadius", -8, -32, 32);
         climateSamplerMax = builder
                 .comment(climateSamplerMaxTxt)
-                .defineInRange("climateSamplerMax", 1000, 1, 10000);
+                .defineInRange("climateSamplerMax", 100, 1, 10000);
         climateSamplerCacheDelay = builder
                 .comment(climateSamplerCacheDelayTxt)
                 .defineInRange("climateSamplerCacheDelay", 0, 0, Integer.MAX_VALUE);
@@ -414,13 +414,13 @@ public class CommonConfig {
         builder.push(sectionHumidityAlgo2).comment(sectionHumidityAlgo2Txt);
         humidityResolution = builder
                 .comment(humidityResolutionTxt)
-                .defineInRange("humidityResolution", 4, 1, 8);
+                .defineInRange("humidityResolution", 3, 1, 8);
         humidityRiverInfluence = builder
                 .comment(humidityRiverInfluenceTxt)
                 .defineInRange("humidityRiverInfluence", 0.4, 0.0, 5.0);
         humiditySearchDistance = builder
                 .comment(humiditySearchDistanceTxt)
-                .defineInRange("humiditySearchDistance", 512, 16, 16384);
+                .defineInRange("humiditySearchDistance", 600, 16, 16384);
         humidityBaseNoisePercent = builder
                 .comment(humidityBaseNoisePercentTxt)
                 .defineInRange("humidityBaseNoisePercent", 0.1, 0.0, 1.0);
