@@ -10,8 +10,8 @@ public class CommonConfig {
     public final ModConfigSpec.BooleanValue doBenchmark;
     public static final String doBenchmarkTxt = """
              
-             [doBenchmark] is only available for (Neo)Forge right now. If true and World Preview is installed, a benchmark will be performed when opening the 'Preview' tab
-                (and after closing the World Preview settings menu, i.e. whenever chunk previews start to generate).
+             [doBenchmark] will, if World Preview is installed, do a benchmark when opening the 'Preview' tab (and after closing the World Preview settings menu,
+                i.e. whenever chunk previews start to generate).
               - Do not scroll or resize the window while World Preview is active, it will cause the benchmark to fail or never complete. To restart benchmark, simply enter
                 the World Preview settings menu then exit out. Wait for all visible chunks to generate to see the results in the log/console.
               - If Humidity algorithm is not advanced, or the climate sampler cache is disabled, the 'cache hit-rate' part of results will be incorrect - ignore it.""";
