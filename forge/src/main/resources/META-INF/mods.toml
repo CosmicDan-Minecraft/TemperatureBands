@@ -1,5 +1,5 @@
 modLoader = "javafml"
-loaderVersion = "[47,)"
+loaderVersion = "[${forge_loader_version},)"
 issueTrackerURL = "https://github.com/CosmicDan-Minecraft/TemperatureBands/issues"
 license = "LGPLv3"
 
@@ -18,14 +18,14 @@ logoFile = "logo.png"
 [[dependencies.temperaturebands]]
 modId = "forge"
 mandatory = true
-versionRange = "[47.4.20,)"
+versionRange = "[${forge_version},)"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.temperaturebands]]
 modId = "minecraft"
 mandatory = true
-versionRange = "[1.20.1,)"
+versionRange = "[${minecraft_version},)"
 ordering = "NONE"
 side = "BOTH"
 

@@ -27,10 +27,10 @@
     "temperaturebands-fabric.mixins.json"
   ],
   "depends": {
-    "fabricloader": ">=0.19.3",
-    "minecraft": "~1.20.1",
-    "java": ">=17",
-    "forgeconfigapiport": ">=8.0.3"
+    "fabricloader": ">=${fabric_loader_version}",
+    "minecraft": "~${minecraft_version}",
+    "java": ">=${java_version}",
+    "forgeconfigapiport": ">=${forgeconfigapiport_version}"
   },
   "suggests": {
     "world_preview": "*"
