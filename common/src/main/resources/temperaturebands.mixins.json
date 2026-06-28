@@ -5,8 +5,7 @@
   "minVersion": "0.8",
   "client": [
     "ClientGuiHooks$CreateWorldScreenHooks",
-    "ClientGuiHooks$WorldSelectionListEntryHooks",
-    "ClientGuiHooks$LevelLoadingScreenHooks"
+    "ClientGuiHooks$WorldSelectionListEntryHooks"
   ],
   "mixins": [
     "LevelHooks$LevelStorageSourceHooks",

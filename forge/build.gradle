@@ -21,7 +21,6 @@ loom {
         extraAccessWideners.add loom.accessWidenerPath.get().asFile.name
 
         mixinConfig "temperaturebands.mixins.json"
-        mixinConfig "temperaturebands-forge.mixins.json"
     }
 }
 
@@ -55,9 +54,6 @@ dependencies {
     // Caffeine library (fast LruCache) - https://github.com/ben-manes/caffeine
     forgeRuntimeLibrary("com.github.ben-manes.caffeine:caffeine:3.2.4")
     include "com.github.ben-manes.caffeine:caffeine:3.2.4"
-    
-    // World Preview (1.20.1)
-    modImplementation("curse.maven:world-preview-891429:5686690")
 }
 
 processResources {

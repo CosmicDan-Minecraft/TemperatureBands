@@ -2,9 +2,9 @@ package github.cosmicdan.temperaturebands.mixin;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.mojang.blaze3d.vertex.PoseStack;
 import github.cosmicdan.temperaturebands.TemperatureBands;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.LevelLoadingScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.worldselection.CreateWorldScreen;
@@ -53,29 +53,6 @@ public abstract class ClientGuiHooks {
         )
         public void onDoDeleteWorldEnd(CallbackInfo ci) {
             TemperatureBands.isDeleteScreenActive = false;
-        }
-    }
-
-    @Mixin(LevelLoadingScreen.class)
-    public static abstract class LevelLoadingScreenHooks extends Screen {
-        @Shadow
-        @Final
-        private StoringChunkProgressListener progressListener;
-
-        protected LevelLoadingScreenHooks(Component component) {
-            super(component);
-        }
-
-        @WrapOperation(
-                method = "render",
-                at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;drawCenteredString(Lnet/minecraft/client/gui/Font;Ljava/lang/String;III)V")
-        )
-        public void onDrawCenteredString(GuiGraphics guiGraphics, Font font, String string, int i, int j, int k, Operation<Void> original) {
-            if (TemperatureBands.addLoadingScreenText && progressListener.getProgress() < 2) {
-                guiGraphics.drawCenteredString(font, "Climate Sampler is warming up, standby...", i, j, k);
-            } else {
-                original.call(guiGraphics, font, string, i, j, k);
-            }
         }
     }
 }

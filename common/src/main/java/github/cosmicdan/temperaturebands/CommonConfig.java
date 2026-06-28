@@ -7,14 +7,6 @@ public class CommonConfig {
     public static final String sectionGlobalTxt = """
              [global] settings are not world-specific. These will apply to all worlds and will not save per-world since they don't affect world generation.
              --------""";
-    public final ForgeConfigSpec.BooleanValue doBenchmark;
-    public static final String doBenchmarkTxt = """
-             
-             [doBenchmark] is only available for (Neo)Forge right now. If true and World Preview is installed, a benchmark will be performed when opening the 'Preview' tab
-                (and after closing the World Preview settings menu, i.e. whenever chunk previews start to generate).
-              - Do not scroll or resize the window while World Preview is active, it will cause the benchmark to fail or never complete. To restart benchmark, simply enter
-                the World Preview settings menu then exit out. Wait for all visible chunks to generate to see the results in the log/console.
-              - If Humidity algorithm is not advanced, or the climate sampler cache is disabled, the 'cache hit-rate' part of results will be incorrect - ignore it.""";
     public final ForgeConfigSpec.BooleanValue copyConfigOnRecreateWorld;
     public static final String copyConfigOnRecreateWorldTxt = """
              
@@ -28,60 +20,7 @@ public class CommonConfig {
               - Separate with commas. Trailing comma doesn't matter.
               - The default entry of The End is there since vanilla End uses a constant 0.0 for temperature (for some reason, though it doesn't use any humidity noise at all)
                 and the mod will try to replace temperature anyway, giving a false 'report if you want support for this custom dimension' error. Please don't report that error :)""";
-    public final ForgeConfigSpec.BooleanValue dumpRiverAndOceanBiomes;
-    public static final String dumpRiverAndOceanBiomesTxt = """
 
-             [dumpRiverAndOceanBiomes] will, if set to true, dump a list of all biomes with 'minecraft:is_river' and 'minecraft:is_ocean' tags from each dimension to console/log.
-              - Might be useful for modpack creators (in relation to humidity algorithms)""";
-    public static final String sectionClimateSamplerPerf = "climatesampler-performance";
-    public static final String sectionClimateSamplerPerfTxt = """
-             [climatesampler-performance] are global climate sampler settings related to performance (shared by all worlds, not saved per-world).
-              - A custom climate sampler is used when calculating humidity based on proximity to rivers and/or oceans. These settings are currently only relevant if the 'advanced'
-                humidity algorithm is enabled (which is the default for new worlds, but left disabled for existing worlds).
-             --------""";
-    public final ForgeConfigSpec.IntValue climateSamplerCacheSize;
-    public static final String climateSamplerCacheSizeTxt = """
-
-             [climateSamplerCacheSize] is the size of our custom climate sampler, in megabytes.
-              - The default of 5Mb can hold almost 50 thousand samples which should be more than enough for any environment.
-              - Setting to zero will disable caching, which is NOT recommended - you will have much higher CPU *and* memory usage without the cache.""";
-    public final ForgeConfigSpec.IntValue climateSamplerCachePrefetchRadius;
-    public static final String climateSamplerCachePrefetchRadiusTxt = """
-
-             [climateSamplerCachePrefetchRadius] is, if non-zero (along with climateSamplerCacheSize also being non-zero), the rough radius to perform additional sampling (and
-                caching) while sampling. This will be done asynchronously as units of 'climateSamplerResolution' (which is in the climatesampler-world section).
-              - Negative numbers refer to a fraction of available CPU threads; the default of -8 will use one-eighth of threads as radius (actual thread count will be higher
-                but they're very short-lived - a few MS - and modern Java handles this well).
-              - Highly recommended to leave enabled as it drastically improves world generation speed with advanced humidity, but there are diminishing returns if set too high.
-              - If you experience 'can't keep up' warnings while exploring new chunks, try reducing this value. A low fixed number like 1 should still be better than 0 (off).
-              - Result is rounded-down, meaning setting it too far negative could result in 0 which will disable prefetching. The default of -8 will do this if your CPU has *less*
-                than 8 threads, which seems appropriate based on my testing. Even on a 24-thread CPU, this default would only result in a radius of 3, so keep that in mind if
-                manually setting to a positive number - there are sharply diminishing returns if this is set too high (relative to your available threads).
-              - Do note that World Preview (and new world creation) will be a bit slower at the very start, but the speed will improve over time and actually generate quicker
-                overall (compared to a disabled sampler cache), especially in high resolutions of World Preview and/or high chunk rendering distances. World Preview will remain
-                slower overall but World Preview is only doing initial chunk generation which is practically never the bottleneck in actual gameplay, even for heavy modpacks
-                (that main bottleneck is chunk carving and decoration, i.e. digging-out caves and placing of trees/structures/etc.).
-              - Finally, if you want to stress-test your CPU, disable this completely with 0 and keep max-1 (or max) threads in World Preview.""";
-
-    public final ForgeConfigSpec.IntValue climateSamplerMax;
-    public static final String climateSamplerMaxTxt = """
-             
-             [climateSamplerMax] specifies the hard limit on maximum active climate samplers.
-              - This setting is only really necessary for World Preview; without this limit, prefetching ends up with too much backpressure which results in a large memory "leak".""";
-    public final ForgeConfigSpec.IntValue climateSamplerCacheDelay;
-    public static final String climateSamplerCacheDelayTxt = """
-             
-             [climateSamplerCacheDelay] will, when above zero, delay sampler caching/prefetching until the game world has ticked this many times.
-              - The default value of zero means no delay.
-              - If you experience 'cant keep up' warnings in the log but only during the first few seconds of loading a world, increasing this value can help.
-              - If you're using World Preview, this value is ignored and prefetch is always active since it significantly improves preview speed and doesn't cause any issues.""";
-    public final ForgeConfigSpec.BooleanValue climateSamplerWarmupMsg;
-    public static final String climateSamplerWarmupMsgTxt = """
-             
-             [climateSamplerWarmupMsg] will, when true, show a message on the loading screen about the Climate Sampler needing to warm up.
-              - Only shown if advanced humidity is active for the overworld dimension (not relevant for simple humidity)
-              - The message is just some QoL because the progress will seem to be stuck on 0% for a few seconds while initial climate sampling occurs
-              - Config is here to disable it just in case you use a custom loading screen that causes a crash or something.""";
     public static final String sectionWorld = "world";
     public static final String sectionWorldTxt = """
              [world] are general defaults for new worlds. These will apply to newly-generated worlds only, existing worlds will remember their own settings.
@@ -141,17 +80,6 @@ public class CommonConfig {
               - HIGHLY recommended to keep it on.
               - See each algorithm for details on how noiseFactor is used. The unit is arbitrary and very dependent on bandSize. For e.g. 100 is nice for a bandSize of 2048 but
                 might be too wild if bandSize is decreased, or too tame if bandSize is increased.""";
-    public final ForgeConfigSpec.IntValue distanceFunction;
-    public static final String distanceFunctionName = "configDistanceFunction";
-    public static final String distanceFunctionTxt = """
-
-            [distanceFunction] provides a choice in algorithm for calculating distances (currently only used by the default/advanced humidity stuff).
-             - A value of 1 is the default and uses "octile" distance which is reasonably fast and accurate.
-             - A value of 0 uses "Manhattan" (or "taxi cab") distance which is faster but a bit inaccurate.
-             - A value of 2 uses "real" or "Euclidean" distance via hypotenuse calculation, which is a bit slower but gives maximum accuracy.
-             - Recommended to leave on 1 (octile). While Euclidean distance is only about 3% slower, it doesn't look any better - just "different".
-               Although Euclidean might give better smoothness if you're using very high accuracy for humidity and climate sampler. Manhattan distance is about 5%
-               faster than octile but looks kinda bad - can be very "noisy" and regularly "skips" biome transitions.""";
     public final ForgeConfigSpec.IntValue vanillaNoiseOverride;
     public static final String vanillaNoiseOverrideName = "configVanillaNoiseOverride";
     public static final String vanillaNoiseOverrideTxt = """
@@ -215,12 +143,9 @@ public class CommonConfig {
              
              [humidityAlgorithm] is the algorithm to use for humidity (aka vegetation).
               - You can configure and read more about each algorithm in their own section below. Recommended to use World Preview if you want to change things around.
-              - A value of 2 (default) uses a "realistic" humidity calculation based on proximity to rivers and/or oceans. Can be a little slow, but still not as slow as many
-                worldgen mods, and it's definitely worth it (in my opinion).
-              - A value of 1 uses a much simpler 'humidity bands' algorithm that run perpendicular to temperature bands.
-              - A value of 0 will disable humidity feature entirely, keeping vanilla random noise humidity.
-              - Do note that with advanced humidity, some worldgen mods may become extremely slow. One example of this is Lithosphere. In these cases it might be best to use
-                simple humidity, or at least turning off river influence (Lithosphere in particular doesn't generate many rivers anyway).""";
+              - A value of 1 uses a simpler 'humidity bands' algorithm that run perpendicular to temperature bands.
+              - There is no other algorithm available for 1.19.2 and below. See the FAQ on mod description page for why.
+              - A value of 0 will disable humidity feature entirely, keeping vanilla random noise humidity.""";
     public final ForgeConfigSpec.DoubleValue humidityTempWeight;
     public static final String humidityTempWeightName = "humidityTempWeight";
     public static final String humidityTempWeightTxt = """
@@ -242,113 +167,15 @@ public class CommonConfig {
 
              [humidityAlgo1MimicScale] will scale the humidity bands, in relation to temperature bands.
               - The default of 0.5 for e.g. means that humidity bands will be half as big and twice as frequent as temperature bands (on average).""";
-    public static final String sectionHumidityAlgo2 = "humidity-algorithm2";
-    public static final String sectionHumidityAlgo2Txt = """
-             [sectionHumidityAlgo2] are the world-specific settings for the 'advanced' humidity algorithm, i.e. humidity based on proximity to rivers and/or oceans.
-             --------""";
-    public final ForgeConfigSpec.IntValue humidityResolution;
-    public static final String humidityResolutionName = "configHumidityResolution";
-    public static final String humidityResolutionTxt = """
-             
-             [humidityResolution] is the accuracy or "resolution" for calculating the distance from river and/or ocean for a given area, where lower values means more accuracy.
-              - Represented as a square root, i.e. the default of 3 means each 9x9 area will use the same distance values.
-              - This is a performance vs accuracy choice but the default of 3 seems decently balanced; values below 3 start to become extremely expensive on CPU/worldgen time
-                with only small improvements in smoothness, and values above 3 get a bit too "chunky". The max value of 8 (each 64x64 area having same humidity) results in a
-                silly checkerboard look (but is very fast).
-              - If you change this, be sure to check out "climateSamplerResolution" in the "[climatesampler-world]" section too - these two settings are closely related.""";
-    public final ForgeConfigSpec.DoubleValue humidityRiverInfluence;
-    public static final String humidityRiverInfluenceName = "configHumidityRiverInfluence";
-    public static final String humidityRiverInfluenceTxt = """
-             
-             [humidityRiverInfluence] determines how much rivers should contribute to final humidity value.
-              - The default of 0.4 means 40% of river closeness will be added to the base humidity that was determined by ocean closeness.
-              - Setting to 0 will disable any river influence on humidity (only oceans will count) and give a whopping ~40% speed increase due to our ability to take some shortcuts
-                when only searching for oceans (only needs to compute continentalness), but it does make worldgen quite a bit more boring and less realistic.
-              - Values higher than the default makes biome placement very 'noisy' (until approaching 1.0), i.e. lots of scattered 'dots' of tiny biomes around where ocean and
-                river distance thresholds intersect. The default 0.4 does this a bit too but not excessively, and it's actually kinda cool :)
-              - Values at/above 1.0 will effectively double/multiply humidity values. Might be useful if you want a world where rivers count for "more humidity" than oceans.
-              - Regardless of the value, keeping this enabled has the same cost in performance - so the choice of what influence to use, if any, is purely up to personal taste.""";
-    public final ForgeConfigSpec.IntValue humiditySearchDistance;
-    public static final String humiditySearchDistanceName = "configHumiditySearchDistance";
-    public static final String humiditySearchDistanceTxt = """
-             
-             [humiditySearchDistance] is the maximal distance in blocks (on XZ/horizontal axes) from rivers and/or oceans to be considered as 'absolutely dry' (the
-                lowest humidity). In other words, higher numbers will make humidity drop slower as distance increases from river and/or ocean biomes.
-              - In plain terms, it is how far we will search for rivers and/or oceans from any given point, with final humidity being based on actualDistance/searchDistance.
-              - Higher values are more expensive on CPU/worldgen time, though it can be mitigated by increasing the humidityResolution value and/or climateSamplerResolution
-                at the expense of worldgen quality (you'll see more "chunkyness" in biome borders). Alternatively, you can try adjusting climatesampler-performance settings
-                to *maybe* improve efficiency at the expense of increased CPU/RAM load, which may actually end up reducing throughput/worldgen speed anyway.
-              - The default value seems decent, but for worldgen mods that create larger landmasses and/or fewer rivers you will probably want to increase this.""";
-    public final ForgeConfigSpec.DoubleValue humidityBaseNoisePercent;
-    public static final String humidityBaseNoisePercentName = "humidityBaseNoisePercent";
-    public static final String humidityBaseNoisePercentTxt = """
-             
-             [humidityBaseNoisePercent] is how much the original humidity noise will contribute to calculated proximity-based humidity. Default value of 0.1 means 10%.
-              - Setting to 0.0 will disable use of the base noise, and provide a *very small* performance improvement (probably not even measurable).
-              - This is not based on the resolution of humidity nor sampler so helps to provide a little random variation to the final result.
-              - You'll probably want to keep this either fairly low (close to 0.0) or fairly high (close to 1.0), otherwise biome placement becomes very 'noisy', though
-                setting higher values might defeat the purpose of using this algorithm at all.""";
-    public final ForgeConfigSpec.DoubleValue humidityMiddleWeight;
-    public static final String humidityMiddleWeightName = "humidityMiddleWeight";
-    public static final String humidityMiddleWeightTxt = """
-             
-             [humidityMiddleWeight] is how much the near-final humidity value will be pulled towards the center.
-              - The default value of 0.2 provides some nicer transitions between biomes while slightly reducing the sizes of the extreme-humidity biomes for middle
-                temperatures (e.g. Dark Forest).
-              - This adjustment happens before humidityTempWeight but after everything else.
-              - Setting to 0.0 will disable this function, though it won't provide any performance benefit and biome transitions will be (subjectively) worse.""";
-
-    public static final String sectionClimateSamplerWorld = "climatesampler-world";
-    public static final String sectionClimateSamplerWorldTxt = """
-             [climatesampler-world] are the world-specific settings for the climate sampler. Currently only used by humidity.
-                Unlike the climatesampler-performance settings, these DO affect worldgen.
-             --------""";
-    public final ForgeConfigSpec.IntValue climateSamplerResolution;
-    public static final String climateSamplerResolutionName = "configClimateSamplerResolution";
-    public static final String climateSamplerResolutionTxt = """
-             
-             [climateSamplerResolution] is the accuracy or "resolution" for sampling the climate.
-              - Currently only used by ocean/river search in the advanced humidity algorithm.
-              - The default of -1 means automatic, which is the cube of humidityResolution. This seems to be the most logical balance between quality and performance - biome edges
-                look natural with sporadic patches of other biomes potential to the nearby humidity/temperature values to make blending a bit more exciting.
-              - Setting this to a value equal to humidityResolution will provide maximum accuracy but will become VERY expensive on CPU/worldgen time, though that might be desirable
-                if you want all biome edges to be smoother and defined with minimal biome 'patches'.
-              - If you've raised humidityResolution (meaning less accuracy) for some performance, it might be useful to manually set this value to something closer to the new
-                humidityResolution rather than leaving on automatic; such a change could result in better overall smoothness without significant efficiency loss. Do note that
-                it's pointless to have this value lower than humidityResolution, though - all that will do is burn CPU time for no reason.'""";
 
     public CommonConfig(final ForgeConfigSpec.Builder builder) {
         builder.push(sectionGlobal).comment(sectionGlobalTxt);
-        doBenchmark = builder
-                .comment(doBenchmarkTxt)
-                .define("doBenchmark", false);
         copyConfigOnRecreateWorld = builder
                 .comment(copyConfigOnRecreateWorldTxt)
                 .define("copyConfigOnRecreateWorld", true);
         ignoreDimensionFailures = builder
                 .comment(ignoreDimensionFailuresTxt)
                 .define("ignoreDimensionFailures", "minecraft:the_end,");
-        dumpRiverAndOceanBiomes = builder
-                .comment(dumpRiverAndOceanBiomesTxt)
-                .define("dumpRiverAndOceanBiomes", false);
-        builder.pop();
-
-        builder.push(sectionClimateSamplerPerf).comment(sectionClimateSamplerPerfTxt);
-        climateSamplerCacheSize = builder
-                .comment(climateSamplerCacheSizeTxt)
-                .defineInRange("climateSamplerCacheSize", 5, 0, 128);
-        climateSamplerCachePrefetchRadius = builder
-                .comment(climateSamplerCachePrefetchRadiusTxt)
-                .defineInRange("climateSamplerCachePrefetchRadius", -8, -32, 32);
-        climateSamplerMax = builder
-                .comment(climateSamplerMaxTxt)
-                .defineInRange("climateSamplerMax", 100, 1, 10000);
-        climateSamplerCacheDelay = builder
-                .comment(climateSamplerCacheDelayTxt)
-                .defineInRange("climateSamplerCacheDelay", 0, 0, Integer.MAX_VALUE);
-        climateSamplerWarmupMsg = builder
-                .comment(climateSamplerWarmupMsgTxt)
-                .define("climateSamplerWarmupMsg", true);
         builder.pop();
 
         builder.push(sectionWorld).comment(sectionWorldTxt);
@@ -373,9 +200,6 @@ public class CommonConfig {
         noiseFactor = builder
                 .comment(noiseFactorTxt)
                 .defineInRange("noiseFactor", 100, 0, 1000);
-        distanceFunction = builder
-                .comment(distanceFunctionTxt)
-                .defineInRange("distanceFunction", 1, 0, 2);
         dimBlacklist = builder
                 .comment(dimBlacklistTxt)
                 .define("dimBlacklist", "minecraft:the_nether,minecraft:the_end,");
@@ -399,7 +223,7 @@ public class CommonConfig {
         builder.push(sectionHumidityWorld).comment(sectionHumidityWorldTxt);
         humidityAlgorithm = builder
                 .comment(humidityAlgorithmTxt)
-                .defineInRange("humidityAlgorithm", 2, 0, 2);
+                .defineInRange("humidityAlgorithm", 1, 0, 1);
         humidityTempWeight = builder
                 .comment(humidityTempWeightTxt)
                 .defineInRange("humidityTempWeight", 0.4, 0.0, 1.0);
@@ -409,30 +233,6 @@ public class CommonConfig {
         humidityAlgo1MimicScale = builder
                 .comment(humidityAlgo1MimicScaleTxt)
                 .defineInRange("humidityAlgo1MimicScale", 0.5, 0.1, 1.0);
-        builder.pop();
-
-        builder.push(sectionHumidityAlgo2).comment(sectionHumidityAlgo2Txt);
-        humidityResolution = builder
-                .comment(humidityResolutionTxt)
-                .defineInRange("humidityResolution", 3, 1, 8);
-        humidityRiverInfluence = builder
-                .comment(humidityRiverInfluenceTxt)
-                .defineInRange("humidityRiverInfluence", 0.4, 0.0, 5.0);
-        humiditySearchDistance = builder
-                .comment(humiditySearchDistanceTxt)
-                .defineInRange("humiditySearchDistance", 600, 16, 16384);
-        humidityBaseNoisePercent = builder
-                .comment(humidityBaseNoisePercentTxt)
-                .defineInRange("humidityBaseNoisePercent", 0.1, 0.0, 1.0);
-        humidityMiddleWeight = builder
-                .comment(humidityMiddleWeightTxt)
-                .defineInRange("humidityMiddleWeight", 0.3, 0.0, 1.0);
-        builder.pop();
-
-        builder.push(sectionClimateSamplerWorld).comment(sectionClimateSamplerWorldTxt);
-        climateSamplerResolution = builder
-                .comment(climateSamplerResolutionTxt)
-                .defineInRange("climateSamplerResolution", -1, -1, 64);
         builder.pop();
     }
 }

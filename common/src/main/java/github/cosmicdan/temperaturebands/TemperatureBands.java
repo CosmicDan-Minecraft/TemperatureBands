@@ -19,7 +19,6 @@ public final class TemperatureBands {
     public static final String MOD_NAME = "TemperatureBands";
     public static final String MOD_ID = "temperaturebands";
     public static final Logger LOGGER = LogManager.getLogger(MOD_NAME);
-    public static boolean addLoadingScreenText;
     private static final boolean IS_IDEA_DEBUG = ManagementFactory.getRuntimeMXBean().getInputArguments().toString().contains("jdwp");
     private final CommonConfig modConfig;
 

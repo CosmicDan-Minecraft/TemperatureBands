@@ -24,7 +24,6 @@ public record DimensionConfig(
         float tempGradeShift,
         int bandAlgorithm,
         int noiseFactor,
-        int distanceFunction,
         int vanillaNoiseOverride,
         // Blacklist config
         Set<String> dimBlacklist,
@@ -36,17 +35,7 @@ public record DimensionConfig(
         int humidityAlgorithm,
         float humidityTempWeight,
         // Humidity algo 1 (simple) config
-        float humidityAlgo1MimicScale,
-        // Humidity algo 2 (advanced) config
-        int humidityResolution,
-        float humidityRiverInfluence,
-        int humiditySearchDistance,
-        float humidityBaseNoisePercent,
-        float humidityMiddleWeight,
-        //public static float humidityRange = 2.0f, // Vanilla clamps humidity between -1.0 and +1.0. If you want that same clamping range, set this to 2.0. The default of 1.6 means it will be clamped to between -0.8 and +0.8 which takes
-        //public static float humidityCenterWeight = 3.0f, // The "weightiness" towards middle values for humidity. Vanilla humidity generation tends to favour values closer to the middle, so this is used reduce the amount of humidity extremes (e.g. too much Jungle and Savanna). The default value seems good to me.
-        // Climate sampler settings (world-specific)
-        int climateSamplerResolution
+        float humidityAlgo1MimicScale
 ) {
     public enum ConfigType {
         DEFAULT, // the default config as loaded from the usual mod config file on startup
@@ -70,12 +59,18 @@ public record DimensionConfig(
      * @param saveDirIn The absolute path to the world save directory of the world being (re)created or loaded
      */
     public static void onLevelStorageLoad(Path saveDirIn, boolean doingCreateOrRecreate) {
+        // For 1.19.2 and below, this method is only called once (there is no 'validateAndCreateAccess' method, only 'createAccess'
+        // So we need to manually check now if this world already exists or not
+        // Thankfully there is no World Preview on these versions so this shortcut is relatively safe
+        File savePropIn = saveDirIn.resolve(TemperatureBands.MOD_ID + ".prop").toFile();
+        if (savePropIn.exists())
+            doingCreateOrRecreate = false;
         if (PENDING_WORLD != null) {
             TemperatureBands.logDebug("Detected world recreation; source world config moved from PENDING_WORLD to CONFIG_RECREATED_WORLD_SOURCE");
             RECREATED_WORLD_SOURCE = PENDING_WORLD;
         }
         TemperatureBands.logDebug("About to load or create base config into PENDING_WORLD");
-        PENDING_WORLD = createTempOrBase(doingCreateOrRecreate, saveDirIn.resolve(TemperatureBands.MOD_ID + ".prop").toFile());
+        PENDING_WORLD = createTempOrBase(doingCreateOrRecreate, savePropIn);
     }
 
     public static boolean isPendingWorldDimensionWhitelisted(String dimensionName) {
@@ -120,7 +115,6 @@ public record DimensionConfig(
                 loadedConfig.tempGradeShift.get().floatValue(),
                 bandAlgorithm,
                 loadedConfig.noiseFactor.get(),
-                loadedConfig.distanceFunction.get(),
                 loadedConfig.vanillaNoiseOverride.get(),
                 dimBlacklist,
                 loadedConfig.dimBlacklistAsWhitelist.get(),
@@ -128,13 +122,7 @@ public record DimensionConfig(
                 loadedConfig.algo1bandVarianceSteepness.get().floatValue(),
                 humidityAlgorithm,
                 loadedConfig.humidityTempWeight.get().floatValue(),
-                loadedConfig.humidityAlgo1MimicScale.get().floatValue(),
-                loadedConfig.humidityResolution.get(),
-                loadedConfig.humidityRiverInfluence.get().floatValue(),
-                loadedConfig.humiditySearchDistance.get(),
-                loadedConfig.humidityBaseNoisePercent.get().floatValue(),
-                loadedConfig.humidityMiddleWeight.get().floatValue(),
-                loadedConfig.climateSamplerResolution.get()
+                loadedConfig.humidityAlgo1MimicScale.get().floatValue()
         );
     }
 
@@ -231,7 +219,6 @@ public record DimensionConfig(
                 DEFAULT.tempGradeShift,
                 DEFAULT.bandAlgorithm,
                 DEFAULT.noiseFactor,
-                DEFAULT.distanceFunction,
                 DEFAULT.vanillaNoiseOverride,
                 DEFAULT.dimBlacklist,
                 DEFAULT.dimBlacklistAsWhitelist,
@@ -239,13 +226,7 @@ public record DimensionConfig(
                 DEFAULT.algo1bandVarianceSteepness,
                 DEFAULT.humidityAlgorithm,
                 DEFAULT.humidityTempWeight,
-                DEFAULT.humidityAlgo1MimicScale,
-                DEFAULT.humidityResolution,
-                DEFAULT.humidityRiverInfluence,
-                DEFAULT.humiditySearchDistance,
-                DEFAULT.humidityBaseNoisePercent,
-                DEFAULT.humidityMiddleWeight,
-                DEFAULT.climateSamplerResolution
+                DEFAULT.humidityAlgo1MimicScale
         );
     }
 
@@ -286,7 +267,6 @@ public record DimensionConfig(
                     Float.parseFloat(prop.getProperty(CommonConfig.tempGradeShiftName)),
                     bandAlgorithm,
                     Integer.parseInt(prop.getProperty(CommonConfig.noiseFactorName)),
-                    Integer.parseInt(prop.getProperty(CommonConfig.distanceFunctionName, String.valueOf(DEFAULT.distanceFunction))),
                     Integer.parseInt(prop.getProperty(CommonConfig.vanillaNoiseOverrideName, String.valueOf(DEFAULT.vanillaNoiseOverride))),
                     // Blacklist
                     dimBlacklist,
@@ -298,14 +278,7 @@ public record DimensionConfig(
                     humidityAlgorithm,
                     Float.parseFloat(prop.getProperty(CommonConfig.humidityTempWeightName, String.valueOf(DEFAULT.humidityTempWeight))),
                     // Humidity algo 1 (simple)
-                    Float.parseFloat(prop.getProperty(CommonConfig.humidityAlgo1MimicScaleName, String.valueOf(DEFAULT.humidityAlgo1MimicScale))),
-                    // Humidity algo 2 (advanced)
-                    Integer.parseInt(prop.getProperty(CommonConfig.humidityResolutionName, String.valueOf(DEFAULT.humidityResolution))),
-                    Float.parseFloat(prop.getProperty(CommonConfig.humidityRiverInfluenceName, String.valueOf(DEFAULT.humidityRiverInfluence))),
-                    Integer.parseInt(prop.getProperty(CommonConfig.humiditySearchDistanceName, String.valueOf(DEFAULT.humiditySearchDistance))),
-                    Float.parseFloat(prop.getProperty(CommonConfig.humidityBaseNoisePercentName, String.valueOf(DEFAULT.humidityBaseNoisePercent))),
-                    Float.parseFloat(prop.getProperty(CommonConfig.humidityMiddleWeightName, String.valueOf(DEFAULT.humidityMiddleWeight))),
-                    Integer.parseInt(prop.getProperty(CommonConfig.climateSamplerResolutionName, String.valueOf(DEFAULT.climateSamplerResolution)))
+                    Float.parseFloat(prop.getProperty(CommonConfig.humidityAlgo1MimicScaleName, String.valueOf(DEFAULT.humidityAlgo1MimicScale)))
             );
         } catch (IOException ex) {
             return TbUtils.doCrash(ex, "Error reading world config, crashing-out intentionally to prevent corruption. Full error is above. If you modified the world config manually, please fix it. Otherwise, report this Temperature Bands error.");
@@ -323,7 +296,6 @@ public record DimensionConfig(
             prop.setProperty(CommonConfig.tempGradeShiftName, String.valueOf(configToSave.tempGradeShift));
             prop.setProperty(CommonConfig.bandAlgorithmName, String.valueOf(configToSave.bandAlgorithm));
             prop.setProperty(CommonConfig.noiseFactorName, String.valueOf(configToSave.noiseFactor));
-            prop.setProperty(CommonConfig.distanceFunctionName, String.valueOf(configToSave.distanceFunction));
             prop.setProperty(CommonConfig.vanillaNoiseOverrideName, String.valueOf(configToSave.vanillaNoiseOverride));
             // Blacklist
             if (!configToSave.dimBlacklist.isEmpty()) {
@@ -343,17 +315,9 @@ public record DimensionConfig(
             if (configToSave.humidityAlgorithm == 1) {
                 // Humidity algo 1 (simple)
                 prop.setProperty(CommonConfig.humidityAlgo1MimicScaleName, String.valueOf(configToSave.humidityAlgo1MimicScale));
-            } else if (configToSave.humidityAlgorithm == 2) {
-                // Humidity algo 2 (advanced)
-                prop.setProperty(CommonConfig.humidityResolutionName, String.valueOf(configToSave.humidityResolution));
-                prop.setProperty(CommonConfig.humidityRiverInfluenceName, String.valueOf(configToSave.humidityRiverInfluence));
-                prop.setProperty(CommonConfig.humiditySearchDistanceName, String.valueOf(configToSave.humiditySearchDistance));
-                prop.setProperty(CommonConfig.humidityBaseNoisePercentName, String.valueOf(configToSave.humidityBaseNoisePercent));
-                prop.setProperty(CommonConfig.humidityMiddleWeightName, String.valueOf(configToSave.humidityMiddleWeight));
             } else if (configToSave.humidityAlgorithm != 0) {
                 TbUtils.doCrash("Unhandled humidity algorithm at config world save, fixme!");
             }
-            prop.setProperty(CommonConfig.climateSamplerResolutionName, String.valueOf(configToSave.climateSamplerResolution));
 
             prop.store(worldPropOutputStream, "World-specific Temperature Bands settings. Do not edit!");
         } catch (IOException ex) {

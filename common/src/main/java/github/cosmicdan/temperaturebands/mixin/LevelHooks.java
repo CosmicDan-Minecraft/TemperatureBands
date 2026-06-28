@@ -5,7 +5,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import github.cosmicdan.temperaturebands.*;
 import github.cosmicdan.temperaturebands.DensityFunctionEx;
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderGetter;
+import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
@@ -13,7 +13,6 @@ import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.progress.ChunkProgressListener;
 import net.minecraft.util.profiling.ProfilerFiller;
-import net.minecraft.world.RandomSequences;
 import net.minecraft.world.level.CustomSpawner;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.dimension.DimensionType;
@@ -60,21 +59,10 @@ public abstract class LevelHooks {
             // (Re)creating a new world OR Deleting a world
             if (!TemperatureBands.isDeleteScreenActive) {
                 Path saveDir = getBaseDir().toAbsolutePath().resolve(saveName);
-                TemperatureBands.logDebug("onCreateAccess called, (re)creating a world with saveDir '{}'", saveDir.toAbsolutePath().toString());
+                TemperatureBands.logDebug("onCreateAccess called, (re)creating or loading a world with saveDir '{}'", saveDir.toAbsolutePath().toString());
                 DimensionConfig.onLevelStorageLoad(saveDir, true);
             } else
                 TemperatureBands.logDebug("Ignoring onCreateAccess because delete world screen is active");
-        }
-
-        @Inject(
-                method = "validateAndCreateAccess",
-                at = @At("TAIL")
-        )
-        private void onValidateAndCreateAccess(String saveName, CallbackInfoReturnable<LevelStorageSource.LevelStorageAccess> cir) {
-            // Loading an existing world (possibly for recreation, which will call onCreateAccess after confirmed)
-            Path saveDir = getBaseDir().toAbsolutePath().resolve(saveName);
-            TemperatureBands.logDebug("onCreateAccess called, loading an existing world with saveDir '{}'", saveDir.toAbsolutePath().toString());
-            DimensionConfig.onLevelStorageLoad(saveDir, false);
         }
     }
 
@@ -91,9 +79,9 @@ public abstract class LevelHooks {
          */
         @WrapOperation(
                 method = "<init>",
-                at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/levelgen/RandomState;create(Lnet/minecraft/world/level/levelgen/NoiseGeneratorSettings;Lnet/minecraft/core/HolderGetter;J)Lnet/minecraft/world/level/levelgen/RandomState;")
+                at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/levelgen/RandomState;create(Lnet/minecraft/world/level/levelgen/NoiseGeneratorSettings;Lnet/minecraft/core/Registry;J)Lnet/minecraft/world/level/levelgen/RandomState;")
         )
-        public RandomState onNewRandomState(NoiseGeneratorSettings noiseGeneratorSettings, HolderGetter<NormalNoise.NoiseParameters> holderGetter, long seed, Operation<RandomState> original) {
+        public RandomState onNewRandomState(NoiseGeneratorSettings arg, Registry<NormalNoise.NoiseParameters> arg2, long l, Operation<RandomState> original) {
             final String dimensionName = level.dimension().location().toString();
             if (DimensionConfig.isPendingWorldDimensionWhitelisted(dimensionName)) {
                 // Check if dimensiondata already exists. Some mods (e.g. World Preview) create multiple RandomStates for whatever reason (assuming multiple threads)
@@ -101,18 +89,18 @@ public abstract class LevelHooks {
                 DimensionData dimDataExisting = TemperatureBands.DIMENSION_DATA_CACHE.getIfPresent(dimensionName);
                 if (dimDataExisting == null) {
                     if (TemperatureBands.isFirstDimensionData) {
-                        TemperatureBands.DIMENSION_DATA_CACHE.put(dimensionName, new DimensionData(false, DimensionConfig.PENDING_WORLD, level, noiseGeneratorSettings.noiseRouter(), null, null));
+                        TemperatureBands.DIMENSION_DATA_CACHE.put(dimensionName, new DimensionData(false, DimensionConfig.PENDING_WORLD, level, arg.noiseRouter(), null, null));
                         TemperatureBands.logDebug("New DimensionData for {} was created (from DimensionConfig.PENDING_WORLD)", dimensionName);
                     } else {
                         // TODO: This is where we'll do dimension-specific config, for now just do same
-                        TemperatureBands.DIMENSION_DATA_CACHE.put(dimensionName, new DimensionData(false, DimensionConfig.PENDING_WORLD, level, noiseGeneratorSettings.noiseRouter(), null, null));
+                        TemperatureBands.DIMENSION_DATA_CACHE.put(dimensionName, new DimensionData(false, DimensionConfig.PENDING_WORLD, level, arg.noiseRouter(), null, null));
                         TemperatureBands.logDebug("New DimensionData for {} was created (from DimensionConfig.PENDING_WORLD, TEMPORARY until dimension-specific config is implemented)", dimensionName);
                     }
                 } else {
                     TemperatureBands.logDebug("DimensionData for {} was already created", dimensionName);
                 }
             }
-            return original.call(noiseGeneratorSettings, holderGetter, seed);
+            return original.call(arg, arg2, l);
         }
     }
 
@@ -170,24 +158,21 @@ public abstract class LevelHooks {
      */
     @Mixin(ServerLevel.class)
     public static abstract class ServerLevelHooks extends Level {
+        protected ServerLevelHooks(WritableLevelData writableLevelData, ResourceKey<Level> resourceKey, Holder<DimensionType> holder, Supplier<ProfilerFiller> supplier, boolean bl, boolean bl2, long l, int i) {
+            super(writableLevelData, resourceKey, holder, supplier, bl, bl2, l, i);
+        }
+
         @Shadow
         public abstract ServerLevel getLevel();
 
-        protected ServerLevelHooks(WritableLevelData writableLevelData, ResourceKey<Level> resourceKey, RegistryAccess registryAccess, Holder<DimensionType> holder, Supplier<ProfilerFiller> supplier, boolean bl, boolean bl2, long l, int i) {
-            super(writableLevelData, resourceKey, registryAccess, holder, supplier, bl, bl2, l, i);
-        }
         @Inject(
                 method = "<init>",
                 at = @At("RETURN")
         )
-        private void onCreationDone(MinecraftServer minecraftServer, Executor executor, LevelStorageSource.LevelStorageAccess levelStorageAccess, ServerLevelData serverLevelData, ResourceKey<Level> resourceKey, LevelStem levelStem, ChunkProgressListener chunkProgressListener, boolean bl, long l, List<CustomSpawner> list, boolean bl2, RandomSequences randomSequences, CallbackInfo ci) {
+        private void onCreationDone(MinecraftServer minecraftServer, Executor executor, LevelStorageSource.LevelStorageAccess levelStorageAccess, ServerLevelData serverLevelData, ResourceKey<Level> resourceKey, LevelStem levelStem, ChunkProgressListener chunkProgressListener, boolean bl, long l, List<CustomSpawner> list, boolean bl2, CallbackInfo ci) {
             final String dimensionName = dimension().location().toString();
             DimensionData dimData = TemperatureBands.DIMENSION_DATA_CACHE.getIfPresent(dimensionName);
             if (dimData != null) {
-                if (dimensionName.equals(OVERWORLD.location().toString()) && TemperatureBands.CONFIG_GLOBAL.climateSamplerWarmupMsg() && dimData.config.humidityAlgorithm() == 2) {
-                    // using advanced humidity and we're loading the overworld, set flag for loading screen
-                    TemperatureBands.addLoadingScreenText = true;
-                }
                 DimensionData.recreateDimensionWithLevelReady(dimensionName, dimData);
             }
         }

@@ -47,10 +47,13 @@ dependencies {
     include "com.github.ben-manes.caffeine:caffeine:3.2.4"
 
     // Forge config API port
-    modApi "fuzs.forgeconfigapiport:forgeconfigapiport-fabric:$rootProject.forgeconfigapiport_version"
+    modApi("net.minecraftforge:forgeconfigapiport-fabric:$rootProject.forgeconfigapiport_version") {
+        exclude group: "net.fabricmc", module: "fabric-loader"
+    }
+    implementation 'com.electronwill.night-config:core:3.6.3'
     
-    // World Preview
-    modImplementation "curse.maven:world-preview-891429:5686688"
+    // C2ME
+    //modRuntimeOnly "curse.maven:c2me-533097:4732284"
 }
 
 processResources {

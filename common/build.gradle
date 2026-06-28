@@ -19,5 +19,8 @@ dependencies {
     modImplementation "net.fabricmc:fabric-loader:$rootProject.fabric_loader_version"
 
     // Forge config API port
-    modApi "fuzs.forgeconfigapiport:forgeconfigapiport-common:$rootProject.forgeconfigapiport_version"
+    modApi("net.minecraftforge:forgeconfigapiport-fabric:$rootProject.forgeconfigapiport_version") {
+        exclude group: "net.fabricmc", module: "fabric-loader"
+    }
+    implementation 'com.electronwill.night-config:core:3.6.3'
 }
