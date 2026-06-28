@@ -4,7 +4,6 @@ import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BiomeTags;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.RandomSequence;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeSource;
 import net.minecraft.world.level.biome.Climate;
@@ -12,6 +11,7 @@ import net.minecraft.world.level.biome.MultiNoiseBiomeSource;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.DensityFunctions;
 import net.minecraft.world.level.levelgen.NoiseRouter;
+import net.minecraft.world.level.levelgen.XoroshiroRandomSource;
 import net.minecraft.world.level.levelgen.synth.NormalNoise;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -106,7 +106,7 @@ public class DimensionData {
         if (functionName.equals(DensityFunctionEx.TEMPERATURE_NAME) || functionName.equals(DensityFunctionEx.HUMIDITY_NAME)) {
             if (config.vanillaNoiseOverride() > 0) {
                 if (config.vanillaNoiseOverride() == 2 || !(originalFunction instanceof DensityFunctions.ShiftedNoise)) {
-                    RandomSource vanillaRandom = new RandomSequence(seed, Optional.empty()).random();
+                    RandomSource vanillaRandom = new XoroshiroRandomSource(seed);
                     NormalNoise vanillaNoiseShift = NormalNoise.create(vanillaRandom, new NormalNoise.NoiseParameters(-3, List.of(1.0, 1.0, 1.0, 0.0)));
                     DensityFunction.NoiseHolder vanillaShiftShared = new DensityFunction.NoiseHolder(new Holder.Direct<>(vanillaNoiseShift.parameters()), vanillaNoiseShift);
                     NormalNoise vanillaNoise;

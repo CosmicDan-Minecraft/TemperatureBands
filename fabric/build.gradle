@@ -13,6 +13,10 @@ architectury {
     fabric()
 }
 
+loom {
+    accessWidenerPath = project(":common").loom.accessWidenerPath
+}
+
 configurations {
     common {
         canBeResolved = true
@@ -44,6 +48,9 @@ dependencies {
 
     // Forge config API port
     modApi "fuzs.forgeconfigapiport:forgeconfigapiport-fabric:$rootProject.forgeconfigapiport_version"
+    
+    // World Preview
+    modImplementation "curse.maven:world-preview-891429:5686688"
 }
 
 processResources {
@@ -60,8 +67,8 @@ shadowJar {
 }
 
 remapJar {
-    input.set shadowJar.archiveFile
-    //Old, might still be needed...?
+    injectAccessWidener = true
+    inputFile.set shadowJar.archiveFile
     //dependsOn shadowJar
     archiveClassifier = null
 }

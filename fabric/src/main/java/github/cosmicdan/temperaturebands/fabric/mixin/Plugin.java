@@ -1,7 +1,7 @@
-package github.cosmicdan.temperaturebands.neoforge.mixin;
+package github.cosmicdan.temperaturebands.fabric.mixin;
 
-import github.cosmicdan.temperaturebands.TemperatureBands;
-import net.neoforged.fml.loading.LoadingModList;
+import com.llamalad7.mixinextras.MixinExtrasBootstrap;
+import net.fabricmc.loader.api.FabricLoader;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
@@ -13,7 +13,10 @@ public class Plugin implements IMixinConfigPlugin {
     private static boolean doneLogMsg = false;
 
     @Override
-    public void onLoad(String s) {}
+    public void onLoad(String s) {
+        // This might be necessary for some setups (e.g. Forge 1.18.2), in any case it's best to be sure
+        MixinExtrasBootstrap.init();
+    }
 
     @Override
     public String getRefMapperConfig() { return null; }
@@ -21,14 +24,7 @@ public class Plugin implements IMixinConfigPlugin {
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         if (targetClassName.startsWith("com.caeruleusTait.world.preview.")) {
-            if (LoadingModList.get().getModFileById("world_preview") == null) {
-                return false;
-            } else {
-                if (!doneLogMsg) {
-                    TemperatureBands.LOGGER.info("World Preview detected; applying benchmark-related hooks. Please report if you see a mixin error after this line, it means World Preview has changed and benchmark may no longer work properly.");
-                    doneLogMsg = true;
-                }
-            }
+            return FabricLoader.getInstance().isModLoaded("world_preview");
         }
         return true;
     }

@@ -197,6 +197,8 @@ public abstract class LevelHooks {
                 at = @At("RETURN")
         )
         private void onClose(CallbackInfo ci) {
+            // Note: This does NOT work for World Preview on 1.20.1 because it doesn't cleanly shutdown the Server nor ServerLevel.
+            //       Only way to handle it for both Fabric and Forge is via the World Preview-specific hook on SampleUtils.
             TemperatureBands.clearDimensionDataAndConfig(getLevel().dimension().location().toString());
         }
     }

@@ -1,13 +1,13 @@
 package github.cosmicdan.temperaturebands;
 
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 
 public class CommonConfig {
     public static final String sectionGlobal = "global";
     public static final String sectionGlobalTxt = """
              [global] settings are not world-specific. These will apply to all worlds and will not save per-world since they don't affect world generation.
              --------""";
-    public final ModConfigSpec.BooleanValue doBenchmark;
+    public final ForgeConfigSpec.BooleanValue doBenchmark;
     public static final String doBenchmarkTxt = """
              
              [doBenchmark] is only available for (Neo)Forge right now. If true and World Preview is installed, a benchmark will be performed when opening the 'Preview' tab
@@ -15,20 +15,20 @@ public class CommonConfig {
               - Do not scroll or resize the window while World Preview is active, it will cause the benchmark to fail or never complete. To restart benchmark, simply enter
                 the World Preview settings menu then exit out. Wait for all visible chunks to generate to see the results in the log/console.
               - If Humidity algorithm is not advanced, or the climate sampler cache is disabled, the 'cache hit-rate' part of results will be incorrect - ignore it.""";
-    public final ModConfigSpec.BooleanValue copyConfigOnRecreateWorld;
+    public final ForgeConfigSpec.BooleanValue copyConfigOnRecreateWorld;
     public static final String copyConfigOnRecreateWorldTxt = """
              
              [copyConfigOnRecreateWorld] will, when true, copy the previous world Temperature Bands config to the new world when "Recreate" is being done.
               - Set this to false if you want to "upgrade" your world with new features and defaults after updating the mod. You will still need to Recreate the world.
               - Relevant for client only. Servers will need to manually recreate their worlds (e.g. set the same seed/settings in server config and delete old world).""";
-    public final ModConfigSpec.ConfigValue<String> ignoreDimensionFailures;
+    public final ForgeConfigSpec.ConfigValue<String> ignoreDimensionFailures;
     public static final String ignoreDimensionFailuresTxt = """
 
              [ignoreDimensionFailures] is a list of dimensions to ignore logging errors about when replacing their temperature/humidity functions fail.
               - Separate with commas. Trailing comma doesn't matter.
               - The default entry of The End is there since vanilla End uses a constant 0.0 for temperature (for some reason, though it doesn't use any humidity noise at all)
                 and the mod will try to replace temperature anyway, giving a false 'report if you want support for this custom dimension' error. Please don't report that error :)""";
-    public final ModConfigSpec.BooleanValue dumpRiverAndOceanBiomes;
+    public final ForgeConfigSpec.BooleanValue dumpRiverAndOceanBiomes;
     public static final String dumpRiverAndOceanBiomesTxt = """
 
              [dumpRiverAndOceanBiomes] will, if set to true, dump a list of all biomes with 'minecraft:is_river' and 'minecraft:is_ocean' tags from each dimension to console/log.
@@ -39,13 +39,13 @@ public class CommonConfig {
               - A custom climate sampler is used when calculating humidity based on proximity to rivers and/or oceans. These settings are currently only relevant if the 'advanced'
                 humidity algorithm is enabled (which is the default for new worlds, but left disabled for existing worlds).
              --------""";
-    public final ModConfigSpec.IntValue climateSamplerCacheSize;
+    public final ForgeConfigSpec.IntValue climateSamplerCacheSize;
     public static final String climateSamplerCacheSizeTxt = """
 
              [climateSamplerCacheSize] is the size of our custom climate sampler, in megabytes.
               - The default of 5Mb can hold almost 50 thousand samples which should be more than enough for any environment.
               - Setting to zero will disable caching, which is NOT recommended - you will have much higher CPU *and* memory usage without the cache.""";
-    public final ModConfigSpec.IntValue climateSamplerCachePrefetchRadius;
+    public final ForgeConfigSpec.IntValue climateSamplerCachePrefetchRadius;
     public static final String climateSamplerCachePrefetchRadiusTxt = """
 
              [climateSamplerCachePrefetchRadius] is, if non-zero (along with climateSamplerCacheSize also being non-zero), the rough radius to perform additional sampling (and
@@ -63,19 +63,19 @@ public class CommonConfig {
                 (that main bottleneck is chunk carving and decoration, i.e. digging-out caves and placing of trees/structures/etc.).
               - Finally, if you want to stress-test your CPU, disable this completely with 0 and keep max-1 (or max) threads in World Preview.""";
 
-    public final ModConfigSpec.IntValue climateSamplerMax;
+    public final ForgeConfigSpec.IntValue climateSamplerMax;
     public static final String climateSamplerMaxTxt = """
              
              [climateSamplerMax] specifies the hard limit on maximum active climate samplers.
               - This setting is only really necessary for World Preview; without this limit, prefetching ends up with too much backpressure which results in a large memory "leak".""";
-    public final ModConfigSpec.IntValue climateSamplerCacheDelay;
+    public final ForgeConfigSpec.IntValue climateSamplerCacheDelay;
     public static final String climateSamplerCacheDelayTxt = """
              
              [climateSamplerCacheDelay] will, when above zero, delay sampler caching/prefetching until the game world has ticked this many times.
               - The default value of zero means no delay.
               - If you experience 'cant keep up' warnings in the log but only during the first few seconds of loading a world, increasing this value can help.
               - If you're using World Preview, this value is ignored and prefetch is always active since it significantly improves preview speed and doesn't cause any issues.""";
-    public final ModConfigSpec.BooleanValue climateSamplerWarmupMsg;
+    public final ForgeConfigSpec.BooleanValue climateSamplerWarmupMsg;
     public static final String climateSamplerWarmupMsgTxt = """
              
              [climateSamplerWarmupMsg] will, when true, show a message on the loading screen about the Climate Sampler needing to warm up.
@@ -86,7 +86,7 @@ public class CommonConfig {
     public static final String sectionWorldTxt = """
              [world] are general defaults for new worlds. These will apply to newly-generated worlds only, existing worlds will remember their own settings.
              --------""";
-    public final ModConfigSpec.IntValue bandSize;
+    public final ForgeConfigSpec.IntValue bandSize;
     public static final String bandSizeName = "configBandSize";
     public static final String bandSizeTxt = """
              
@@ -96,12 +96,12 @@ public class CommonConfig {
                 Hot through to Freezing then back again.
               - If there are any worldgen mods that add biomes with a different 'temperature range' for placement, they should be incorporated within existing bands normally.
               - If you want to maintain as much performance as possible, keep this as a power of two.""";
-    public final ModConfigSpec.BooleanValue useVerticalBands;
+    public final ForgeConfigSpec.BooleanValue useVerticalBands;
     public static final String useVerticalBandsName = "configUseVerticalBands";
     public static final String useVerticalBandsTxt = """
              
              [useVerticalBands] will, if true, use vertical instead of horizontal.""";
-    public final ModConfigSpec.DoubleValue bandPositionShift;
+    public final ForgeConfigSpec.DoubleValue bandPositionShift;
     public static final String bandPositionShiftName = "configPosShift";
     public static final String bandPositionShiftTxt = """
              
@@ -111,7 +111,7 @@ public class CommonConfig {
                 simulate a southern hemisphere start instead.
               - Note that some world gen mods like Tectonic and Larion seem to have their own idea about initial world spawn and don't use world origin, in these cases you might
                 want to use a mod like 'Biome Spawn Point' too.""";
-    public final ModConfigSpec.DoubleValue tempRange;
+    public final ForgeConfigSpec.DoubleValue tempRange;
     public static final String tempRangeName = "configTempRange";
     public static final String tempRangeTxt = """
              
@@ -119,21 +119,21 @@ public class CommonConfig {
               - Increasing will make the coldest and hottest bands larger while reducing others, lowering will have the opposite effect.
               - The default value makes hottest/coldest bands a tiny bit smaller than the others.
                 Setting this value too high or low might result in some bands not generating at all.""";
-    public final ModConfigSpec.DoubleValue tempGradeShift;
+    public final ForgeConfigSpec.DoubleValue tempGradeShift;
     public static final String tempGradeShiftName = "configGradeShift";
     public static final String tempGradeShiftTxt = """
              
              [tempGradeShift] is used to make the hottest and coldest bands roughly the same size.
               - Vanilla temperature has a bias towards cold, this solves that. If e.g. you set it to zero, the coldest band will be larger than all other bands and the hottest
                 would be smaller than all others.""";
-    public final ModConfigSpec.IntValue bandAlgorithm;
+    public final ForgeConfigSpec.IntValue bandAlgorithm;
     public static final String bandAlgorithmName = "configAlgorithm";
     public static final String bandAlgorithmTxt = """
              
              [bandAlgorithm] is the algorithm to use for temperature bands.
               - You can configure and read more about each algorithm in their own section below. Recommended to use World Preview if you want to change things.
               - Note that there is only 1 algorithm currently, this config is here just in case I add more later.""";
-    public final ModConfigSpec.IntValue noiseFactor;
+    public final ForgeConfigSpec.IntValue noiseFactor;
     public static final String noiseFactorName = "configNoiseFactor";
     public static final String noiseFactorTxt = """
              
@@ -141,7 +141,7 @@ public class CommonConfig {
               - HIGHLY recommended to keep it on.
               - See each algorithm for details on how noiseFactor is used. The unit is arbitrary and very dependent on bandSize. For e.g. 100 is nice for a bandSize of 2048 but
                 might be too wild if bandSize is decreased, or too tame if bandSize is increased.""";
-    public final ModConfigSpec.IntValue distanceFunction;
+    public final ForgeConfigSpec.IntValue distanceFunction;
     public static final String distanceFunctionName = "configDistanceFunction";
     public static final String distanceFunctionTxt = """
 
@@ -152,7 +152,7 @@ public class CommonConfig {
              - Recommended to leave on 1 (octile). While Euclidean distance is only about 3% slower, it doesn't look any better - just "different".
                Although Euclidean might give better smoothness if you're using very high accuracy for humidity and climate sampler. Manhattan distance is about 5%
                faster than octile but looks kinda bad - can be very "noisy" and regularly "skips" biome transitions.""";
-    public final ModConfigSpec.IntValue vanillaNoiseOverride;
+    public final ForgeConfigSpec.IntValue vanillaNoiseOverride;
     public static final String vanillaNoiseOverrideName = "configVanillaNoiseOverride";
     public static final String vanillaNoiseOverrideTxt = """
              
@@ -166,7 +166,7 @@ public class CommonConfig {
               - Setting to 2 (to always replace) is only recommended for non-vanilla worldgen because the replacement is *not* a 1:1 recreation of vanilla noise given the same seed.
               - This function is particularly useful for many world gen mods like Larion where their original temperature/humidity noises are very "gentle" which results in extremely straight bands.
                 For some mods you may want to increase noiseFactor above the defaults.""";
-    public final ModConfigSpec.ConfigValue<String> dimBlacklist;
+    public final ForgeConfigSpec.ConfigValue<String> dimBlacklist;
     public static final String dimBlacklistName = "configDimBlacklist";
     public static final String dimBlacklistTxt = """
              
@@ -174,7 +174,7 @@ public class CommonConfig {
               - Separate with commas. Trailing comma doesn't matter.
               - Default excludes the_nether and the_end.
               - Adding minecraft:overworld won't do anything, it is always whitelisted.""";
-    public final ModConfigSpec.BooleanValue dimBlacklistAsWhitelist;
+    public final ForgeConfigSpec.BooleanValue dimBlacklistAsWhitelist;
     public static final String dimBlacklistAsWhitelistName = "configDimBlacklistAsWhitelist";
     public static final String dimBlacklistAsWhitelistTxt = """
              
@@ -189,7 +189,7 @@ public class CommonConfig {
               - Keeping the variance low but noiseFactor a decent amount (around 100 or so) will produce some decent looking curves/waves in the bands with some randomness, but if you
                 want something more predictable you can reduce noiseFactor while optionally increasing variance.
              --------""";
-    public final ModConfigSpec.IntValue algo1bandVariance;
+    public final ForgeConfigSpec.IntValue algo1bandVariance;
     public static final String algo1bandVarianceName = "configAlgo1BandVariance";
     public static final String algo1bandVarianceTxt = """
              
@@ -197,7 +197,7 @@ public class CommonConfig {
                 remaining algo1 features.
               - You will want to keep this a fairly small value. Making it too large will result in weirdness, especially if it's too close to the bandSize.
               - If you want to maintain as much performance as possible, keep this as a power of two.""";
-    public final ModConfigSpec.DoubleValue algo1bandVarianceSteepness;
+    public final ForgeConfigSpec.DoubleValue algo1bandVarianceSteepness;
     public static final String algo1bandVarianceSteepnessName = "configAlgo1bandVarianceSteepness";
     public static final String algo1bandVarianceSteepnessTxt = """
              
@@ -209,7 +209,7 @@ public class CommonConfig {
              [humidity-world] are the world-specific settings for humidity (aka vegetation).
               - As before, these settings are only the defaults for new worlds - each world will remember its own settings.
              --------""";
-    public final ModConfigSpec.IntValue humidityAlgorithm;
+    public final ForgeConfigSpec.IntValue humidityAlgorithm;
     public static final String humidityAlgorithmName = "configHumidityAlgorithm";
     public static final String humidityAlgorithmTxt = """
              
@@ -221,7 +221,7 @@ public class CommonConfig {
               - A value of 0 will disable humidity feature entirely, keeping vanilla random noise humidity.
               - Do note that with advanced humidity, some worldgen mods may become extremely slow. One example of this is Lithosphere. In these cases it might be best to use
                 simple humidity, or at least turning off river influence (Lithosphere in particular doesn't generate many rivers anyway).""";
-    public final ModConfigSpec.DoubleValue humidityTempWeight;
+    public final ForgeConfigSpec.DoubleValue humidityTempWeight;
     public static final String humidityTempWeightName = "humidityTempWeight";
     public static final String humidityTempWeightTxt = """
              
@@ -236,7 +236,7 @@ public class CommonConfig {
     public static final String sectionHumidityAlgo1Txt = """
              [humidity-algorithm1] are world-specific settings for the 'simple' banding humidity algorithm, i.e. humidity bands that run perpendicular to temperature.
              --------""";
-    public final ModConfigSpec.DoubleValue humidityAlgo1MimicScale;
+    public final ForgeConfigSpec.DoubleValue humidityAlgo1MimicScale;
     public static final String humidityAlgo1MimicScaleName = "configHumidityAlgo1MimicScale";
     public static final String humidityAlgo1MimicScaleTxt = """
 
@@ -246,7 +246,7 @@ public class CommonConfig {
     public static final String sectionHumidityAlgo2Txt = """
              [sectionHumidityAlgo2] are the world-specific settings for the 'advanced' humidity algorithm, i.e. humidity based on proximity to rivers and/or oceans.
              --------""";
-    public final ModConfigSpec.IntValue humidityResolution;
+    public final ForgeConfigSpec.IntValue humidityResolution;
     public static final String humidityResolutionName = "configHumidityResolution";
     public static final String humidityResolutionTxt = """
              
@@ -256,7 +256,7 @@ public class CommonConfig {
                 with only small improvements in smoothness, and values above 3 get a bit too "chunky". The max value of 8 (each 64x64 area having same humidity) results in a
                 silly checkerboard look (but is very fast).
               - If you change this, be sure to check out "climateSamplerResolution" in the "[climatesampler-world]" section too - these two settings are closely related.""";
-    public final ModConfigSpec.DoubleValue humidityRiverInfluence;
+    public final ForgeConfigSpec.DoubleValue humidityRiverInfluence;
     public static final String humidityRiverInfluenceName = "configHumidityRiverInfluence";
     public static final String humidityRiverInfluenceTxt = """
              
@@ -268,7 +268,7 @@ public class CommonConfig {
                 river distance thresholds intersect. The default 0.4 does this a bit too but not excessively, and it's actually kinda cool :)
               - Values at/above 1.0 will effectively double/multiply humidity values. Might be useful if you want a world where rivers count for "more humidity" than oceans.
               - Regardless of the value, keeping this enabled has the same cost in performance - so the choice of what influence to use, if any, is purely up to personal taste.""";
-    public final ModConfigSpec.IntValue humiditySearchDistance;
+    public final ForgeConfigSpec.IntValue humiditySearchDistance;
     public static final String humiditySearchDistanceName = "configHumiditySearchDistance";
     public static final String humiditySearchDistanceTxt = """
              
@@ -279,7 +279,7 @@ public class CommonConfig {
                 at the expense of worldgen quality (you'll see more "chunkyness" in biome borders). Alternatively, you can try adjusting climatesampler-performance settings
                 to *maybe* improve efficiency at the expense of increased CPU/RAM load, which may actually end up reducing throughput/worldgen speed anyway.
               - The default value seems decent, but for worldgen mods that create larger landmasses and/or fewer rivers you will probably want to increase this.""";
-    public final ModConfigSpec.DoubleValue humidityBaseNoisePercent;
+    public final ForgeConfigSpec.DoubleValue humidityBaseNoisePercent;
     public static final String humidityBaseNoisePercentName = "humidityBaseNoisePercent";
     public static final String humidityBaseNoisePercentTxt = """
              
@@ -288,7 +288,7 @@ public class CommonConfig {
               - This is not based on the resolution of humidity nor sampler so helps to provide a little random variation to the final result.
               - You'll probably want to keep this either fairly low (close to 0.0) or fairly high (close to 1.0), otherwise biome placement becomes very 'noisy', though
                 setting higher values might defeat the purpose of using this algorithm at all.""";
-    public final ModConfigSpec.DoubleValue humidityMiddleWeight;
+    public final ForgeConfigSpec.DoubleValue humidityMiddleWeight;
     public static final String humidityMiddleWeightName = "humidityMiddleWeight";
     public static final String humidityMiddleWeightTxt = """
              
@@ -303,7 +303,7 @@ public class CommonConfig {
              [climatesampler-world] are the world-specific settings for the climate sampler. Currently only used by humidity.
                 Unlike the climatesampler-performance settings, these DO affect worldgen.
              --------""";
-    public final ModConfigSpec.IntValue climateSamplerResolution;
+    public final ForgeConfigSpec.IntValue climateSamplerResolution;
     public static final String climateSamplerResolutionName = "configClimateSamplerResolution";
     public static final String climateSamplerResolutionTxt = """
              
@@ -317,7 +317,7 @@ public class CommonConfig {
                 humidityResolution rather than leaving on automatic; such a change could result in better overall smoothness without significant efficiency loss. Do note that
                 it's pointless to have this value lower than humidityResolution, though - all that will do is burn CPU time for no reason.'""";
 
-    public CommonConfig(final ModConfigSpec.Builder builder) {
+    public CommonConfig(final ForgeConfigSpec.Builder builder) {
         builder.push(sectionGlobal).comment(sectionGlobalTxt);
         doBenchmark = builder
                 .comment(doBenchmarkTxt)

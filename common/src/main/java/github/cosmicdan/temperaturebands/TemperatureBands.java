@@ -5,7 +5,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import net.minecraft.core.Holder;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.DensityFunctions;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -38,7 +38,7 @@ public final class TemperatureBands {
 
     public TemperatureBands(final IModPlatform modPlatform) {
         // Register common config
-        final Pair<CommonConfig, ModConfigSpec> specPairConfigCommon = new ModConfigSpec.Builder().configure(CommonConfig::new);
+        final Pair<CommonConfig, ForgeConfigSpec> specPairConfigCommon = new ForgeConfigSpec.Builder().configure(CommonConfig::new);
         modConfig = specPairConfigCommon.getLeft();
         modPlatform.registerConfigCommon(specPairConfigCommon.getRight());
     }
