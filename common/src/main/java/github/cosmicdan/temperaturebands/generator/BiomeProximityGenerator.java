@@ -28,9 +28,6 @@ import static github.cosmicdan.temperaturebands.TemperatureBands.CONFIG_GLOBAL;
 public class BiomeProximityGenerator implements IGenerator {
     public static final int blockY = 64;
 
-    public static AtomicInteger benchmarkSampleCacheHitCount = new AtomicInteger(0);
-    public static AtomicInteger benchmarkSampleTotalCount = new AtomicInteger(0);
-
     private final Config config;
     // initialized in constructor and/or derived from config arg
     private final int samplerResolution;
@@ -245,14 +242,11 @@ public class BiomeProximityGenerator implements IGenerator {
 
     public ClimateTargetPointEx sampleClimateCachedAndMaybePrefetch(int blockX, int blockZ) {
         long packedPos = TbUtils.packBlockXZtoLong(blockX, blockZ);
-        if (TbUtils.benchmarkActive)
-            benchmarkSampleTotalCount.getAndIncrement();
         ClimateTargetPointEx result = climateSamplerCache.synchronous().getIfPresent(packedPos);
         if (result == null) {
             result = config.owner.sampleClimate(packedPos, firstBiomeOnly);
             climateSamplerCache.synchronous().put(packedPos, result);
-        } else if (TbUtils.benchmarkActive)
-            benchmarkSampleCacheHitCount.getAndIncrement();
+        }
         if (CONFIG_GLOBAL.climateSamplerCachePrefetchRadius() > 0 && CONFIG_GLOBAL.climateSamplerCacheSize() > 0 && climateSamplerCacheActiveFutures.size() < CONFIG_GLOBAL.climateSamplerMax()) {
             // another spiral. Cbf making the methods common.
             double angle = 0;

@@ -5,7 +5,6 @@ import java.util.Set;
 
 public record GlobalConfig(
         // Global settings (not per-world)
-        boolean doBenchmark,
         boolean copyConfigOnRecreateWorld,
         Set<String> ignoreDimensionFailures,
         boolean dumpRiverAndOceanBiomes,
@@ -34,7 +33,6 @@ public record GlobalConfig(
         }
         // all done
         return new GlobalConfig(
-                loadedConfig.doBenchmark.get(),
                 loadedConfig.copyConfigOnRecreateWorld.get(),
                 ignoreDimensionFailures,
                 loadedConfig.dumpRiverAndOceanBiomes.get(),
