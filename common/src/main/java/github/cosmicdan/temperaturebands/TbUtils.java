@@ -4,18 +4,13 @@ import net.minecraft.CrashReport;
 import net.minecraft.ReportedException;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.DensityFunctions;
-import org.spongepowered.asm.mixin.injection.At;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.Collections;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class TbUtils {
     private static Path TEMP_PATH = null;
