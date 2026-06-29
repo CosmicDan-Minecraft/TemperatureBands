@@ -76,6 +76,8 @@ public record DimensionConfig(
     public static boolean isPendingWorldDimensionWhitelisted(String dimensionName) {
         if (dimensionName.equals(Level.OVERWORLD.location().toString()))
             return true;
+        if (PENDING_WORLD == null)
+            return false; // Fix for "Fake" levels (e.g. Supplementaries/Moonlight lib
         boolean isWhitelistedDim = false;
         if (PENDING_WORLD.dimBlacklistAsWhitelist()) {
             if (PENDING_WORLD.dimBlacklist().contains(dimensionName))
