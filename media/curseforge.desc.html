@@ -5,7 +5,7 @@
 <br/>
 <h2>📜 Changelogs (Update history)</h2>
 <div class="spoiler"><p>
-<h5>2.0.1</h5>
+<h5>2.0.x</h5>
  - NEW: Humidity settings that modify biome placement even more. The default (for 1.20.1 and later only, see FAQ for why) is the "advanced" algorithm that calculates humidity based on proximity to rivers and/or oceans. The other "simple" option generates bands that are perpendicular to temperature bands. Existing worlds will keep their vanilla humidity, see the "Upgrading" section on mod description page for more info.<br/>
  - OPTIMIZED: The core system was completely rewritten to replace the temperature/humidity density functions and check for success/failure instead of dynamically modifying them and assuming they worked. More robust, more reliable, more gooder. Most of the below changes are made possible thanks to this rewrite.<br/>
  - NEW: Ability to blacklist/whitelist dimensions. The default config will exclude The Nether and The End. This new default will only apply to NEW worlds, see the "Upgrading" section on mod description page for more info.<br/>
@@ -15,6 +15,8 @@
  - IMPROVED: Solved compatibility with C2ME, and probably other performance mods.<br/>
  - IMPROVED: More config options, better comments and reworked defaults.<br/>
  - VERSION: Latest branch moved to 26.1.2, dropping 1.21.5 (was previous latest) and 1.18.2 versions (too much backport work and no longer popular anyway)<br/>
+ - [2.0.2] FIX: Solved crash caused by trying to process "fake" levels (from e.g. Supplementaries mod and/or Moonlight Lib)<br/>
+ - [2.0.2] FIX: Properly handle dimension data for runtime-generated dimensions that re-use the overworld noise router<br/>
 <br/><br/>
  <h5>1.0.0</h5>
  - Initial release<br/>
