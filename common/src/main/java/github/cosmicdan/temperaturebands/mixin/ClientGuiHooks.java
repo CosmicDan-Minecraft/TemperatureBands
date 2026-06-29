@@ -30,7 +30,6 @@ public abstract class ClientGuiHooks {
         )
         private void onPopScreen(CallbackInfo ci) {
             TemperatureBands.clearDimensionDataAndConfig(null);
-            TemperatureBands.logDebug("World creation cancelled, clearing dimension data/config");
         }
     }
 
