@@ -41,15 +41,6 @@ public class DimensionData {
         // sanity check
         if (config == null)
             TbUtils.doCrash("Tried to create new DimensionData but provided config is null, eh?");
-        else if (isLevelReady) {
-            // setup and verification for humidity
-            if (config.humidityAlgorithm() != 0) {
-                if (!(level.getChunkSource().getGenerator().getBiomeSource() instanceof MultiNoiseBiomeSource)) {
-                    if (!CONFIG_GLOBAL.ignoreDimensionFailures().contains(level.dimension().location().toString()))
-                        LOGGER.error("Error: The dimension {} does not use a MultiNoiseBiomeSource; humidity modification cannot continue. Please report this to CosmicDan so support for this custom dimension might be added.", level.dimension().location());
-                }
-            }
-        }
     }
 
     public NoiseRouter getNoiseRouter() {
@@ -118,14 +109,6 @@ public class DimensionData {
             );
             TemperatureBands.DIMENSION_DATA_CACHE.put(dimensionName, dimDataNew);
         }
-    }
-
-    public BiomeSource getBiomeSource() {
-        return level.getChunkSource().getGenerator().getBiomeSource();
-    }
-
-    public Climate.Sampler getClimateSampler() {
-        return level.getChunkSource().randomState().sampler();
     }
 
     public @NotNull DensityFunctions.HolderHolder getTemperatureNoise() {
