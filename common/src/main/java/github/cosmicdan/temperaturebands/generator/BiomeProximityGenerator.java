@@ -127,21 +127,23 @@ public class BiomeProximityGenerator implements IGenerator {
         this.dimData = dimData;
         if (dimData == null)
             TbUtils.doCrash("dimData must not be null");
-        final BiomeSource biomeSource = dimData.getBiomeSource();
-        if (biomeSource instanceof MultiNoiseBiomeSource biomeSourceNoise) {
-            biomeSourceInvoker = (MultiNoiseBiomeSourceInvoker) biomeSourceNoise;
-        } else {
-            // we already logged error about biomeSource not being MultiNoiseBiomeSource, just set a flag and move on
-            biomeSourceError = true;
+        else {
+            final BiomeSource biomeSource = dimData.getBiomeSource();
+            if (biomeSource instanceof MultiNoiseBiomeSource biomeSourceNoise) {
+                biomeSourceInvoker = (MultiNoiseBiomeSourceInvoker) biomeSourceNoise;
+            } else {
+                // we already logged error about biomeSource not being MultiNoiseBiomeSource, just set a flag and move on
+                biomeSourceError = true;
+            }
         }
     }
 
     @Override
     public double onCompute(DensityFunction.FunctionContext context, DimensionData dimData) {
-        if (biomeSourceError)
-            return config.owner.computeOriginal(context);
         if (this.dimData == null)
             onFirstCompute(dimData);
+        if (biomeSourceError)
+            return config.owner.computeOriginal(context);
         int originPosX = scalePosForResolution(context.blockX(), config.noiseResolution, noisePartSize, noisePartSizeMiddleOffset);
         int originPosZ = scalePosForResolution(context.blockZ(), config.noiseResolution, noisePartSize, noisePartSizeMiddleOffset);
 

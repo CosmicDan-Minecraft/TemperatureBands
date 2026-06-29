@@ -34,6 +34,7 @@ public final class TemperatureBands {
     public static boolean isFirstDimensionData = true;
     /** Used on client to check if "Delete World" screen is currently active (avoids loading world data if so) **/
     public static boolean isDeleteScreenActive = false;
+    public static boolean isClient = false;
 
     private static final Map<String, Set<String>> failedDimensionNoiseReplacements = new HashMap<>();
 
@@ -53,6 +54,11 @@ public final class TemperatureBands {
         logDebug("Loading mod config");
         CONFIG_GLOBAL = GlobalConfig.create(modConfig);
         DimensionConfig.createDefault(modConfig);
+        try {
+            // Using a string avoids direct bytecode references that trigger classloading crashes
+            Class.forName("net.minecraft.client.Minecraft");
+            isClient = true;
+        } catch (ClassNotFoundException ignored) {}
     }
 
     public static void clearDimensionDataAndConfig(@Nullable String dimensionName) {
