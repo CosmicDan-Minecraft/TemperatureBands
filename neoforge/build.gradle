@@ -97,11 +97,17 @@ sourcesJar {
 }
 
 tasks.named('build') {
-    finalizedBy('copyJar')
+    finalizedBy 'copyJar', 'copySourcesJar'
 }
 
 tasks.register('copyJar', Copy) {
     dependsOn tasks.remapJar
     from tasks.remapJar.outputs.files
+    into layout.projectDirectory.dir("../build")
+}
+
+tasks.register('copySourcesJar', Copy) {
+    dependsOn tasks.sourcesJar
+    from tasks.sourcesJar.outputs.files
     into layout.projectDirectory.dir("../build")
 }
