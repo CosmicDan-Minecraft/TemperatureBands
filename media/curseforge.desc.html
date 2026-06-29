@@ -5,17 +5,17 @@
 <br/>
 <h2>📜 Changelogs (Update history)</h2>
 <div class="spoiler"><p>
-<h5>2.0.0</h5>
- - NEW: Humidity settings that modify biome placement even more. The default is the "advanced" algorithm that calculates humidity based on proximity to rivers and/or oceans. The other "simple" option generates bands that are perpendicular to temperature bands. Existing worlds will keep their vanilla humidity, see the "Upgrading" section on mod description page for more info.<br/>
+<h5>2.0.1</h5>
+ - NEW: Humidity settings that modify biome placement even more. The default (for 1.20.1 and later only, see FAQ for why) is the "advanced" algorithm that calculates humidity based on proximity to rivers and/or oceans. The other "simple" option generates bands that are perpendicular to temperature bands. Existing worlds will keep their vanilla humidity, see the "Upgrading" section on mod description page for more info.<br/>
  - OPTIMIZED: The core system was completely rewritten to replace the temperature/humidity density functions and check for success/failure instead of dynamically modifying them and assuming they worked. More robust, more reliable, more gooder. Most of the below changes are made possible thanks to this rewrite.<br/>
  - NEW: Ability to blacklist/whitelist dimensions. The default config will exclude The Nether and The End. This new default will only apply to NEW worlds, see the "Upgrading" section on mod description page for more info.<br/>
- - NEW: Benchmark option if World Preview is installed. Forge/NeoForge only (for now, will add Fabric support if it's desired). See config to enable it.<br/>
+ - NEW: Benchmark option if World Preview is installed. See config for usage, results are written to log/console.<br/>
  - IMPROVED: When recreating a world, the Temperature Bands config will now properly copy from the old world by default. This function can be disabled to make world recreation use the current mod defaults, see the "Upgrading" section on mod description page for more info.<br/>
  - IMPROVED: Better compatibility with worldgen mods. Tested with Larion, Tectonic and Lithosphere - they *really* work now, and it should work with every worldgen mod (assuming they still use Density Functions that are named "temperature" and "humidity").<br/>
+ - IMPROVED: Solved compatibility with C2ME, and probably other performance mods.<br/>
  - IMPROVED: More config options, better comments and reworked defaults.<br/>
-<h5>1.1.0</h5>
- - Added dimension blacklist/whitelist config. Only applies to new worlds, see "Upgrading" section for details on how to apply this change to existing worlds.<br/>
- - Major refactor/optimization. Instead of hooking every ShiftedNoise instance, we now hook a the specific NoiseRouter for a whitelisted dimension and replace the relevant ShiftedNoise.<br/>
+ - VERSION: Latest branch moved to 26.1.2, dropping 1.21.5 (was previous latest) and 1.18.2 versions (too much backport work and no longer popular anyway)<br/>
+<br/><br/>
  <h5>1.0.0</h5>
  - Initial release<br/>
 </p></div><br/>
@@ -24,71 +24,462 @@
 <br/>
 <h2>⭐ Highlights</h2>
  - Modifies worldgen to place biomes into repeating temperature bands from coldest through to hottest, back to coldest, and so on;<br/>
- - <strong>NEW</strong>: Additionally modifies biome placement to put high humidity biomes closer to rivers and/or oceans (default, configurable) or in bands ;<br/>
+ - <strong>NEW</strong>: Additionally modifies biome placement to put high humidity biomes closer to rivers and/or oceans (default, configurable, only for 1.20.1+) or in bands that run perpendicular to temperature bands (default for 1.19.2);<br/>
  - <strong>NEW</strong>: Dimension blacklist/whitelist. By default, The Nether and The End are blacklisted;<br/>
  - Compatible with most worldgen mods (see Compatibility section for details);<br/>
  - Each world will remember its own settings, mod config will only apply to new worlds;<br/>
- - Configurable band size, choice of vertical bands;<br/>
+ - Configurable band size, choice of vertical bands, many more config options;<br/>
  - By default the world spawn (near origin; i.e. block X,Z coordinates 0,0) will act like a "northern hemisphere temperate zone start", meaning cold is North and hot is South (NOTE: Only guaranteed on vanilla worldgen, some mods e.g. Larion and Tectonic are much more random with origin - see Tips section to solve this with another mod);<br/>
- - Ability to benchmark chunk generation if World Preview is installed (Forge/NeoForge only right now).
+ - Ability to benchmark chunk generation if World Preview is installed.
 <br/>
-<p>Example world before mod:</p><p><img src="https://media.forgecdn.net/attachments/1177/352/before_small-png.png" alt="Picture of Example world before mod" width="500" height="350" />
+<p>Example pictures of a 1.21.1 world before and after mod (with default mod config):</p>
+<p><img src="https://media.forgecdn.net/attachments/1762/183/before_small-png.png" alt="Picture of Example world before mod" width="400" height="244" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="https://media.forgecdn.net/attachments/1762/182/after_small-png.png" alt="Picture of same world after mod (notice the cold at the top, hot at the bottom)" width="400" height="244" />
 </p>
-<p>Same world seed after mod (notice the cold at the top, hot at the bottom):</p><p><img src="https://media.forgecdn.net/attachments/1177/351/after_small-png.png" alt="Picture of same world after mod (notice the cold at the top, hot at the bottom)" width="500" height="350" />
-</p>
-<p>(Screenshots taken with World Preview mod, highly recommended if you want to test any config changes)</p>
+<p>(Screenshots taken with World Preview mod, highly recommended if you want to test any config changes. 1.20(.1) is here on CF, port for NeoForge 1.21.1 can be found on Modrinth)</p>
 <br/>
 <br/>
 <br/>
 <br/>
 <h2>🏷️ Usage & Config</h2>
-<p>After installing the mod, simply start Minecraft to let the config generate. Jump into a NEW world if you're happy with the default config, as detailed below. By default each band is about 2048 blocks wide on average, and the player will start "above the equator" with cold biomes North and warm biomes South, but this can all be changed in config.</p>
+<p>After installing the mod, simply start Minecraft to let the config generate. Jump into a NEW world if you're happy with the default config, as detailed below. By default each band is about 2048 blocks wide on average, and the player will start "above the equator" with cold biomes North and warm biomes South, but this can all be changed in config.<br/><br/>
+The config is very extensive with lengthy comments that detail all features and worthwhile considerations. It's highly recommended to read it all once. Also note that some features and config settings, namely anything related to advanced humidity, are only available on 1.20.1 and later. See the FAQ for why.</p>
 <h3><em><strong>temperaturebands-common.toml:</strong></em></h3>
-<div class="spoiler"><p>
-<strong>[world]</strong><br/>
-Default world settings. These will apply to newly-generated worlds only, existing worlds will remember their own settings.<br/>
-<br/><strong>bandSize:</strong><br/>
- - The average size of each temperature band in blocks.<br/>
- - Vanilla Minecraft generation has 5 temperature zones - Freezing, Cool, Temperate, Warm and Hot - every biome fits into one of these five temperature ranges.<br/>
- - So for example, if this value is 2048 (default), the distance from the *center* of one one Hot band to the next Hot band center will be about 16384 (2048 * 8) blocks (Hot through to Freezing and back again).<br/>
- - If there are any worldgen mods that add biomes with a different 'temperature range' for placement, they should be incorporated within existing bands normally.<br/>
-<br/><strong>useVerticalBands:</strong><br/>
- - If true, bands will be vertical instead of horizontal.<br/>
-<br/><strong>bandPositionShift:</strong><br/>
- - Shift the bands by this percentage.<br/>
- - Normally the Hot band (Desert and such) will generate at origin (0,0) so the default shift of 0.25 (meaning 25%) will make the origin temperate (middle temp) instead, shifted downwards to simulate a 'Northern hemisphere' start (Colder will be North, or East if Vertical bands, and Hotter will be South or West). A value of 0.75 (meaning 75%) would simulate southern hemisphere start instead.<br/>
- - NOTE: Some world gen mods like Tectonic and Larion seem to have their own idea about initial world spawn and don't use origin, you might want a different mod like 'Biome Spawn Point' instead.<br/>
-<br/><strong>tempRange:</strong><br/>
- - Absolute min/max temperature range. Increasing this will make the coldest and hottest bands larger while reducing others, lowering this value will have the opposite effect.<br/>
- - The default value (0.65) makes the hottest/coldest bands a tiny bit smaller than the others.<br/>
- - Be careful, setting this value too high or too low could result in some bands not generating at all.<br/>
-<br/><strong>tempGradeShift:</strong><br/>
- - Vanilla temperature has a bias towards cold, this value is used to make the hottest and coldest roughly the same size.<br/>
- - If you set it to zero, the coldest band will be larger than all other bands and the hottest would be smaller than all others.<br/>
- - You probably wont want to change this, but I made it configurable anyway.<br/>
-<br/><strong>bandAlgorithm:</strong><br/>
- - Algorithm to use. You can configure and read more about each algorithm in their own section below. Recommended to use World Preview if you want to change things around.<br/>
- - Note: There is only 1 algorithm currently, this config is here just in case I add more later.<br/>
-<br/><strong>noiseFactor:</strong><br/>
- - If above zero, will use original noise generation to help make the edges between bands a bit nicer.<br/>
- - See each algorithm for details on how noiseFactor is used.<br/>
- - The unit is arbitrary and very dependent on bandSize. For e.g. 100 (default) is nice for a bandSize of 2048 but might be too wild if bandSize is decreased, or too tame if bandSize is increased.<br/>
-<br/><strong>dimBlacklist:</strong><br/>
- - Specify a blacklist of dimensions, separated by commas. Default excludes the_nether and the_end.<br/>
-<br/><strong>dimBlacklistAsWhitelist:</strong><br/>
- - If true (not default), the above blacklist will be treated as a whitelist instead.<br/>
-<br/>
-<br/>
-<strong>[algorithm1]</strong><br/>
-Settings for algorithm 1, the 'simple' or 'default' algorithm.<br/>
-This algorithm is very simple and produces jaggy lines that aren't very random or natural looking, but it looks OK as long as you keep useNoise enabled.<br/>
-Keeping the variance low but noiseFactor a decent amount (around 100 or so) will produce some OK looking curves/waves in the bands, but if you want something more predictable you can reduce noiseFactor and increase variance.<br/>
-<br/><strong>bandVariance:</strong><br/>
- - Band variance in blocks (roughly). If below 10, each band will have a completely straight edge across the world and disables all remaining algo1 features.<br/>
- - You will want to keep this a fairly small value. Making it too large could result in weirdness, especially if it's too close to the bandSize.<br/>
-<br/><strong>algo1bandVarianceSteepness:</strong><br/>
- - Steepness of band variance. Unit is arbitrary, you'll want to experiment and test if you change it. Probably best left alone though.<br/>
-</p></div>
+<div class="spoiler">
+<p><pre>
+[global] settings are not world-specific. These will apply to all worlds and will not
+    save per-world since they don't affect world generation.
+    
+    [doBenchmark] will, if World Preview is installed, do a benchmark when opening the
+        'Preview' tab (and after closing the World Preview settings menu, i.e. whenever
+        chunk previews start to generate).
+        - Do not scroll or resize the window while World Preview is active, it will 
+          cause the benchmark to fail or never complete. To restart benchmark, simply
+          enter the World Preview settings menu then exit out. Wait for all visible 
+          chunks to generate to see the results in the log/console.
+        - If Humidity algorithm is not advanced, or the climate sampler cache is 
+          disabled, the 'cache hit-rate' part of results will be incorrect - ignore it.
+    doBenchmark = false
+    
+    [copyConfigOnRecreateWorld] will, when true, copy the previous world Temperature 
+        Bands config to the new world when "Recreate" is being done.
+        - Set this to false if you want to "upgrade" your world with new features and
+          defaults after updating the mod. You will still need to Recreate the world.
+        - Relevant for client only. Servers will need to manually recreate their 
+          worlds (e.g. set the same seed/settings in server config and delete old world).
+    copyConfigOnRecreateWorld = true
+    
+    [ignoreDimensionFailures] is a list of dimensions to ignore logging errors about
+        when replacing their temperature/humidity functions fail.
+        - Separate with commas. Trailing comma doesn't matter.
+        - The default entry of The End is there since vanilla End uses a constant 0.0
+          for temperature (for some reason, though it doesn't use any humidity noise 
+          at all) and the mod will try to replace temperature anyway, giving a false 
+          'report if you want support for this custom dimension' error. Please don't 
+          report that error :)
+    ignoreDimensionFailures = "minecraft:the_end,"
+    
+    [dumpRiverAndOceanBiomes] will, if set to true, dump a list of all biomes with 
+        'minecraft:is_river' and 'minecraft:is_ocean' tags from each dimension to 
+        console/log.
+        - Might be useful for modpack creators (in relation to humidity algorithms)
+    dumpRiverAndOceanBiomes = false
+
+
+[climatesampler-performance]
+    [climatesampler-performance] are global climate sampler settings related to 
+        performance (shared by all worlds, not saved per-world).
+        - A custom climate sampler is used when calculating humidity based on proximity
+          to rivers and/or oceans. These settings are currently only relevant if the 
+          'advanced' humidity algorithm is enabled (which is the default for new worlds,
+          but left disabled for existing worlds).
+    --------
+    
+    [climateSamplerCacheSize] is the size of our custom climate sampler, in megabytes.
+        - The default of 5Mb can hold almost 50 thousand samples which should be more
+          than enough for any environment.
+        - Setting to zero will disable caching, which is NOT recommended - you will
+          have much higher CPU *and* memory usage without the cache.
+    Default: 5
+    Range: 0 ~ 128
+    climateSamplerCacheSize = 5
+    
+    [climateSamplerCachePrefetchRadius] is, if non-zero (along with 
+        climateSamplerCacheSize also being non-zero), the rough radius to perform 
+        additional sampling (and caching) while sampling. This will be done 
+        asynchronously as units of 'climateSamplerResolution' (which is in the 
+        climatesampler-world section).
+        - Negative numbers refer to a fraction of available CPU threads; the default 
+          of -8 will use one-eighth of threads as radius (actual thread count will be 
+          higher but they're very short-lived - a few MS - and modern Java handles this
+          well).
+        - Highly recommended to leave enabled as it drastically improves world generation
+          speed with advanced humidity, but there are diminishing returns if set too high.
+        - If you experience 'can't keep up' warnings while exploring new chunks, try
+          reducing this value. A low fixed number like 1 should still be better than 0 
+          (off).
+        - Result is rounded-down, meaning setting it too far negative could result in 0
+          which will disable prefetching. The default of -8 will do this if your CPU has 
+          *less* than 8 threads, which seems appropriate based on my testing. Even on a 
+          24-thread CPU, this default would only result in a radius of 3, so keep that in
+          mind if manually setting to a positive number - there are sharply diminishing
+          returns if this is set too high (relative to your available threads).
+        - Do note that World Preview (and new world creation) will be a bit slower at the
+          very start, but the speed will improve over time and actually generate quicker
+          overall (compared to a disabled sampler cache), especially in high resolutions
+          of World Preview and/or high chunk rendering distances. World Preview will remain
+          slower overall but World Preview is only doing initial chunk generation which is
+          practically never the bottleneck in actual gameplay, even for heavy modpacks 
+          (that main bottleneck is chunk carving and decoration, i.e. digging-out caves 
+          and placing of trees/structures/etc.).
+        - Finally, if you want to stress-test your CPU, disable this completely with 0 and
+          keep max-1 (or max) threads in World Preview.
+    Default: -8
+    Range: -32 ~ 32
+    climateSamplerCachePrefetchRadius = -8
+    
+    [climateSamplerMax] specifies the hard limit on maximum active climate samplers.
+        - This setting is only really necessary for World Preview; without this limit, 
+          prefetching ends up with too much backpressure which results in a large memory
+          "leak".
+    Default: 100
+    Range: 1 ~ 10000
+    climateSamplerMax = 100
+    
+    [climateSamplerCacheDelay] will, when above zero, delay sampler caching/prefetching
+        until the game world has ticked this many times.
+        - The default value of zero means no delay.
+        - If you experience 'cant keep up' warnings in the log but only during the first few
+          seconds of loading a world, increasing this value can help.
+        - If you're using World Preview, this value is ignored and prefetch is always active
+          since it significantly improves preview speed and doesn't cause any issues.
+    Default: 0
+    Range: > 0
+    climateSamplerCacheDelay = 0
+    
+    [climateSamplerWarmupMsg] will, when true, show a message on the loading screen about the
+        Climate Sampler needing to warm up.
+        - Only shown if advanced humidity is active for the overworld dimension (not relevant
+          for simple humidity)
+        - The message is just some QoL because the progress will seem to be stuck on 0% for a
+          few seconds while initial climate sampling occurs
+        - Config is here to disable it just in case you use a custom loading screen that 
+          causes a crash or something.
+    climateSamplerWarmupMsg = true
+
+
+[world]
+    [world] are general defaults for new worlds. These will apply to newly-generated worlds 
+        only, existing worlds will remember their own settings.
+    --------
+    
+    [bandSize] is the average size of each temperature band, in blocks.
+        - Vanilla Minecraft generation has 5 temperature zones - Freezing, Cool, Temperate,
+          Warm and Hot - every biome fits into one of these five temperature ranges. For an
+          example, when this value is 2048, the distance from the *center* of one one Hot 
+          band to the next Hot band center will be about 16384 (2048 * 8) blocks; Hot through
+          to Freezing then back again.
+        - If there are any worldgen mods that add biomes with a different 'temperature range'
+          for placement, they should be incorporated within existing bands normally.
+        - If you want to maintain as much performance as possible, keep this as a power of two.
+    Default: 2048
+    Range: 512 ~ 32768
+    bandSize = 512
+    
+    [useVerticalBands] will, if true, use vertical instead of horizontal.
+    useVerticalBands = false
+    
+    [bandPositionShift] will shift the bands by the given percentage.
+        - Normally the Hot band (Desert and such) will generate at origin (0,0) so the default
+          shift of 25% will make the origin temperate (middle temp) instead, shifted downwards
+          to simulate a 'Northern hemisphere' start (Colder will be North, or East if Vertical
+          bands, and Hotter will be South or West). A value of 0.75 would simulate a southern
+          hemisphere start instead.
+        - Note that some world gen mods like Tectonic and Larion seem to have their own idea
+          about initial world spawn and don't use world origin, in these cases you might want 
+          to use a mod like 'Biome Spawn Point' too.
+    Default: 0.25
+    Range: 0.0 ~ 1.0
+    bandPositionShift = 0.25
+    
+    [tempRange] is the absolute min/max temperature range.
+        - Increasing will make the coldest and hottest bands larger while reducing others, 
+          lowering will have the opposite effect.
+        - The default value makes hottest/coldest bands a tiny bit smaller than the others.
+          Setting this value too high or low might result in some bands not generating at all.
+    Default: 0.65
+    Range: 0.3 ~ 1.0
+    tempRange = 0.65
+    
+    [tempGradeShift] is used to make the hottest and coldest bands roughly the same size.
+        - Vanilla temperature has a bias towards cold, this solves that. If e.g. you set it to 
+          zero, the coldest band will be larger than all other bands and the hottest would be
+          smaller than all others.
+    Default: -0.05
+    Range: -0.5 ~ 0.5
+    tempGradeShift = -0.05
+    
+    [bandAlgorithm] is the algorithm to use for temperature bands.
+        - You can configure and read more about each algorithm in their own section below. 
+          Recommended to use World Preview if you want to change things.
+        - Note that there is only 1 algorithm currently, this config is here just in case I add
+          more later.
+    Default: 1
+    Range: 1 ~ 1
+    bandAlgorithm = 1
+    
+    [noiseFactor] will, when above zero, incorporate original noise generation into temperature
+        bands to help make the shape and edges of bands a bit nicer.
+        - HIGHLY recommended to keep it on.
+        - See each algorithm for details on how noiseFactor is used. The unit is arbitrary and 
+          very dependent on bandSize. For e.g. 100 is nice for a bandSize of 2048 but might be 
+          too wild if bandSize is decreased, or too tame if bandSize is increased.
+    Default: 100
+    Range: 0 ~ 1000
+    noiseFactor = 100
+    
+    [distanceFunction] provides a choice in algorithm for calculating distances (currently only
+        used by the default/advanced humidity stuff).
+        - A value of 1 is the default and uses "octile" distance which is reasonably fast and 
+          accurate.
+        - A value of 0 uses "Manhattan" (or "taxi cab") distance which is faster but a bit
+          inaccurate.
+        - A value of 2 uses "real" or "Euclidean" distance via hypotenuse calculation, which is
+          a bit slower but gives maximum accuracy.
+        - Recommended to leave on 1 (octile). While Euclidean distance is only about 3% slower,
+          it doesn't look any better - just "different". Although Euclidean might give better
+          smoothness if you're using very high accuracy for humidity and climate sampler. 
+          Manhattan distance is about 5% faster than octile but looks kinda bad - can be very 
+          "noisy" and regularly "skips" biome transitions.
+    Default: 1
+    Range: 0 ~ 2
+    distanceFunction = 1
+    
+    [dimBlacklist] specifies a blacklist of dimensions to exclude from *all* modifications.
+        - Separate with commas. Trailing comma doesn't matter.
+        - Default excludes the_nether and the_end.
+        - Adding minecraft:overworld won't do anything, it is always whitelisted.
+    dimBlacklist = "minecraft:the_nether,minecraft:the_end,"
+    
+    [dimBlacklistAsWhitelist] will, when true, use the above blacklist as a whitelist instead.
+        - Adding minecraft:overworld is not necessary, it is always whitelisted.
+    dimBlacklistAsWhitelist = false
+    
+    [vanillaNoiseOverride] is used to override the base noise with vanilla-like Shifted Noise.
+        I.e. the noise used with noiseFactor and humidityBaseNoisePercent.
+        - The default value of 1 will only replace the noise if it's not already a ShiftedNoise
+          type. Recommended.
+        - A value of 2 will always replace the noise. Only recommended if you're using a world
+          gen mod that happens to keep ShiftedNoise for temperature and humidity, but NOT 
+          recommended for vanilla world generation (see second-last point for why).
+        - A value of 0 will disable this function. Not recommended (see next point why).
+        - This is implemented to help re-introduce some variation to various worldgen mods, and
+          usually improves performance a little. Without it, biomes can become extremely large
+          and boring, and sometimes extremely slow to generate. Lithosphere is the best example
+          of this (though Lithosphere is honestly not recommended in general because of how
+          slow it is).
+        - Setting to 2 (to always replace) is only recommended for non-vanilla worldgen because 
+          the replacement is *not* a 1:1 recreation of vanilla noise given the same seed.
+        - This function is particularly useful for many world gen mods like Larion where their 
+          original temperature/humidity noises are very "gentle" which results in extremely 
+          straight bands. For some mods you may want to increase noiseFactor above the
+          defaults.
+    Default: 1
+    Range: 0 ~ 2
+    vanillaNoiseOverride = 1
+
+
+[algorithm1]
+    [algorithm1] are settings for temperature algorithm 1, the 'standard bands' algorithm.
+        - As before, these settings are only the defaults for new worlds - each world will 
+          remember its own settings.
+        - This algorithm is quite simple and produces jaggy lines that aren't too random or 
+          natural looking alone, but they look quite good as long as you keep noiseFactor.
+        - Keeping the variance low but noiseFactor a decent amount (around 100 or so) will
+          produce some decent looking curves/waves in the bands with some randomness, but if 
+          you want something more predictable you can reduce noiseFactor while optionally 
+          increasing variance.
+    --------
+    
+    [configAlgo1BandVariance] is the band variance in blocks (roughly). If below 10, each band 
+        will have a completely straight edge across the world and will disable all remaining 
+        algo1 features.
+        - You will want to keep this a fairly small value. Making it too large will result in 
+          weirdness, especially if it's too close to the bandSize.
+        - If you want to maintain as much performance as possible, keep this as a power of two.
+    Default: 32
+    Range: 0 ~ 16384
+    bandVariance = 32
+    
+    [algo1bandVarianceSteepness] is the "steepness" of band variance.
+        - Unit is arbitrary, you'll want to experiment and test if you change it. Probably best 
+          left alone, though.
+    Default: 0.2
+    Range: 0.1 ~ 10.0
+    algo1bandVarianceSteepness = 0.2
+
+
+[humidity-world]
+    [humidity-world] are the world-specific settings for humidity (aka vegetation).
+        - As before, these settings are only the defaults for new worlds - each world will 
+          remember its own settings.
+    --------
+    
+    [humidityAlgorithm] is the algorithm to use for humidity (aka vegetation).
+        - You can configure and read more about each algorithm in their own section below.
+          Recommended to use World Preview if you want to change things around.
+        - A value of 2 (default) uses a "realistic" humidity calculation based on proximity to
+          rivers and/or oceans. Can be a little slow, but still not as slow as many worldgen
+          mods, and it's definitely worth it (in my opinion).
+        - A value of 1 uses a much simpler 'humidity bands' algorithm that run perpendicular to
+          temperature bands.
+        - A value of 0 will disable humidity feature entirely, keeping vanilla random noise 
+          humidity.
+        - Do note that with advanced humidity, some worldgen mods may become extremely slow. 
+          One example of this is Lithosphere. In these cases it might be best to use simple 
+          humidity, or at least turning off river influence (Lithosphere in particular doesn't 
+          generate many rivers anyway).
+    Default: 2
+    Range: 0 ~ 2
+    humidityAlgorithm = 2
+    
+    [humidityTempWeight] is how much the temperature will additionally influence humidity.
+        - Applies to all humidity algorithms, and is the final adjustment to the humidity
+          value.
+        - For humidity algorithm 2 (advanced) it introduces some biome variation between the
+          warmer and cooler sides of the temperate (middle temperature) bands.
+        - For humidity algorithm 1 (bands perpendicular to temperature), it applies some angle
+          via narrowing/widening on the humidity bands - as you approach the cold band, 
+          lower-humidity biomes will become wider; as you approach the hot band, higher-
+          humidity biomes will become wider.
+        - Setting to 0.0 will disable this function.
+    Default: 0.4
+    Range: 0.0 ~ 1.0
+    humidityTempWeight = 0.4
+
+
+[humidity-algorithm1]
+    [humidity-algorithm1] are world-specific settings for the 'simple' banding humidity 
+        algorithm, i.e. humidity bands that run perpendicular to temperature.
+    --------
+    
+    [humidityAlgo1MimicScale] will scale the humidity bands, in relation to temperature bands.
+        - The default of 0.5 for e.g. means that humidity bands will be half as big and twice
+          as frequent as temperature bands (on average).
+    Default: 0.5
+    Range: 0.1 ~ 1.0
+    humidityAlgo1MimicScale = 0.5
+
+
+[humidity-algorithm2]
+    [sectionHumidityAlgo2] are the world-specific settings for the 'advanced' humidity 
+        algorithm, i.e. humidity based on proximity to rivers and/or oceans.
+    --------
+    
+    [humidityResolution] is the accuracy or "resolution" for calculating the distance from
+        river and/or ocean for a given area, where lower values means more accuracy.
+        - Represented as a square root, i.e. the default of 3 means each 9x9 area will use the
+          same distance values.
+        - This is a performance vs accuracy choice but the default of 3 seems decently 
+          balanced; values below 3 start to become extremely expensive on CPU/worldgen time 
+          with only small improvements in smoothness, and values above 3 get a bit too 
+          "chunky". The max value of 8 (each 64x64 area having same humidity) results in a 
+          silly checkerboard look (but is very fast).
+        - If you change this, be sure to check out "climateSamplerResolution" in the 
+          "[climatesampler-world]" section too - these two settings are closely related.
+    Default: 3
+    Range: 1 ~ 8
+    humidityResolution = 3
+    
+    [humidityRiverInfluence] determines how much rivers should contribute to final humidity 
+        value.
+        - The default of 0.4 means 40% of river closeness will be added to the base humidity
+          that was determined by ocean closeness.
+        - Setting to 0 will disable any river influence on humidity (only oceans will count) 
+          and give a whopping ~40% speed increase due to our ability to take some shortcuts
+          when only searching for oceans (only needs to compute continentalness), but it does
+          make worldgen quite a bit more boring and less realistic.
+        - Values higher than the default makes biome placement very 'noisy' (until approaching
+          1.0), i.e. lots of scattered 'dots' of tiny biomes around where ocean and river 
+          distance thresholds intersect. The default 0.4 does this a bit too but not
+          excessively, and it's actually kinda cool :)
+        - Values at/above 1.0 will effectively double/multiply humidity values. Might be 
+          useful if you want a world where rivers count for "more humidity" than oceans.
+        - Regardless of the value, keeping this enabled has the same cost in performance - so
+          the choice of what influence to use, if any, is purely up to personal taste.
+    Default: 0.4
+    Range: 0.0 ~ 5.0
+    humidityRiverInfluence = 0.4
+    
+    [humiditySearchDistance] is the maximal distance in blocks (on XZ/horizontal axes) from
+        rivers and/or oceans to be considered as 'absolutely dry' (the lowest humidity). In 
+        other words, higher numbers will make humidity drop slower as distance increases from
+        river and/or ocean biomes.
+        - In plain terms, it is how far we will search for rivers and/or oceans from any given
+          point, with final humidity being based on actualDistance/searchDistance.
+        - Higher values are more expensive on CPU/worldgen time, though it can be mitigated by 
+          increasing the humidityResolution value and/or climateSamplerResolution at the
+          expense of worldgen quality (you'll see more "chunkyness" in biome borders). 
+          Alternatively, you can try adjusting climatesampler-performance settings to *maybe* 
+          improve efficiency at the expense of increased CPU/RAM load, which may actually end
+          up reducing throughput/worldgen speed anyway.
+        - The default value seems decent, but for worldgen mods that create larger landmasses 
+          and/or fewer rivers you will probably want to increase this.
+    Default: 600
+    Range: 16 ~ 16384
+    humiditySearchDistance = 600
+    
+    [humidityBaseNoisePercent] is how much the original humidity noise will contribute to 
+        calculated proximity-based humidity. Default value of 0.1 means 10%.
+        - Setting to 0.0 will disable use of the base noise, and provide a *very small* 
+          performance improvement (probably not even measurable).
+        - This is not based on the resolution of humidity nor sampler so helps to provide a 
+          little random variation to the final result.
+        - You'll probably want to keep this either fairly low (close to 0.0) or fairly high 
+          (close to 1.0), otherwise biome placement becomes very 'noisy', though setting higher
+          values might defeat the purpose of using this algorithm at all.
+    Default: 0.1
+    Range: 0.0 ~ 1.0
+    humidityBaseNoisePercent = 0.1
+    
+    [humidityMiddleWeight] is how much the near-final humidity value will be pulled towards the
+        center.
+        - The default value of 0.2 provides some nicer transitions between biomes while 
+          slightly reducing the sizes of the extreme-humidity biomes for middle temperatures 
+          (e.g. Dark Forest).
+        - This adjustment happens before humidityTempWeight but after everything else.
+        - Setting to 0.0 will disable this function, though it won't provide any performance 
+          benefit and biome transitions will be (subjectively) worse.
+    Default: 0.3
+    Range: 0.0 ~ 1.0
+    humidityMiddleWeight = 0.3
+
+
+[climatesampler-world]
+    [climatesampler-world] are the world-specific settings for the climate sampler. Currently 
+        only used by humidity. Unlike the climatesampler-performance settings, these DO affect
+        worldgen.
+    --------
+    
+    [climateSamplerResolution] is the accuracy or "resolution" for sampling the climate.
+        - Currently only used by ocean/river search in the advanced humidity algorithm.
+        - The default of -1 means automatic, which is the cube of humidityResolution. This
+          seems to be the most logical balance between quality and performance - biome edges
+          look natural with sporadic patches of other biomes potential to the nearby 
+          humidity/temperature values to make blending a bit more exciting.
+        - Setting this to a value equal to humidityResolution will provide maximum accuracy 
+          but will become VERY expensive on CPU/worldgen time, though that might be desirable 
+          if you want all biome edges to be smoother and defined with minimal biome 'patches'.
+        - If you've raised humidityResolution (meaning less accuracy) for some performance, it 
+          might be useful to manually set this value to something closer to the new 
+          humidityResolution rather than leaving on automatic; such a change could result in 
+          better overall smoothness without significant efficiency loss. Do note that it's 
+          pointless to have this value lower than humidityResolution, though - all that will 
+          do is burn CPU time for no reason.
+    Default: -1
+    Range: -1 ~ 64
+    climateSamplerResolution = -1
+</pre></p>
+</div>
 <br/>
 <br/>
 <br/>
@@ -102,7 +493,7 @@ Keeping the variance low but noiseFactor a decent amount (around 100 or so) will
 <br/>
 <br/>
 <h2>⤴️ Upgrading</h2>
-New versions of the mod may add new features, these new features will be configurable but WILL NOT apply to existing worlds (to avoid world generation issues). In some cases, however, you may want to retroactively apply the new changes to the old world. Here's the easiest way to do that (be sure to read this whole section before starting):<br/>
+New versions of the mod may add new features, these new features will be configurable but WILL NOT apply to existing worlds (to avoid world generation issues). Easiest way to "upgrade" is to simply set the config "copyConfigOnRecreateWorld" to false, (re)start Minecraft, and Recreate your old world. In some cases, however, you may want to retroactively apply the new changes to the old world. Here's the easiest way to do that (be sure to read this whole section before starting):<br/>
 <ol>
 <li>Upgrade to the new version of Temperature Bands;</li>
 <li>Start Minecraft, generate a new world, then Save and Quit (no need to quit the whole game);</li>
@@ -110,6 +501,7 @@ New versions of the mod may add new features, these new features will be configu
 <li>Each folder here are your worlds. Inside, there will be a 'temperaturebands.prop' file - this is a plain text file with the Temperature Bands config for that world;</li>
 <li>You can "simply" open these files with Notepad (or whatever) and compare the prop file contents from the newly-generated world with your old world, and copy-and-paste the appropriate new lines over.</li>
 </ol>
+<br/>
 You can of course backup your existing world if you want to be careful. Now, sometimes you don't need to copy the lines EXACTLY, you might want to change them. You may have already noticed that each line in this prop file already corresponds to a setting in the usual (default world) config, so it's important not to change anything in the prop unless you're absolutely sure. Here I will detail new config options and any tips regarding them:
 <h5>2.0.0</h5>
 Added config entries "configDimBlacklist" and "configDimBlacklistAsWhitelist". You can read about these in the Usage & Config section above, but they should be mostly self-explanatory. A couple important notes regarding these, though:
@@ -129,9 +521,9 @@ The mod should be compatible with most world generator mods, since in modern Min
 <li>Larion World Generation;</li>
 <li>Lithosphere;</li>
 </ul>
-...everything should work with most worldgen mods, as long as they still use DensityFunctions that are named "temperature" and "humidity". Do note that the default mod config might not be ideal for some mods, though - read the config comments for details. Most notable is vanillaNoiseOverride.
+...everything should work with most worldgen mods, as long as they still use DensityFunctions that are named "temperature" and "humidity". Do note that the default mod config might not be ideal for some mods, though - read the config comments for details. Most notable is vanillaNoiseOverride.<br/>
 <br/>
-The following are examples of worldgen mods NOT compatible, most likely because they completely replace Minecraft generation with their own system (e.g. they don't use the vanilla NoiseRouter):<br/>
+The following are examples of worldgen mods that are NOT compatible, because they completely replace Minecraft generation with their own system (i.e. they don't use the vanilla NoiseRouter and/or vanilla DensityFunctions):<br/>
 <ul>
 <li>TerraFirmaCraft;</li>
 </ul>
@@ -157,18 +549,29 @@ No support will be added for these incompatible mods. Please report any and all 
 <br/>
 <p><strong>Q. <em>Does this mod slow down world generation?</em></strong></p>
 <p>A. Yes and No. If you've turned off advanced humidity, the performance impact is negligible. If you are using advanced humidity, the *initial* phase of chunk generation will be significantly slower, as can be seen in World Preview. HOWEVER, in modern Minecraft, this initial noise-generation
-and biome placement is multi-threaded and is very rarely the bottleneck in actual gameplay. The final phases of chunk generation - decoration and carving - generally remain the bottleneck since they run on the main (server) thread. Also note that, even though World Preview seems much slower, if
-you enable to benchmark config you'll see that chunk generation is still quite fast - on my 3900X I'm able to achieve around 2000 chunks per second.</p>
+and biome placement is highly multi-threaded and is very rarely the bottleneck in actual gameplay. The final phases of chunk generation - decoration and carving - generally remain the bottleneck since the final part still runs on the main (server) thread. Also note that, even though World Preview seems much slower, if
+you enable to benchmark config you'll see that chunk generation is still quite fast - on my 3900X I'm able to achieve over 7000 chunks per second. Still, if you want it to be faster, see the next question.</p>
 <br/>
 <p><strong>Q. <em>Can I make World Preview faster?</em></strong></p>
-<p>A. Yes, assuming you're keeping advanced humidity enabled. In the settings menu (wrench icon on Preview tab), go to the "Resolution" tab and change the bottom bar, "samples per chunk", to the maximum value (farthest right). The preview will be a bit more pixelated, but will significantly improve the speed.</p>
+<p>A. Yes, assuming you're keeping advanced humidity enabled, which is the main reason for slowing it down. In the World Preview settings menu (wrench icon on Preview tab), go to the "Resolution" tab and change the bottom bar, "samples per chunk", to the maximum value (farthest right). The preview will be a bit more pixelated, but it will significantly improve the speed.</p>
+<br/>
+<p><strong>Q. <em>The "Climate Sampler is warming up" screen (or world load on server) takes to long, how to speed up?</em></strong></p>
+<p>A. Set the config "climateSamplerCacheDelay" to 1 or higher. I might make this default in later versions, feedback is appreciated (just a simple comment saying it's too slow or it's fine)</p>
 <br/>
 <p><strong>Q. <em>Is X worldgen mod compatible?</em></strong></p>
 <p>A. If it only adds new biomes, yes. If it actually changes worldgen and is not listed above in Compatibility, probably - try it out! Would appreciate reporting your results 😊 remember you can use World Preview mod to make testing quicker, though that's only for 1.20.x at time of writing (there is also an unofficial port for NeoForge 1.21.1 on Modrinth). 
 You should see log messages when temperature/humidity function replacement succeeds or fails for a given dimension.</p>
 <br/>
 <p><strong>Q. <em>Can you make the border between bands more organic rather than with the lines they currently are?</em></strong></p>
-<p>A. Not really, no. Doing so would require a separate mod/datapack that actually changes biome parameters to fit into those transition zones (or adds new biomes that fit there). This *might* be something I am working on, though 😉 Note regarding Oceans, there is no such biome as "Warm Deep Ocean" but Warm Oceans can still get as deep as the non-Warm deep variants.</p>
+<p>A. Not really, no. Doing so would require a separate mod/datapack that actually changes biome parameters to fit into those transition zones (and/or adds new biomes that go between them). This *might* be something I am working on, though 😉 Note regarding Oceans, there is no such biome as "Warm Deep Ocean" but Warm Oceans can still get as deep as the non-Warm deep variants.</p>
+<br/>
+<p><strong>Q. <em>There's too much Dark Forest! How to fix?</em></strong></p>
+<p>A. I've noticed this. Try increasing "humidityMiddleWeight" a little. I might be able to "fix" this properly with a separate mod that adjusts biome parameters (see the Q just above this one).</p>
+<br/>
+<p><strong>Q. <em>Why is advanced humidity only available on 1.20.1 and later?</em></strong></p>
+<p>A. Minecraft 1.20.1 added significant performance improvements to biome decoration which make it possible, namely the generation of Strongholds and other large structures through multithreading. In 1.19.2 and below, this structure generation is still single threaded. The process in both versions requires locating biomes since structures have preferred biomes, and this in turn requires climate sampling.
+But with advanced humidity, climate sampling itself also requires locating biomes. This results in several levels or "nested" climate sampling processes, and because 1.19.2 still uses single threads for generating these structures it becomes practically impossible to finish with the chunk generation seeming stuck.<br/><br/>
+There is no mod that I know of that "backports" multi-threaded structure generation to older versions, not even C2ME, so I've prevented it from being used in these older versions. It is also beyond the scope of Temperature Bands to solve this - I looked into it and it requires significant changes to the MC codebase which may introduce more problems. The only solution I can give is to update your modpack to 1.20.1 or later.</p>
 <br/>
 <p><strong>Q. <em>I have another question...</em></strong></p>
 <p>A. ...ask away in the comments :)</em></p>
