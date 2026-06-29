@@ -29,6 +29,7 @@ public class DimensionData {
     private final @Nullable DensityFunctions.HolderHolder noiseTemperature;
     private final @Nullable DensityFunctions.HolderHolder noiseHumidity;
     // humidity-related things
+    public final MultiNoiseBiomeSource biomeSource;
     public final Set<Holder<Biome>> biomeOceans = new HashSet<>();
     public final Set<Holder<Biome>> biomeRivers = new HashSet<>();
 
@@ -44,48 +45,47 @@ public class DimensionData {
         this.noiseHumidity = noiseHumidity;
 
         // sanity check
-        if (config == null)
+        if (config == null) {
             TbUtils.doCrash("Tried to create new DimensionData but provided config is null, eh?");
-        else if (isLevelReady) {
+            biomeSource = null;
+        } else if (isLevelReady && config.humidityAlgorithm() != 0) {
             // setup and verification for humidity
-            if (config.humidityAlgorithm() != 0) {
-                if (!(level.getChunkSource().getGenerator().getBiomeSource() instanceof MultiNoiseBiomeSource)) {
-                    if (!CONFIG_GLOBAL.ignoreDimensionFailures().contains(level.dimension().location().toString()))
-                        LOGGER.error("Error: The dimension {} does not use a MultiNoiseBiomeSource; humidity modification cannot continue. Please report this to CosmicDan so support for this custom dimension might be added.", level.dimension().location());
-                } else {
-                    // fetch appropriate biomes for humidity
-                    Set<Holder<Biome>> possibleBiomes = level.getChunkSource().getGenerator().getBiomeSource().possibleBiomes();
-                    for (Holder<Biome> biomeHolder : possibleBiomes) {
-                        if (biomeHolder.is(BiomeTags.IS_RIVER)) {
-                            biomeRivers.add(biomeHolder);
-                        } else if (biomeHolder.is(BiomeTags.IS_OCEAN)) {
-                            biomeOceans.add(biomeHolder);
-                        }
+            biomeSource = TbUtils.findMultiNoiseBiomeSource(level, true);
+            if (biomeSource != null) {
+                // fetch appropriate biomes for humidity
+                Set<Holder<Biome>> possibleBiomes = biomeSource.possibleBiomes();
+                for (Holder<Biome> biomeHolder : possibleBiomes) {
+                    if (biomeHolder.is(BiomeTags.IS_RIVER)) {
+                        biomeRivers.add(biomeHolder);
+                    } else if (biomeHolder.is(BiomeTags.IS_OCEAN)) {
+                        biomeOceans.add(biomeHolder);
                     }
-                    if (TemperatureBands.CONFIG_GLOBAL.dumpRiverAndOceanBiomes()) {
-                        LOGGER.info("List of all biomes with 'minecraft:is_river' tag for dimension '{}':", level.dimension().location());
-                        if (biomeRivers.isEmpty())
-                            LOGGER.info(noneStringForBiomeDump);
-                        else {
-                            for (Holder<Biome> biomeHolder : biomeRivers) {
-                                if (biomeHolder.unwrapKey().isPresent()) {
-                                    LOGGER.info(" - {}", biomeHolder.unwrapKey().get().location());
-                                }
+                }
+                if (TemperatureBands.CONFIG_GLOBAL.dumpRiverAndOceanBiomes()) {
+                    LOGGER.info("List of all biomes with 'minecraft:is_river' tag for dimension '{}':", level.dimension().location());
+                    if (biomeRivers.isEmpty())
+                        LOGGER.info(noneStringForBiomeDump);
+                    else {
+                        for (Holder<Biome> biomeHolder : biomeRivers) {
+                            if (biomeHolder.unwrapKey().isPresent()) {
+                                LOGGER.info(" - {}", biomeHolder.unwrapKey().get().location());
                             }
                         }
-                        LOGGER.info("List of all biomes with 'minecraft:is_ocean' tag for dimension '{}':", level.dimension().location());
-                        if (biomeOceans.isEmpty())
-                            LOGGER.info(noneStringForBiomeDump);
-                        else {
-                            for (Holder<Biome> biomeHolder : biomeOceans) {
-                                if (biomeHolder.unwrapKey().isPresent()) {
-                                    LOGGER.info(" - {}", biomeHolder.unwrapKey().get().location());
-                                }
+                    }
+                    LOGGER.info("List of all biomes with 'minecraft:is_ocean' tag for dimension '{}':", level.dimension().location());
+                    if (biomeOceans.isEmpty())
+                        LOGGER.info(noneStringForBiomeDump);
+                    else {
+                        for (Holder<Biome> biomeHolder : biomeOceans) {
+                            if (biomeHolder.unwrapKey().isPresent()) {
+                                LOGGER.info(" - {}", biomeHolder.unwrapKey().get().location());
                             }
                         }
                     }
                 }
             }
+        } else {
+            biomeSource = null;
         }
     }
 
@@ -158,7 +158,7 @@ public class DimensionData {
     }
 
     public BiomeSource getBiomeSource() {
-        return level.getChunkSource().getGenerator().getBiomeSource();
+        return biomeSource;
     }
 
     public Climate.Sampler getClimateSampler() {

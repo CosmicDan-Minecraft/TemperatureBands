@@ -1,14 +1,20 @@
 package github.cosmicdan.temperaturebands;
 
 import github.cosmicdan.temperaturebands.generator.BiomeProximityGenerator;
+import github.cosmicdan.temperaturebands.mixin.MultiNoiseBiomeSourceInvoker;
 import net.minecraft.CrashReport;
 import net.minecraft.ReportedException;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.biome.BiomeSource;
+import net.minecraft.world.level.biome.MultiNoiseBiomeSource;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.DensityFunctions;
+import org.jspecify.annotations.Nullable;
 import org.spongepowered.asm.mixin.injection.At;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
@@ -17,6 +23,9 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+
+import static github.cosmicdan.temperaturebands.TemperatureBands.CONFIG_GLOBAL;
+import static github.cosmicdan.temperaturebands.TemperatureBands.LOGGER;
 
 public class TbUtils {
     private static Path TEMP_PATH = null;
@@ -66,13 +75,13 @@ public class TbUtils {
         return (n < 0) ? (n | -divisor) : (n & (divisor - 1));
     }
 
-    public static void dumpExtraClassInfo(DensityFunction func) {
-        TemperatureBands.LOGGER.error("    - Class type is '{}'", func.getClass().getCanonicalName());
-        if (func instanceof DensityFunctions.HolderHolder holderHolder) {
+    public static void dumpExtraClassInfo(Object clazz) {
+        TemperatureBands.LOGGER.error("    - Class type is '{}'", clazz.getClass().getCanonicalName());
+        if (clazz instanceof DensityFunctions.HolderHolder holderHolder) {
             DensityFunction funcInner = holderHolder.function().value();
             TemperatureBands.LOGGER.error("    - Inner class type is '{}'", funcInner.getClass().getCanonicalName());
         }
-        TemperatureBands.LOGGER.error("    - Class dump: {}", func.toString());
+        TemperatureBands.LOGGER.error("    - Class dump: {}", clazz.toString());
     }
 
     public static double pullTowardsZeroLinear(double value, double weight) {
@@ -135,6 +144,40 @@ public class TbUtils {
         throw new ReportedException(report);
     }
 
+    public static @Nullable MultiNoiseBiomeSource findMultiNoiseBiomeSource(ServerLevel level, boolean logError) {
+        String dimensionName = level.dimension().location().toString();
+        BiomeSource biomeSource = level.getChunkSource().getGenerator().getBiomeSource();
+        if (biomeSource instanceof MultiNoiseBiomeSource)
+            return (MultiNoiseBiomeSource) biomeSource;
+        else {
+            // some mods badly overwrite MultiNoiseBiomeSource with their own modded source that only implements base
+            // BiomeSource (e.g. Blueprint), try to find original via reflection
+            LOGGER.warn("The dimension {} does not use MultiNoiseBiomeSource, attempting to find one via reflection...", dimensionName);
+            Field[] biomeSourceFields = biomeSource.getClass().getDeclaredFields();
+            for (Field field : biomeSourceFields) {
+                try {
+                    field.setAccessible(true);
+                    String biomeSourceFieldName = field.getName();
+                    Object biomeSourceFieldValue = field.get(biomeSource);
+                    if (biomeSourceFieldValue instanceof MultiNoiseBiomeSource) {
+                        LOGGER.warn("...found via field '{}'", biomeSourceFieldName);
+                        return (MultiNoiseBiomeSource) biomeSourceFieldValue;
+                    }
+                } catch (IllegalAccessException ignored) {}
+            }
+
+            if (!CONFIG_GLOBAL.ignoreDimensionFailures().contains(dimensionName)) {
+                LOGGER.error("Error: The dimension {} does not use a MultiNoiseBiomeSource; additionally it was not found via reflection.", dimensionName);
+                if (dimensionName.equals("minecraft:overworld"))
+                    LOGGER.error("This is unexpected for the overworld; there must be another mod that is overwriting the BiomeSource with a non MultiNoise type, which is a naughty thing to do.");
+                LOGGER.error("Please report this to CosmicDan so support for this modded dimension might be added.");
+                LOGGER.error("Dump of BiomeSource class for debugging:");
+                TbUtils.dumpExtraClassInfo(biomeSource);
+            }
+        }
+        return null;
+    }
+
     public static volatile boolean benchmarkActive = false;
     public static AtomicInteger batchesTotal = new AtomicInteger(0);
     public static AtomicInteger batchesDone = new AtomicInteger(-1);
@@ -142,47 +185,53 @@ public class TbUtils {
     private static AtomicReference<Instant> benchmarkStart;
 
     public static void benchmarkReset() {
-        if (batchesTotal.get() > 0) {
-            TemperatureBands.LOGGER.info("WorldPreview benchmark cancelled");
-        }
-        benchmarkActive = false;
-        batchesTotal.set(0);
-        batchesDone.set(-1);
-        chunksTotal.set(0);
-        BiomeProximityGenerator.benchmarkSampleTotalCount.set(0);
-        BiomeProximityGenerator.benchmarkSampleCacheHitCount.set(0);
-    }
-
-    public static void benchmarkStart(int batchesSize, int chunks) {
-        TemperatureBands.LOGGER.info("Starting WorldPreview benchmark, waiting for {} chunks via {} batches to finish...", chunks, batchesSize);
-        benchmarkActive = true;
-        benchmarkStart = new AtomicReference<>(Instant.now());
-        batchesTotal.set(batchesSize);
-        batchesDone.set(0);
-        chunksTotal.set(chunks);
-        BiomeProximityGenerator.benchmarkSampleTotalCount.set(0);
-        BiomeProximityGenerator.benchmarkSampleCacheHitCount.set(0);
-    }
-
-    public static void benchmarkBatchDone() {
-        batchesDone.getAndIncrement();
-        if (batchesDone.get() >= batchesTotal.get()) {
+        if (TemperatureBands.isClient && TbUtilsClient.isOnWorldCreateScreen()) {
+            if (batchesTotal.get() > 0) {
+                TemperatureBands.LOGGER.info("WorldPreview benchmark cancelled");
+            }
             benchmarkActive = false;
-            double timeMillis = Duration.between(benchmarkStart.get(), Instant.now()).abs().toMillis();
-            int cacheHitCount = BiomeProximityGenerator.benchmarkSampleCacheHitCount.get();
-            int cacheTotalCount = BiomeProximityGenerator.benchmarkSampleTotalCount.get();
-            TemperatureBands.LOGGER.info("WorldPreview benchmark finished. {} chunks via {} batches finished in {} seconds. Average generation speed of {} chunks per second. Sampler cache hit-rate was {}% ({} over {})." ,
-                    chunksTotal,
-                    batchesTotal,
-                    String.format("%.2f", timeMillis / 1000.0),
-                    String.format("%.2f", chunksTotal.get() / (timeMillis / 1000.0)),
-                    String.format("%.2f", (cacheHitCount / (double) cacheTotalCount) * 100),
-                    String.format("%,d", cacheHitCount) + " cached reads",
-                    String.format("%,d", cacheTotalCount) + " total sample count"
-            );
             batchesTotal.set(0);
             batchesDone.set(-1);
             chunksTotal.set(0);
+            BiomeProximityGenerator.benchmarkSampleTotalCount.set(0);
+            BiomeProximityGenerator.benchmarkSampleCacheHitCount.set(0);
+        }
+    }
+
+    public static void benchmarkStart(int batchesSize, int chunks) {
+        if (TemperatureBands.isClient && TbUtilsClient.isOnWorldCreateScreen()) {
+            TemperatureBands.LOGGER.info("Starting WorldPreview benchmark, waiting for {} chunks via {} batches to finish...", chunks, batchesSize);
+            benchmarkActive = true;
+            benchmarkStart = new AtomicReference<>(Instant.now());
+            batchesTotal.set(batchesSize);
+            batchesDone.set(0);
+            chunksTotal.set(chunks);
+            BiomeProximityGenerator.benchmarkSampleTotalCount.set(0);
+            BiomeProximityGenerator.benchmarkSampleCacheHitCount.set(0);
+        }
+    }
+
+    public static void benchmarkBatchDone() {
+        if (TemperatureBands.isClient && TbUtilsClient.isOnWorldCreateScreen()) {
+            batchesDone.getAndIncrement();
+            if (batchesDone.get() >= batchesTotal.get()) {
+                benchmarkActive = false;
+                double timeMillis = Duration.between(benchmarkStart.get(), Instant.now()).abs().toMillis();
+                int cacheHitCount = BiomeProximityGenerator.benchmarkSampleCacheHitCount.get();
+                int cacheTotalCount = BiomeProximityGenerator.benchmarkSampleTotalCount.get();
+                TemperatureBands.LOGGER.info("WorldPreview benchmark finished. {} chunks via {} batches finished in {} seconds. Average generation speed of {} chunks per second. Sampler cache hit-rate was {}% ({} over {})." ,
+                        chunksTotal,
+                        batchesTotal,
+                        String.format("%.2f", timeMillis / 1000.0),
+                        String.format("%.2f", chunksTotal.get() / (timeMillis / 1000.0)),
+                        String.format("%.2f", (cacheHitCount / (double) cacheTotalCount) * 100),
+                        String.format("%,d", cacheHitCount) + " cached reads",
+                        String.format("%,d", cacheTotalCount) + " total sample count"
+                );
+                batchesTotal.set(0);
+                batchesDone.set(-1);
+                chunksTotal.set(0);
+            }
         }
     }
 }
