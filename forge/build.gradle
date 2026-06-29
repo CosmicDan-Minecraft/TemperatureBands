@@ -58,6 +58,8 @@ dependencies {
     
     // World Preview (1.20.1)
     modImplementation("curse.maven:world-preview-891429:5686690")
+
+    modImplementation("curse.maven:blueprint-382216:8048579")
 }
 
 processResources {
@@ -96,11 +98,17 @@ sourcesJar {
 }
 
 tasks.named('build') {
-    finalizedBy('copyJar')
+    finalizedBy 'copyJar', 'copySourcesJar'
 }
 
 tasks.register('copyJar', Copy) {
     dependsOn tasks.remapJar
     from tasks.remapJar.outputs.files
+    into layout.projectDirectory.dir("../build")
+}
+
+tasks.register('copySourcesJar', Copy) {
+    dependsOn tasks.sourcesJar
+    from tasks.sourcesJar.outputs.files
     into layout.projectDirectory.dir("../build")
 }
