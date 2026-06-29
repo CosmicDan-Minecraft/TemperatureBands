@@ -94,7 +94,7 @@ public class DensityFunctionEx implements DensityFunction {
         if (dimData == null) {
             dimData = DIMENSION_DATA_CACHE.getIfPresent(dimensionName);
             if (dimData == null)
-                TbUtils.doCrash("Couldn't find DimensionData on first compute! Eh?");
+                TbUtils.doCrash("Couldn't find DimensionData on first compute! Eh? Dimension name = " + dimensionName);
         }
         return gen.onCompute(context, dimData);
     }

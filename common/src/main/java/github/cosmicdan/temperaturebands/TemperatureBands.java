@@ -55,15 +55,26 @@ public final class TemperatureBands {
     }
 
     public static void clearDimensionDataAndConfig(@Nullable String dimensionName) {
-        // first clear all caches in dimensiondatas
-        if (dimensionName != null)
-            TemperatureBands.LOGGER.info("Level {} unloaded, clearing all caches/configs", dimensionName);
-        for (@NonNull DimensionData dimData : DIMENSION_DATA_CACHE.asMap().values())
-            dimData.clearCaches();
-        DimensionConfig.clearWorldConfigs();
-        isFirstDimensionData = true;
-        DIMENSION_DATA_BASE = null;
-        DIMENSION_DATA_CACHE.invalidateAll();
+        if (dimensionName == null || dimensionName.equals("minecraft:overworld")) {
+            if (dimensionName == null)
+                TemperatureBands.logDebug("World creation cancelled, clearing all dimension data/config");
+            else
+                TemperatureBands.logDebug("Overworld was unloaded, clearing all dimension data/config");
+            // world creation screen was canceled or overworld was unloaded, clear *all* data
+            for (@NonNull DimensionData dimData : DIMENSION_DATA_CACHE.asMap().values())
+                dimData.clearCaches();
+            DIMENSION_DATA_CACHE.invalidateAll();
+            DimensionConfig.clearWorldConfigs();
+            isFirstDimensionData = true;
+            DIMENSION_DATA_BASE = null;
+        } else {
+            DimensionData dimData = DIMENSION_DATA_CACHE.getIfPresent(dimensionName);
+            if (dimData != null) {
+                TemperatureBands.LOGGER.info("Level {} unloaded, clearing caches/configs for this specific dimension", dimensionName);
+                dimData.clearCaches();
+                DIMENSION_DATA_CACHE.invalidate(dimensionName);
+            }
+        }
     }
 
     /**
