@@ -30,7 +30,7 @@ public class DimensionData {
     private final @Nullable DensityFunctions.HolderHolder noiseTemperature;
     private final @Nullable DensityFunctions.HolderHolder noiseHumidity;
     // humidity-related things
-    public final MultiNoiseBiomeSource biomeSource;
+    public MultiNoiseBiomeSource biomeSource;
     public final Set<Holder<Biome>> biomeOceans = new HashSet<>();
     public final Set<Holder<Biome>> biomeRivers = new HashSet<>();
 
@@ -48,7 +48,6 @@ public class DimensionData {
         // sanity check
         if (config == null) {
             TbUtils.doCrash("Tried to create new DimensionData but provided config is null, eh?");
-            biomeSource = null;
         } else if (isLevelReady && config.humidityAlgorithm() != 0) {
             // setup and verification for humidity
             biomeSource = TbUtils.findMultiNoiseBiomeSource(level, true);
@@ -85,8 +84,6 @@ public class DimensionData {
                     }
                 }
             }
-        } else {
-            biomeSource = null;
         }
     }
 
@@ -158,7 +155,10 @@ public class DimensionData {
         }
     }
 
-    public BiomeSource getBiomeSource() {
+    public MultiNoiseBiomeSource getBiomeSource() {
+        if (biomeSource == null)
+            // happens sometimes when C2ME + mods that modify BiomeSource (e.g. Blueprnt lib) are installed
+            biomeSource = TbUtils.findMultiNoiseBiomeSource(level, false);
         return biomeSource;
     }
 

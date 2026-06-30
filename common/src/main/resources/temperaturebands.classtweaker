@@ -5,3 +5,4 @@ transitive-accessible      class   net/minecraft/world/level/levelgen/DensityFun
 transitive-accessible      method  net/minecraft/world/level/levelgen/DensityFunctions$ShiftA <init> (Lnet/minecraft/world/level/levelgen/DensityFunction$NoiseHolder;)V
 transitive-accessible      class   net/minecraft/world/level/levelgen/DensityFunctions$ShiftB
 transitive-accessible      method  net/minecraft/world/level/levelgen/DensityFunctions$ShiftB <init> (Lnet/minecraft/world/level/levelgen/DensityFunction$NoiseHolder;)V
+transitive-accessible      method  net/minecraft/world/level/biome/MultiNoiseBiomeSource parameters ()Lnet/minecraft/world/level/biome/Climate$ParameterList;

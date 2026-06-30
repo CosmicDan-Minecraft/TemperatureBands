@@ -8,7 +8,6 @@ import github.cosmicdan.temperaturebands.DimensionConfig;
 import github.cosmicdan.temperaturebands.DimensionData;
 import github.cosmicdan.temperaturebands.TbUtils;
 import github.cosmicdan.temperaturebands.DensityFunctionEx;
-import github.cosmicdan.temperaturebands.mixin.MultiNoiseBiomeSourceInvoker;
 import net.minecraft.core.Holder;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeSource;
@@ -41,7 +40,6 @@ public class BiomeProximityGenerator implements IGenerator {
 
     private DimensionData dimData;
     private boolean biomeSourceError = false;
-    private MultiNoiseBiomeSourceInvoker biomeSourceInvoker;
     private boolean samplerCacheCooldownElapsed = false;
 
     public record Config(
@@ -127,15 +125,6 @@ public class BiomeProximityGenerator implements IGenerator {
         this.dimData = dimData;
         if (dimData == null)
             TbUtils.doCrash("dimData must not be null");
-        else {
-            final BiomeSource biomeSource = dimData.getBiomeSource();
-            if (biomeSource instanceof MultiNoiseBiomeSource biomeSourceNoise) {
-                biomeSourceInvoker = (MultiNoiseBiomeSourceInvoker) biomeSourceNoise;
-            } else {
-                // we already logged error about biomeSource not being MultiNoiseBiomeSource, just set a flag and move on
-                biomeSourceError = true;
-            }
-        }
     }
 
     @Override
@@ -239,7 +228,7 @@ public class BiomeProximityGenerator implements IGenerator {
                     samplerCacheCooldownElapsed = true;
             }
         }
-        return biomeSourceInvoker.getParameters().findValue(targetPointEx.targetPoint());
+        return dimData.getBiomeSource().parameters().findValue(targetPointEx.targetPoint());
     }
 
     public ClimateTargetPointEx sampleClimateCachedAndMaybePrefetch(int blockX, int blockZ) {

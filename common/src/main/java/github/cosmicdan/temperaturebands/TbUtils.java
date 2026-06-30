@@ -1,5 +1,6 @@
 package github.cosmicdan.temperaturebands;
 
+import github.cosmicdan.temperaturebands.generator.BiomeProximityGenerator;
 import net.minecraft.CrashReport;
 import net.minecraft.ReportedException;
 import net.minecraft.server.level.ServerLevel;
@@ -137,7 +138,7 @@ public class TbUtils {
         throw new ReportedException(report);
     }
 
-    public static @Nullable MultiNoiseBiomeSource findMultiNoiseBiomeSource(ServerLevel level, boolean logError) {
+    public static @Nullable MultiNoiseBiomeSource findMultiNoiseBiomeSource(ServerLevel level, boolean logProgress) {
         String dimensionName = level.dimension().identifier().toString();
         BiomeSource biomeSource = level.getChunkSource().getGenerator().getBiomeSource();
         if (biomeSource instanceof MultiNoiseBiomeSource)
@@ -145,7 +146,8 @@ public class TbUtils {
         else {
             // some mods badly overwrite MultiNoiseBiomeSource with their own modded source that only implements base
             // BiomeSource (e.g. Blueprint), try to find original via reflection
-            LOGGER.warn("The dimension {} does not use MultiNoiseBiomeSource, attempting to find one via reflection...", dimensionName);
+            if (logProgress)
+                LOGGER.warn("The dimension {} does not use MultiNoiseBiomeSource, attempting to find one via reflection...", dimensionName);
             Field[] biomeSourceFields = biomeSource.getClass().getDeclaredFields();
             for (Field field : biomeSourceFields) {
                 try {
@@ -153,13 +155,14 @@ public class TbUtils {
                     String biomeSourceFieldName = field.getName();
                     Object biomeSourceFieldValue = field.get(biomeSource);
                     if (biomeSourceFieldValue instanceof MultiNoiseBiomeSource) {
-                        LOGGER.warn("...found via field '{}'", biomeSourceFieldName);
+                        if (logProgress)
+                            LOGGER.warn("...found via field '{}'", biomeSourceFieldName);
                         return (MultiNoiseBiomeSource) biomeSourceFieldValue;
                     }
                 } catch (IllegalAccessException ignored) {}
             }
 
-            if (!CONFIG_GLOBAL.ignoreDimensionFailures().contains(dimensionName)) {
+            if (!CONFIG_GLOBAL.ignoreDimensionFailures().contains(dimensionName) && logProgress) {
                 LOGGER.error("Error: The dimension {} does not use a MultiNoiseBiomeSource; additionally it was not found via reflection.", dimensionName);
                 if (dimensionName.equals("minecraft:overworld"))
                     LOGGER.error("This is unexpected for the overworld; there must be another mod that is overwriting the BiomeSource with a non MultiNoise type, which is a naughty thing to do.");
