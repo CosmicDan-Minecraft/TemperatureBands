@@ -55,10 +55,10 @@ dependencies {
     // Caffeine library (fast LruCache) - https://github.com/ben-manes/caffeine
     forgeRuntimeLibrary("com.github.ben-manes.caffeine:caffeine:3.2.4")
     include "com.github.ben-manes.caffeine:caffeine:3.2.4"
-    
+
     // World Preview (1.20.1)
     modImplementation("curse.maven:world-preview-891429:5686690")
-
+    // Compat. testing (modded BiomeSource)
     modImplementation("curse.maven:blueprint-382216:8048579")
 }
 
