@@ -59,6 +59,9 @@ dependencies {
     //modImplementation files('lithosphere 1.6 17.06.2025 (1.20.5 - 1.21.5).jar')
     // Larion
     //modImplementation "curse.maven:larion-world-generation-1150582:6315772"
+
+    // Compat. testing (modded BiomeSource)
+    //modImplementation "curse.maven:blueprint-382216:8048607"
 }
 
 processResources {

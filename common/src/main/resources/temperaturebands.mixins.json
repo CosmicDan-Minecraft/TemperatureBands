@@ -13,7 +13,6 @@
     "LevelHooks$ChunkMapHooks",
     "LevelHooks$NoiseRouterHooks",
     "LevelHooks$ServerLevelHooks",
-    "MultiNoiseBiomeSourceInvoker",
     "RandomStateHooks"
   ],
   "injectors": {
