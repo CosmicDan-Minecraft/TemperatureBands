@@ -584,6 +584,12 @@ You should see log messages when temperature/humidity function replacement succe
 But with advanced humidity, climate sampling itself also requires locating biomes. This results in several levels or "nested" climate sampling processes, and because 1.19.2 still uses single threads for generating these structures it becomes practically impossible to finish with the chunk generation seeming stuck.<br/><br/>
 There is no mod that I know of that "backports" multi-threaded structure generation to older versions, not even C2ME, so I've prevented it from being used in these older versions. It is also beyond the scope of Temperature Bands to solve this - I looked into it and it requires significant changes to the MC codebase which may introduce more problems. The only solution I can give is to update your modpack to 1.20.1 or later.</p>
 <br/>
+<p><strong>Q. <em>It's still too slow, or my PC freezes!</em></strong></p>
+<p>A. Advanced humidity is a bit expensive if you don't have a high-end CPU, or you have a lot of players on a server. Try adding C2ME and Fast Noise mods. If these don't help, consider disabling climate prefetch radius and/or setting prefetch delay to something above 0. Last resort is to disable advanced humidity entirely. Alternatively, another modder has made a similar mod (though it's closed source/proprietary) called 'Natural Temperature', you can try that.</p>
+<br/>
+<p><strong>Q. <em>Can you add a port for Minecraft version X?</em></strong></p>
+<p>A. I will only support popular modding versions since it's a lot of work to maintain so many versions. If I've missed a version, please let me know in the comments (along with some examples of major content mods or modpacks that exist for this version). Otherwise, another modder has made a similar mod (though it's closed source/proprietary) called 'Natural Temperature' which has more version support, you can try that.</p>
+<br/>
 <p><strong>Q. <em>I have another question...</em></strong></p>
 <p>A. ...ask away in the comments :)</em></p>
 <br/>
