@@ -71,12 +71,19 @@ public record DimensionConfig(
      * @param saveDirIn The absolute path to the world save directory of the world being (re)created or loaded
      */
     public static void onLevelStorageLoad(Path saveDirIn, boolean doingCreateOrRecreate) {
+        File savePropIn = saveDirIn.resolve(TemperatureBands.MOD_ID + ".prop").toFile();
+        if (doingCreateOrRecreate) {
+            // Some naughty mods call "createAccess" instead of "validateAndCreateAccess" when loading an existing world, e.g. BCLib/BetterX mods.
+            // So if doingCreateOrRecreate is true, check if the temperaturebands.prop already exists - we're loading existing world if so.
+            if (savePropIn.exists())
+                doingCreateOrRecreate = false;
+        }
         if (PENDING_WORLD != null) {
             TemperatureBands.logDebug("Detected world recreation; source world config moved from PENDING_WORLD to CONFIG_RECREATED_WORLD_SOURCE");
             RECREATED_WORLD_SOURCE = PENDING_WORLD;
         }
         TemperatureBands.logDebug("About to load or create base config into PENDING_WORLD");
-        PENDING_WORLD = createTempOrBase(doingCreateOrRecreate, saveDirIn.resolve(TemperatureBands.MOD_ID + ".prop").toFile());
+        PENDING_WORLD = createTempOrBase(doingCreateOrRecreate, savePropIn);
     }
 
     public static boolean isPendingWorldDimensionWhitelisted(String dimensionName) {
@@ -211,7 +218,7 @@ public record DimensionConfig(
             // Loading an existing world (either fully or as part as recreation)
             if (worldPropFile.exists()) {
                 dimConfig = createConfigFromProp(worldPropFile, isTempProp ? ConfigType.TEMP : ConfigType.BASE);
-                TemperatureBands.LOGGER.info("Loaded {} config for world '{}'", configTypeNameForLogging, worldName);
+                TemperatureBands.LOGGER.info("Loaded {} config from world '{}' props", configTypeNameForLogging, worldName);
             } else {
                 // No prop config. We could crash-out here to prevent loading non-modded worlds, but the user might be recreating a world, so just set a flag load defaults for now
                 isOnlyLoadingWorldWithoutConfig = true;
