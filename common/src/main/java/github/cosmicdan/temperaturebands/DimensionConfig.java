@@ -46,7 +46,8 @@ public record DimensionConfig(
         //public static float humidityRange = 2.0f, // Vanilla clamps humidity between -1.0 and +1.0. If you want that same clamping range, set this to 2.0. The default of 1.6 means it will be clamped to between -0.8 and +0.8 which takes
         //public static float humidityCenterWeight = 3.0f, // The "weightiness" towards middle values for humidity. Vanilla humidity generation tends to favour values closer to the middle, so this is used reduce the amount of humidity extremes (e.g. too much Jungle and Savanna). The default value seems good to me.
         // Climate sampler settings (world-specific)
-        int climateSamplerResolution
+        int climateSamplerResolution,
+        boolean climateSamplerShortcuts
 ) {
     public enum ConfigType {
         DEFAULT, // the default config as loaded from the usual mod config file on startup
@@ -136,7 +137,8 @@ public record DimensionConfig(
                 loadedConfig.humiditySearchDistance.get(),
                 loadedConfig.humidityBaseNoisePercent.get().floatValue(),
                 loadedConfig.humidityMiddleWeight.get().floatValue(),
-                loadedConfig.climateSamplerResolution.get()
+                loadedConfig.climateSamplerResolution.get(),
+                loadedConfig.climateSamplerShortcuts.get()
         );
     }
 
@@ -247,7 +249,8 @@ public record DimensionConfig(
                 DEFAULT.humiditySearchDistance,
                 DEFAULT.humidityBaseNoisePercent,
                 DEFAULT.humidityMiddleWeight,
-                DEFAULT.climateSamplerResolution
+                DEFAULT.climateSamplerResolution,
+                DEFAULT.climateSamplerShortcuts
         );
     }
 
@@ -307,7 +310,8 @@ public record DimensionConfig(
                     Integer.parseInt(prop.getProperty(CommonConfig.humiditySearchDistanceName, String.valueOf(DEFAULT.humiditySearchDistance))),
                     Float.parseFloat(prop.getProperty(CommonConfig.humidityBaseNoisePercentName, String.valueOf(DEFAULT.humidityBaseNoisePercent))),
                     Float.parseFloat(prop.getProperty(CommonConfig.humidityMiddleWeightName, String.valueOf(DEFAULT.humidityMiddleWeight))),
-                    Integer.parseInt(prop.getProperty(CommonConfig.climateSamplerResolutionName, String.valueOf(DEFAULT.climateSamplerResolution)))
+                    Integer.parseInt(prop.getProperty(CommonConfig.climateSamplerResolutionName, String.valueOf(DEFAULT.climateSamplerResolution))),
+                    Boolean.parseBoolean(prop.getProperty(CommonConfig.climateSamplerShortcutsName, String.valueOf(DEFAULT.climateSamplerShortcuts)))
             );
         } catch (IOException ex) {
             return TbUtils.doCrash(ex, "Error reading world config, crashing-out intentionally to prevent corruption. Full error is above. If you modified the world config manually, please fix it. Otherwise, report this Temperature Bands error.");
@@ -356,6 +360,7 @@ public record DimensionConfig(
                 TbUtils.doCrash("Unhandled humidity algorithm at config world save, fixme!");
             }
             prop.setProperty(CommonConfig.climateSamplerResolutionName, String.valueOf(configToSave.climateSamplerResolution));
+            prop.setProperty(CommonConfig.climateSamplerShortcutsName, String.valueOf(configToSave.climateSamplerShortcuts));
 
             prop.store(worldPropOutputStream, "World-specific Temperature Bands settings. Do not edit!");
         } catch (IOException ex) {

@@ -11,7 +11,6 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.dimension.LevelStem;
@@ -34,7 +33,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
-import java.util.function.Supplier;
 
 /**
  * Contains hooks for the various related to Level creation/loading. Each level represents a dimension on the client or server.
@@ -181,13 +179,8 @@ public abstract class LevelHooks {
         private void onCreationDone(MinecraftServer server, Executor executor, LevelStorageSource.LevelStorageAccess levelStorage, ServerLevelData levelData, ResourceKey<Level> dimension, LevelStem levelStem, boolean isDebug, long biomeZoomSeed, List customSpawners, boolean tickTime, CallbackInfo ci) {
             final String dimensionName = dimension().identifier().toString();
             DimensionData dimData = TemperatureBands.DIMENSION_DATA_CACHE.getIfPresent(dimensionName);
-            if (dimData != null) {
-                if (dimensionName.equals(OVERWORLD.identifier().toString()) && TemperatureBands.CONFIG_GLOBAL.climateSamplerWarmupMsg() && dimData.config.humidityAlgorithm() == 2) {
-                    // using advanced humidity and we're loading the overworld, set flag for loading screen
-                    TemperatureBands.addLoadingScreenText = true;
-                }
+            if (dimData != null)
                 DimensionData.recreateDimensionWithLevelReady(dimensionName, dimData);
-            }
         }
 
         @Inject(
