@@ -519,15 +519,13 @@ No support will be added for these incompatible mods. Please report any and all 
 <p>A. Of course! As long as you consider reporting any mod compatibility issues, and feature/config requests too 😁</p>
 <br/>
 <p><strong>Q. <em>Does this mod slow down world generation?</em></strong></p>
-<p>A. Yes and No. If you've turned off advanced humidity, the performance impact is negligible. If you are using advanced humidity, the *initial* phase of chunk generation will be significantly slower, as can be seen in World Preview. HOWEVER, in modern Minecraft, this initial noise-generation
-and biome placement is highly multi-threaded and is very rarely the bottleneck in actual gameplay. The final phases of chunk generation - decoration and carving - generally remain the bottleneck since the final part still runs on the main (server) thread. Also note that, even though World Preview seems much slower, if
-you enable to benchmark config you'll see that chunk generation is still quite fast - on my 3900X I'm able to achieve over 7000 chunks per second. Still, if you want it to be faster, see the next question.</p>
+<p>A. Yes and No. If you've turned off advanced humidity, the performance impact is negligible. If you are using advanced humidity, it is a little slower, but in modern Minecraft this initial noise-generation and biome placement is highly multi-threaded and is very rarely the bottleneck in actual gameplay. The final phases of chunk generation - decoration and carving - generally remain the bottleneck since the final part still runs on the main (server) thread. In World Preview, on my 3900X, I'm still able to achieve over 15000 chunks per second. Still, if you want it to be faster, see the next question.</p>
 <br/>
 <p><strong>Q. <em>Can I make World Preview faster?</em></strong></p>
 <p>A. Yes, assuming you're keeping advanced humidity enabled, which is the main reason for slowing it down. In the World Preview settings menu (wrench icon on Preview tab), go to the "Resolution" tab and change the bottom bar, "samples per chunk", to the maximum value (farthest right). The preview will be a bit more pixelated, but it will significantly improve the speed.</p>
 <br/>
 <p><strong>Q. <em>The "Climate Sampler is warming up" screen (or world load on server) takes to long, how to speed up?</em></strong></p>
-<p>A. Set the config "climateSamplerCacheDelay" to 1 or higher. I might make this default in later versions, feedback is appreciated (just a simple comment saying it's too slow or it's fine)</p>
+<p>A. Update to version 2.1.0. Climate sampler warmup and prefetching is no longer a thing due to major optimizations in 2.1.0.</p>
 <br/>
 <p><strong>Q. <em>Is X worldgen mod compatible?</em></strong></p>
 <p>A. If it only adds new biomes, yes. If it actually changes worldgen and is not listed above in Compatibility, probably - try it out! Would appreciate reporting your results 😊 remember you can use World Preview mod to make testing quicker, though that's only for 1.20.x at time of writing (there is also an unofficial port for NeoForge 1.21.1 on Modrinth). 
@@ -545,10 +543,10 @@ But with advanced humidity, climate sampling itself also requires locating biome
 There is no mod that I know of that "backports" multi-threaded structure generation to older versions, not even C2ME, so I've prevented it from being used in these older versions. It is also beyond the scope of Temperature Bands to solve this - I looked into it and it requires significant changes to the MC codebase which may introduce more problems. The only solution I can give is to update your modpack to 1.20.1 or later.</p>
 <br/>
 <p><strong>Q. <em>It's still too slow, or my PC freezes!</em></strong></p>
-<p>A. Advanced humidity is a bit expensive if you don't have a high-end CPU, or you have a lot of players on a server. Try adding C2ME and Fast Noise mods. If these don't help, consider disabling climate prefetch radius and/or setting prefetch delay to something above 0. Last resort is to disable advanced humidity entirely. Alternatively, another modder has made a similar mod (though it's closed source/proprietary) called 'Natural Temperature', you can try that.</p>
+<p>A. First, make sure you've updated to 2.1.0 since it has major performance improvements (not necessary for 1.19.2 version). Apart from that, advanced humidity might be a little expensive if you don't have a decent CPU or you have a lot of players on a server. Try adding C2ME and Fast Noise mods. If these don't help, consider setting 'humidityRiverInfluence' to 0.0 for a significant speed improvement, but with a sacrifice in advanced humidity coolness. Last resort is to disable advanced humidity entirely and just use the simple bands algorithm.</p>
 <br/>
 <p><strong>Q. <em>Can you add a port for Minecraft version X?</em></strong></p>
-<p>A. I will only support popular modding versions since it's a lot of work to maintain so many versions. If I've missed a version, please let me know in the comments (along with some examples of major content mods or modpacks that exist for this version). Otherwise, another modder has made a similar mod (though it's closed source/proprietary) called 'Natural Temperature' which has more version support, you can try that.</p>
+<p>A. I will only support popular modding versions since it's a lot of work to maintain so many versions. If I've missed a version, please let me know in the comments (along with some examples of major content mods or modpacks that exist for this version). Otherwise, another modder has made a similar mod (though it's closed source/proprietary) called 'Natural Temperature' which has some other versions supported, you can try there.</p>
 <br/>
 <p><strong>Q. <em>I have another question...</em></strong></p>
 <p>A. ...ask away in the comments :)</em></p>
