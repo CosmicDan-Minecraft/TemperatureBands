@@ -172,9 +172,8 @@ public abstract class LevelHooks {
         private void onCreationDone(MinecraftServer minecraftServer, Executor executor, LevelStorageSource.LevelStorageAccess levelStorageAccess, ServerLevelData serverLevelData, ResourceKey<Level> resourceKey, LevelStem levelStem, ChunkProgressListener chunkProgressListener, boolean bl, long l, List<CustomSpawner> list, boolean bl2, CallbackInfo ci) {
             final String dimensionName = dimension().location().toString();
             DimensionData dimData = TemperatureBands.DIMENSION_DATA_CACHE.getIfPresent(dimensionName);
-            if (dimData != null) {
+            if (dimData != null)
                 DimensionData.recreateDimensionWithLevelReady(dimensionName, dimData);
-            }
         }
 
         @Inject(

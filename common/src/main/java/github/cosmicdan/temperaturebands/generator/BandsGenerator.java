@@ -118,7 +118,4 @@ public class BandsGenerator implements IGenerator {
 
         return tempLimit;
     }
-
-    @Override
-    public void cancelAllCacheTasks() {}
 }

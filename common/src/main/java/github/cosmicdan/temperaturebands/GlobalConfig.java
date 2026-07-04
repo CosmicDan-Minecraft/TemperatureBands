@@ -12,7 +12,6 @@ public record GlobalConfig(
         // prepare ignoreDimensionFailures set
         HashSet<String> ignoreDimensionFailures = new HashSet<>();
         TbUtils.convertCsvToSet(loadedConfig.ignoreDimensionFailures.get(), ignoreDimensionFailures);
-        // prepare automatic configClimateSamplerCachePrefetchRadius
         // all done
         return new GlobalConfig(
                 loadedConfig.copyConfigOnRecreateWorld.get(),

@@ -5,5 +5,4 @@ import net.minecraft.world.level.levelgen.DensityFunction;
 
 public interface IGenerator {
     double onCompute(DensityFunction.FunctionContext context, DimensionData dimData);
-    void cancelAllCacheTasks();
 }

@@ -66,8 +66,6 @@ public final class TemperatureBands {
             else
                 TemperatureBands.logDebug("Overworld was unloaded, clearing all dimension data/config");
             // world creation screen was canceled or overworld was unloaded, clear *all* data
-            for (@NonNull DimensionData dimData : DIMENSION_DATA_CACHE.asMap().values())
-                dimData.clearCaches();
             DIMENSION_DATA_CACHE.invalidateAll();
             DimensionConfig.clearWorldConfigs();
             isFirstDimensionData = true;
@@ -76,7 +74,6 @@ public final class TemperatureBands {
             DimensionData dimData = DIMENSION_DATA_CACHE.getIfPresent(dimensionName);
             if (dimData != null) {
                 TemperatureBands.LOGGER.info("Level {} unloaded, clearing caches/configs for this specific dimension", dimensionName);
-                dimData.clearCaches();
                 DIMENSION_DATA_CACHE.invalidate(dimensionName);
             }
         }
