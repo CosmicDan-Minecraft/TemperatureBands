@@ -54,27 +54,4 @@ public abstract class ClientGuiHooks {
             TemperatureBands.isDeleteScreenActive = false;
         }
     }
-
-    @Mixin(LevelLoadingScreen.class)
-    public static abstract class LevelLoadingScreenHooks extends Screen {
-        @Shadow
-        @Final
-        private StoringChunkProgressListener progressListener;
-
-        protected LevelLoadingScreenHooks(Component component) {
-            super(component);
-        }
-
-        @WrapOperation(
-                method = "render",
-                at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;drawCenteredString(Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/Component;III)V")
-        )
-        public void onDrawCenteredString(GuiGraphics guiGraphics, Font font, Component component, int middleX, int middleTopY, int color, Operation<Void> original) {
-            if (TemperatureBands.addLoadingScreenText && progressListener.getProgress() < 2) {
-                guiGraphics.drawCenteredString(font, "Climate Sampler is warming up, standby...", middleX, middleTopY, color);
-            } else {
-                original.call(guiGraphics, font, component, middleX, middleTopY, color);
-            }
-        }
-    }
 }

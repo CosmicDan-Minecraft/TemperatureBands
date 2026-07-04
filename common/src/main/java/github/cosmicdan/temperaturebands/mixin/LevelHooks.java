@@ -183,13 +183,8 @@ public abstract class LevelHooks {
         private void onCreationDone(MinecraftServer minecraftServer, Executor executor, LevelStorageSource.LevelStorageAccess levelStorageAccess, ServerLevelData serverLevelData, ResourceKey<Level> resourceKey, LevelStem levelStem, ChunkProgressListener chunkProgressListener, boolean bl, long l, List<CustomSpawner> list, boolean bl2, RandomSequences randomSequences, CallbackInfo ci) {
             final String dimensionName = dimension().location().toString();
             DimensionData dimData = TemperatureBands.DIMENSION_DATA_CACHE.getIfPresent(dimensionName);
-            if (dimData != null) {
-                if (dimensionName.equals(OVERWORLD.location().toString()) && TemperatureBands.CONFIG_GLOBAL.climateSamplerWarmupMsg() && dimData.config.humidityAlgorithm() == 2) {
-                    // using advanced humidity and we're loading the overworld, set flag for loading screen
-                    TemperatureBands.addLoadingScreenText = true;
-                }
+            if (dimData != null)
                 DimensionData.recreateDimensionWithLevelReady(dimensionName, dimData);
-            }
         }
 
         @Inject(
