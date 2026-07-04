@@ -171,15 +171,6 @@ public class DimensionData {
         return noiseTemperature;
     }
 
-    public void clearCaches() {
-        if (noiseTemperature != null)
-            if (noiseTemperature.function().value() instanceof DensityFunctionEx func)
-                func.cancelAllCacheTasks();
-        if (noiseHumidity != null)
-            if (noiseHumidity.function().value() instanceof DensityFunctionEx func)
-                func.cancelAllCacheTasks();
-    }
-
     @Override
     public String toString() {
         return "DimensionData{" +

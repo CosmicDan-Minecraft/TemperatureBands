@@ -9,7 +9,6 @@ import net.minecraft.world.level.biome.MultiNoiseBiomeSource;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.DensityFunctions;
 import org.jspecify.annotations.Nullable;
-import org.spongepowered.asm.mixin.injection.At;
 
 import java.io.File;
 import java.io.IOException;

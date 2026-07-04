@@ -45,43 +45,7 @@ public class CommonConfig {
              [climateSamplerCacheSize] is the size of our custom climate sampler, in megabytes.
               - The default of 5Mb can hold almost 50 thousand samples which should be more than enough for any environment.
               - Setting to zero will disable caching, which is NOT recommended - you will have much higher CPU *and* memory usage without the cache.""";
-    public final ForgeConfigSpec.IntValue climateSamplerCachePrefetchRadius;
-    public static final String climateSamplerCachePrefetchRadiusTxt = """
 
-             [climateSamplerCachePrefetchRadius] is, if non-zero (along with climateSamplerCacheSize also being non-zero), the rough radius to perform additional sampling (and
-                caching) while sampling. This will be done asynchronously as units of 'climateSamplerResolution' (which is in the climatesampler-world section).
-              - Negative numbers refer to a fraction of available CPU threads; the default of -8 will use one-eighth of threads as radius (actual thread count will be higher
-                but they're very short-lived - a few MS - and modern Java handles this well).
-              - Highly recommended to leave enabled as it drastically improves world generation speed with advanced humidity, but there are diminishing returns if set too high.
-              - If you experience 'can't keep up' warnings while exploring new chunks, try reducing this value. A low fixed number like 1 should still be better than 0 (off).
-              - Result is rounded-down, meaning setting it too far negative could result in 0 which will disable prefetching. The default of -8 will do this if your CPU has *less*
-                than 8 threads, which seems appropriate based on my testing. Even on a 24-thread CPU, this default would only result in a radius of 3, so keep that in mind if
-                manually setting to a positive number - there are sharply diminishing returns if this is set too high (relative to your available threads).
-              - Do note that World Preview (and new world creation) will be a bit slower at the very start, but the speed will improve over time and actually generate quicker
-                overall (compared to a disabled sampler cache), especially in high resolutions of World Preview and/or high chunk rendering distances. World Preview will remain
-                slower overall but World Preview is only doing initial chunk generation which is practically never the bottleneck in actual gameplay, even for heavy modpacks
-                (that main bottleneck is chunk carving and decoration, i.e. digging-out caves and placing of trees/structures/etc.).
-              - Finally, if you want to stress-test your CPU, disable this completely with 0 and keep max-1 (or max) threads in World Preview.""";
-
-    public final ForgeConfigSpec.IntValue climateSamplerMax;
-    public static final String climateSamplerMaxTxt = """
-             
-             [climateSamplerMax] specifies the hard limit on maximum active climate samplers.
-              - This setting is only really necessary for World Preview; without this limit, prefetching ends up with too much backpressure which results in a large memory "leak".""";
-    public final ForgeConfigSpec.IntValue climateSamplerCacheDelay;
-    public static final String climateSamplerCacheDelayTxt = """
-             
-             [climateSamplerCacheDelay] will, when above zero, delay sampler caching/prefetching until the game world has ticked this many times.
-              - The default value of zero means no delay.
-              - If you experience 'cant keep up' warnings in the log but only during the first few seconds of loading a world, increasing this value can help.
-              - If you're using World Preview, this value is ignored and prefetch is always active since it significantly improves preview speed and doesn't cause any issues.""";
-    public final ForgeConfigSpec.BooleanValue climateSamplerWarmupMsg;
-    public static final String climateSamplerWarmupMsgTxt = """
-             
-             [climateSamplerWarmupMsg] will, when true, show a message on the loading screen about the Climate Sampler needing to warm up.
-              - Only shown if advanced humidity is active for the overworld dimension (not relevant for simple humidity)
-              - The message is just some QoL because the progress will seem to be stuck on 0% for a few seconds while initial climate sampling occurs
-              - Config is here to disable it just in case you use a custom loading screen that causes a crash or something.""";
     public static final String sectionWorld = "world";
     public static final String sectionWorldTxt = """
              [world] are general defaults for new worlds. These will apply to newly-generated worlds only, existing worlds will remember their own settings.
@@ -316,6 +280,20 @@ public class CommonConfig {
               - If you've raised humidityResolution (meaning less accuracy) for some performance, it might be useful to manually set this value to something closer to the new
                 humidityResolution rather than leaving on automatic; such a change could result in better overall smoothness without significant efficiency loss. Do note that
                 it's pointless to have this value lower than humidityResolution, though - all that will do is burn CPU time for no reason.'""";
+    public final ForgeConfigSpec.BooleanValue climateSamplerShortcuts;
+    public static final String climateSamplerShortcutsName = "climateSamplerShortcuts";
+    public static final String climateSamplerShortcutsTxt = """
+             
+             [climateSamplerShortcuts] will, if true, perform some shortcuts during climate sampling to make it much faster.
+              - Skips making some noise calculations that aren't relevant to oceans or rivers. Results in about 200% faster chunk generation.
+                 - Oceans are based solely on continentalness, so we can skip generating other noises entirely when searching for oceans.
+                 - Rivers can only generate with Valleys PV (weirdness noise between -0.05 and +0.05) so we check this first and abort early if it's not in this range.
+                 - Temperature and Humidity noises are also skipped entirely because all ocean and river biomes can spawn in any temperature or humidity.
+              - Enabling/disabling does technically result in changed world generation, but it's only in extremely specific circumstances and in tiny areas. Regardless, it will
+                still be saved to world config.
+              - Highly recommended to keep enabled, unless you're using a mod that changes the biome parameters of rivers and/or oceans.
+              - Note that, even if this is set to false, climate sampling for oceans will always be optimized by checking the continentalness noise only, since it's essentially a
+                core rule of ocean vs land.""";
 
     public CommonConfig(final ForgeConfigSpec.Builder builder) {
         builder.push(sectionGlobal).comment(sectionGlobalTxt);
@@ -337,18 +315,6 @@ public class CommonConfig {
         climateSamplerCacheSize = builder
                 .comment(climateSamplerCacheSizeTxt)
                 .defineInRange("climateSamplerCacheSize", 5, 0, 128);
-        climateSamplerCachePrefetchRadius = builder
-                .comment(climateSamplerCachePrefetchRadiusTxt)
-                .defineInRange("climateSamplerCachePrefetchRadius", -8, -32, 32);
-        climateSamplerMax = builder
-                .comment(climateSamplerMaxTxt)
-                .defineInRange("climateSamplerMax", 100, 1, 10000);
-        climateSamplerCacheDelay = builder
-                .comment(climateSamplerCacheDelayTxt)
-                .defineInRange("climateSamplerCacheDelay", 0, 0, Integer.MAX_VALUE);
-        climateSamplerWarmupMsg = builder
-                .comment(climateSamplerWarmupMsgTxt)
-                .define("climateSamplerWarmupMsg", true);
         builder.pop();
 
         builder.push(sectionWorld).comment(sectionWorldTxt);
@@ -433,6 +399,9 @@ public class CommonConfig {
         climateSamplerResolution = builder
                 .comment(climateSamplerResolutionTxt)
                 .defineInRange("climateSamplerResolution", -1, -1, 64);
+        climateSamplerShortcuts = builder
+                .comment(climateSamplerShortcutsTxt)
+                .define("climateSamplerShortcuts", true);
         builder.pop();
     }
 }

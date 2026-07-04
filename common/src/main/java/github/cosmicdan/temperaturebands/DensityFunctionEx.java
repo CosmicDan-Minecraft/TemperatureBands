@@ -61,32 +61,12 @@ public class DensityFunctionEx implements DensityFunction {
         return funcOriginal.compute(context);
     }
 
-    public final ClimateTargetPointEx sampleClimate(long packedBlockPos, boolean firstBiomeOnly) {
-        // if firstBiomeOnly is true, we're just looking for oceans so only sampling continentalness is required
-        int blockX = TbUtils.unpackBlockFromLongX(packedBlockPos);
-        int blockZ = TbUtils.unpackBlockFromLongZ(packedBlockPos);
-        DensityFunction.SinglePointContext singlePointContext = new DensityFunction.SinglePointContext(blockX, BiomeProximityGenerator.blockY, blockZ);
-        float temperatureResult = firstBiomeOnly ? 0.0f : (float) dimData.getTemperatureNoise().compute(singlePointContext);
-        float humidityResult = firstBiomeOnly ? 0.0f : (float) computeOriginal(singlePointContext); // always use original non-overridden densityfunctions for humidity
-        float continentalnessResult = (float) dimData.getClimateSampler().continentalness().compute(singlePointContext);
-        float erosionResult = firstBiomeOnly ? 0.0f : (float) dimData.getClimateSampler().erosion().compute(singlePointContext);
-        float depthResult = firstBiomeOnly ? 0.0f : (float) dimData.getClimateSampler().depth().compute(singlePointContext);
-        float weirdnessResult = firstBiomeOnly ? 0.0f : (float) dimData.getClimateSampler().weirdness().compute(singlePointContext);
-
-        Climate.TargetPoint sampleResultRaw = Climate.target(temperatureResult, humidityResult, continentalnessResult, erosionResult, depthResult, weirdnessResult);
-        return new ClimateTargetPointEx(sampleResultRaw, false);
-    }
-
     public final Set<Holder<Biome>> getBiomesFirst() {
         return dimData.biomeOceans;
     }
 
     public final Set<Holder<Biome>> getBiomesSecond() {
         return dimData.biomeRivers;
-    }
-
-    public final void cancelAllCacheTasks() {
-        gen.cancelAllCacheTasks();
     }
 
     @Override
