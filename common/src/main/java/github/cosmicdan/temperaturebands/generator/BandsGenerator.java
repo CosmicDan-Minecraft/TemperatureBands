@@ -16,6 +16,7 @@ public class BandsGenerator implements IGenerator {
     public final int tempAlgo1bandVarianceMid;
     private final boolean bandSizeIsPowerOfTwo;
     public final boolean bandVarianceIsPowerOfTwo;
+    private final int noiseFactor;
 
     public record Config(
             DensityFunctionEx owner,
@@ -24,10 +25,14 @@ public class BandsGenerator implements IGenerator {
             float bandPositionShift,
             float tempRange,
             float tempGradeShift,
-            int noiseFactor,
+            float noiseFactorRaw,
             int algo1bandVariance,
             float algo1bandVarianceSteepness,
-            float tempWeight
+            float tempWeight,
+            int bandLimitUpperCount,
+            float bandLimitUpperValue,
+            int bandLimitLowerCount,
+            float bandLimitLowerValue
     ) {}
 
     public static BandsGenerator create(DensityFunctionEx owner, DimensionConfig config, boolean isHumidity, float tempWeight) {
@@ -38,10 +43,14 @@ public class BandsGenerator implements IGenerator {
                 config.bandPositionShift(),
                 config.tempRange(),
                 config.tempGradeShift(),
-                config.noiseFactor(),
+                config.noiseFactorRaw(),
                 config.algo1bandVariance(),
                 config.algo1bandVarianceSteepness(),
-                tempWeight // pass in -1.0 if not used (e.g. temperature function)
+                tempWeight, // pass in -1.0 if not used (e.g. temperature function)
+                config.bandLimitUpperCount(),
+                config.bandLimitUpperValue(),
+                config.bandLimitLowerCount(),
+                config.bandLimitLowerValue()
         ));
     }
 
@@ -57,6 +66,11 @@ public class BandsGenerator implements IGenerator {
         }
         bandSizeIsPowerOfTwo = TbUtils.isNumberPowerOfTwo(config.bandSize);
         bandVarianceIsPowerOfTwo = TbUtils.isNumberPowerOfTwo(config.algo1bandVariance);
+        if (config.noiseFactorRaw < 1.0) {
+            noiseFactor = Math.round(config.noiseFactorRaw * config.bandSize);
+        } else {
+            noiseFactor = Math.round(config.noiseFactorRaw);
+        }
     }
 
     @Override
@@ -64,14 +78,23 @@ public class BandsGenerator implements IGenerator {
         int bandShift;
         int bandPos;
         int bandPosOffset = (int) (config.bandSize * (config.bandPositionShift * 8));
+        int blockPos;
         if (config.swapBandAxis) {
             bandShift = Math.abs(context.blockZ());
             bandPos = Math.abs(context.blockX() - bandPosOffset);
+            blockPos = context.blockX();
         } else {
             bandShift = Math.abs(context.blockX());
             bandPos = Math.abs(context.blockZ() - bandPosOffset);
+            blockPos = context.blockZ();
         }
 
+        // check for band limits, return fixed value if so
+        if (blockPos < 1 && config.bandLimitUpperCount > 0 && Math.abs(blockPos) > (config.bandSize * config.bandLimitUpperCount)) {
+            return config.bandLimitUpperValue;
+        } else if (blockPos > 1 && config.bandLimitLowerCount > 0 && Math.abs(blockPos) > (config.bandSize * config.bandLimitLowerCount)) {
+            return config.bandLimitLowerValue;
+        }
 
         bandShift = (int) (bandShift * config.algo1bandVarianceSteepness);
         if (config.algo1bandVariance >= algo1bandVarianceMin) {
@@ -89,8 +112,8 @@ public class BandsGenerator implements IGenerator {
         // divide bandPos by 8 because we calculate based on a bouncing gradient, idk better words lol
         bandPos /= 8;
 
-        if (config.noiseFactor > 0) {
-            bandPos += (int) (config.owner.computeOriginal(context) * config.noiseFactor);
+        if (noiseFactor > 0) {
+            bandPos += (int) (config.owner.computeOriginal(context) * noiseFactor);
         }
 
         // calculate grade
