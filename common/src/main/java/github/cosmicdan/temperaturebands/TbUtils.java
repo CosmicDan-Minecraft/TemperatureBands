@@ -217,8 +217,8 @@ public class TbUtils {
             if (batchesDone.get() >= batchesTotal.get()) {
                 benchmarkActive = false;
                 double timeMillis = Duration.between(benchmarkStart.get(), Instant.now()).abs().toMillis();
-                int cacheHitCount = BiomeProximityGenerator.benchmarkSampleCacheHitCount.get();
-                int cacheTotalCount = BiomeProximityGenerator.benchmarkSampleTotalCount.get();
+                long cacheHitCount = BiomeProximityGenerator.benchmarkSampleCacheHitCount.get();
+                long cacheTotalCount = BiomeProximityGenerator.benchmarkSampleTotalCount.get();
                 TemperatureBands.LOGGER.info("WorldPreview benchmark finished. {} chunks via {} batches finished in {} seconds. Average generation speed of {} chunks per second. Sampler cache hit-rate was {}% ({} over {})." ,
                         chunksTotal,
                         batchesTotal,

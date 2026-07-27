@@ -57,24 +57,28 @@ public abstract class LevelHooks {
                 at = @At("TAIL")
         )
         private void onCreateAccess(String saveName, CallbackInfoReturnable<LevelStorageSource.LevelStorageAccess> cir) {
-            // (Re)creating a new world OR Deleting a world
-            if (!TemperatureBands.isDeleteScreenActive) {
+            if (TemperatureBands.isDeleteScreenActive)
+                TemperatureBands.logDebug("Ignoring onCreateAccess call because delete world screen is active");
+            else {
+                // Creating a new world on the client
                 Path saveDir = getBaseDir().toAbsolutePath().resolve(saveName);
-                TemperatureBands.logDebug("onCreateAccess called, (re)creating a world with saveDir '{}'", saveDir.toAbsolutePath().toString());
-                DimensionConfig.onLevelStorageLoad(saveDir, true);
-            } else
-                TemperatureBands.logDebug("Ignoring onCreateAccess because delete world screen is active");
+                TemperatureBands.logDebug("onCreateAccess called with saveDir '{}'", saveDir.toAbsolutePath().toString());
+                DimensionConfig.onLevelStorageLoad(saveDir);
+            }
         }
 
+        /**
+         * As above, but used on dedicated servers (always) OR clients when a world is being loaded
+         */
         @Inject(
                 method = "validateAndCreateAccess",
                 at = @At("TAIL")
         )
         private void onValidateAndCreateAccess(String saveName, CallbackInfoReturnable<LevelStorageSource.LevelStorageAccess> cir) {
-            // Loading an existing world (possibly for recreation, which will call onCreateAccess after confirmed)
+            // Probably loading an existing world (possibly for recreation) or might also be creating a new world on dedicated server
             Path saveDir = getBaseDir().toAbsolutePath().resolve(saveName);
-            TemperatureBands.logDebug("onCreateAccess called, loading an existing world with saveDir '{}'", saveDir.toAbsolutePath().toString());
-            DimensionConfig.onLevelStorageLoad(saveDir, false);
+            TemperatureBands.logDebug("onValidateAndCreateAccess called with saveDir '{}'", saveDir.toAbsolutePath().toString());
+            DimensionConfig.onLevelStorageLoad(saveDir);
         }
     }
 
@@ -166,7 +170,6 @@ public abstract class LevelHooks {
     /**
      * Fourth and final hook that's used during level (world) creation/load, after NoiseRouterHooks. The level is now ready.
      * Responsible for finalizing DimensionData. Also contains a hook on close to clear config/data.
-     * TODO: Replace with "Level", once sided stuff is done
      */
     @Mixin(ServerLevel.class)
     public static abstract class ServerLevelHooks extends Level {

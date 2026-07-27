@@ -15,15 +15,15 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Set;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static github.cosmicdan.temperaturebands.TemperatureBands.CONFIG_GLOBAL;
 
 public class BiomeProximityGenerator implements IGenerator {
     public static final int blockY = 64;
 
-    public static AtomicInteger benchmarkSampleCacheHitCount = new AtomicInteger(0);
-    public static AtomicInteger benchmarkSampleTotalCount = new AtomicInteger(0);
+    public static AtomicLong benchmarkSampleCacheHitCount = new AtomicLong(0);
+    public static AtomicLong benchmarkSampleTotalCount = new AtomicLong(0);
 
     private final Config config;
     // initialized in constructor and/or derived from config arg
@@ -66,7 +66,14 @@ public class BiomeProximityGenerator implements IGenerator {
 
     public BiomeProximityGenerator(Config config) {
         this.config = config;
-        this.samplerResolution = (config.climateSamplerResolutionRaw < 0) ? config.noiseResolution * config.noiseResolution * config.noiseResolution : config.climateSamplerResolutionRaw;
+        if (config.climateSamplerResolutionRaw == -1)
+            this.samplerResolution = config.noiseResolution * config.noiseResolution * config.noiseResolution;
+        else if (config.climateSamplerResolutionRaw == -2)
+            this.samplerResolution = config.noiseResolution * config.noiseResolution;
+        else if (config.climateSamplerResolutionRaw == 0)
+            this.samplerResolution = TbUtils.doCrash("climateSamplerResolution cannot be zero, please fix your config!");
+        else
+            this.samplerResolution =  config.climateSamplerResolutionRaw;
 
         if (CONFIG_GLOBAL.climateSamplerCacheSize() > 0) {
             climateSamplerCache = Caffeine.newBuilder()
@@ -99,7 +106,7 @@ public class BiomeProximityGenerator implements IGenerator {
 
         // default value if biome wasn't found
         double noiseValue = -1.0;
-        Pair<Double, Double> nearestFirstAndMaybeSecondBiomeDistance = getDistanceToNearestBiomes(
+        Pair<Double, Double> nearestFirstAndMaybeSecondBiomeDistance = getDistanceToNearestBiomesSimple(
                 originPosX,
                 originPosZ,
                 config.owner.getBiomesFirst(),
@@ -152,7 +159,7 @@ public class BiomeProximityGenerator implements IGenerator {
     }
 
     // Simple 2D Archimedean spiral check
-    private Pair<Double, Double> getDistanceToNearestBiomes(int originX, int originZ, Set<Holder<Biome>> firstBiomes, Set<Holder<Biome>> secondBiomes, int searchRadiusXZ, int searchStep) {
+    private Pair<Double, Double> getDistanceToNearestBiomesSimple(int originX, int originZ, Set<Holder<Biome>> firstBiomes, Set<Holder<Biome>> secondBiomes, int searchRadiusXZ, int searchStep) {
         double angle = 0;
         double radius = 0;
         double firstBiomeDistance = -1.0;
@@ -216,11 +223,7 @@ public class BiomeProximityGenerator implements IGenerator {
         float continentalnessResult = (float) dimData.getClimateSampler().continentalness().compute(singlePointContext);
         float weirdnessResult = firstBiomeOnly ? 0.0f : (float) dimData.getClimateSampler().weirdness().compute(singlePointContext);
         boolean doShortcuts = dimData.config.climateSamplerShortcuts();
-        if (
-                !doShortcuts ||
-                (continentalnessResult >= -1.05f && continentalnessResult <= -0.19f) || // DEEPOCEAN and OCEAN range
-                (weirdnessResult >= -0.05f && weirdnessResult <= 0.05f) // Equivalent of Valleys PV
-        ) {
+        if (!doShortcuts || dimData.mightBeOcean(continentalnessResult) || dimData.mightBeRiver(weirdnessResult)) {
             float temperatureResult = firstBiomeOnly || doShortcuts ? 0.0f : (float) dimData.getTemperatureNoise().compute(singlePointContext);
             float humidityResult = firstBiomeOnly || doShortcuts ? 0.0f : (float) config.owner.computeOriginal(singlePointContext); // always use original non-overridden densityfunctions for humidity
             float erosionResult = firstBiomeOnly ? 0.0f : (float) dimData.getClimateSampler().erosion().compute(singlePointContext);
