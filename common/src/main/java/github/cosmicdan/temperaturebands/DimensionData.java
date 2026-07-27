@@ -2,12 +2,7 @@ package github.cosmicdan.temperaturebands;
 
 import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.tags.BiomeTags;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.level.biome.BiomeSource;
-import net.minecraft.world.level.biome.Climate;
-import net.minecraft.world.level.biome.MultiNoiseBiomeSource;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.DensityFunctions;
 import net.minecraft.world.level.levelgen.NoiseRouter;
@@ -18,7 +13,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-import static github.cosmicdan.temperaturebands.TemperatureBands.CONFIG_GLOBAL;
 import static github.cosmicdan.temperaturebands.TemperatureBands.LOGGER;
 
 public class DimensionData {

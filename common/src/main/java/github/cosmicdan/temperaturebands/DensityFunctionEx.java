@@ -4,6 +4,7 @@ import github.cosmicdan.temperaturebands.generator.BandsGenerator;
 import github.cosmicdan.temperaturebands.generator.IGenerator;
 import net.minecraft.core.Holder;
 import net.minecraft.util.KeyDispatchDataCodec;
+import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.DensityFunctions;
 import net.minecraft.world.level.levelgen.synth.NormalNoise;
@@ -54,18 +55,18 @@ public class DensityFunctionEx implements DensityFunction {
         return funcOriginal.compute(context);
     }
 
-    public final void cancelAllCacheTasks() {
-        gen.cancelAllCacheTasks();
-    }
-
     @Override
     public final double compute(FunctionContext context) {
-        if (dimData == null) {
+        fetchDimDataIfNeeded();
+        return gen.onCompute(context, dimData);
+    }
+
+    private void fetchDimDataIfNeeded() {
+        if (dimData == null || !dimData.isLevelReady) {
             dimData = DIMENSION_DATA_CACHE.getIfPresent(dimensionName);
             if (dimData == null)
                 TbUtils.doCrash("Couldn't find DimensionData on first compute! Eh? Dimension name = " + dimensionName);
         }
-        return gen.onCompute(context, dimData);
     }
 
     @Override

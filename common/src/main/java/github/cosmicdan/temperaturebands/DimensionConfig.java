@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Properties;
@@ -23,7 +24,7 @@ public record DimensionConfig(
         float tempRange,
         float tempGradeShift,
         int bandAlgorithm,
-        int noiseFactor,
+        float noiseFactorRaw,
         int vanillaNoiseOverride,
         // Blacklist config
         Set<String> dimBlacklist,
@@ -35,8 +36,13 @@ public record DimensionConfig(
         int humidityAlgorithm,
         float humidityTempWeight,
         // Humidity algo 1 (simple) config
-        float humidityAlgo1MimicScale
+        float humidityAlgo1MimicScale,
+        int bandLimitUpperCount,
+        float bandLimitUpperValue,
+        int bandLimitLowerCount,
+        float bandLimitLowerValue
 ) {
+
     public enum ConfigType {
         DEFAULT, // the default config as loaded from the usual mod config file on startup
         BASE, // A base config which only applies to the base overworld dimension
@@ -58,19 +64,13 @@ public record DimensionConfig(
      * Called when a world is being created, recreated or loaded
      * @param saveDirIn The absolute path to the world save directory of the world being (re)created or loaded
      */
-    public static void onLevelStorageLoad(Path saveDirIn, boolean doingCreateOrRecreate) {
-        // For 1.19.2 and below, this method is only called once (there is no 'validateAndCreateAccess' method, only 'createAccess'
-        // So we need to manually check now if this world already exists or not
-        // Thankfully there is no World Preview on these versions so this shortcut is relatively safe
-        File savePropIn = saveDirIn.resolve(TemperatureBands.MOD_ID + ".prop").toFile();
-        if (savePropIn.exists())
-            doingCreateOrRecreate = false;
+    public static void onLevelStorageLoad(Path saveDirIn) {
         if (PENDING_WORLD != null) {
-            TemperatureBands.logDebug("Detected world recreation; source world config moved from PENDING_WORLD to CONFIG_RECREATED_WORLD_SOURCE");
+            TemperatureBands.logDebug("Detected world recreation; source world config moved from PENDING_WORLD to RECREATED_WORLD_SOURCE");
             RECREATED_WORLD_SOURCE = PENDING_WORLD;
         }
         TemperatureBands.logDebug("About to load or create base config into PENDING_WORLD");
-        PENDING_WORLD = createTempOrBase(doingCreateOrRecreate, savePropIn);
+        PENDING_WORLD = createTempOrBase(saveDirIn);
     }
 
     public static boolean isPendingWorldDimensionWhitelisted(String dimensionName) {
@@ -89,7 +89,7 @@ public record DimensionConfig(
 
     public static void clearWorldConfigs() {
         PENDING_WORLD = null;
-        RECREATED_WORLD_SOURCE = null;
+        // we don't clear RECREATED_WORLD_SOURCE here for World Preview compat, we do that in ClientGuiHooks#CreateWorldScreenHooks
         isOnlyLoadingWorldWithoutConfig = false;
     }
 
@@ -116,7 +116,7 @@ public record DimensionConfig(
                 loadedConfig.tempRange.get().floatValue(),
                 loadedConfig.tempGradeShift.get().floatValue(),
                 bandAlgorithm,
-                loadedConfig.noiseFactor.get(),
+                loadedConfig.noiseFactor.get().floatValue(),
                 loadedConfig.vanillaNoiseOverride.get(),
                 dimBlacklist,
                 loadedConfig.dimBlacklistAsWhitelist.get(),
@@ -124,7 +124,11 @@ public record DimensionConfig(
                 loadedConfig.algo1bandVarianceSteepness.get().floatValue(),
                 humidityAlgorithm,
                 loadedConfig.humidityTempWeight.get().floatValue(),
-                loadedConfig.humidityAlgo1MimicScale.get().floatValue()
+                loadedConfig.humidityAlgo1MimicScale.get().floatValue(),
+                loadedConfig.bandLimitUpperCount.get(),
+                loadedConfig.bandLimitUpperValue.get().floatValue(),
+                loadedConfig.bandLimitLowerCount.get(),
+                loadedConfig.bandLimitLowerValue.get().floatValue()
         );
     }
 
@@ -141,19 +145,21 @@ public record DimensionConfig(
     }
 
     /**
-     * Creates a new TEMP or BASE type of DimensionConfig
-     * @param worldPropFile The prop file for this world. If it exists, props will be read - otherwise DEFAULT config will be used.
+     * Creates a new TEMP or BASE type of DimensionConfig.
+     * @param saveDirIn The path for this world. If it exists, props will be read - otherwise DEFAULT config will be used.
      * @return A DimensionConfig of either BASE or TEMP type, where TEMP is chosen if the worldPropFile happens to be in system temporary path (e.g. World Preview)
      */
-    public static @NotNull DimensionConfig createTempOrBase(boolean doingCreateOrRecreate, File worldPropFile) {
-        // gather info
+    public static @NotNull DimensionConfig createTempOrBase(@NotNull Path saveDirIn) {
+        boolean worldAlreadyGenerated = false;
+        if (Files.exists(saveDirIn) && Files.isDirectory(saveDirIn))
+            // Always check for level.dat to determine if an existing world is present; (required for dedicated server compat.)
+            worldAlreadyGenerated = saveDirIn.resolve("level.dat").toFile().exists();
+        File worldPropFile = saveDirIn.resolve(TemperatureBands.MOD_ID + ".prop").toFile();
         DimensionConfig dimConfig = null;
-        if (worldPropFile == null)
-            return TbUtils.doCrash("worldPropFile must be provided!");
         String worldName = worldPropFile.getParentFile().getName();
         boolean isTempProp = TbUtils.isFileInsideTemp(worldPropFile);
         String configTypeNameForLogging = isTempProp ? "temporary" : "base";
-        if (doingCreateOrRecreate) {
+        if (!worldAlreadyGenerated) {
             isOnlyLoadingWorldWithoutConfig = false;
             if (RECREATED_WORLD_SOURCE != null) {
                 // We're recreating a world...
@@ -199,7 +205,7 @@ public record DimensionConfig(
                 dimConfig = createConfigFromProp(worldPropFile, isTempProp ? ConfigType.TEMP : ConfigType.BASE);
                 TemperatureBands.LOGGER.info("Loaded {} config for world '{}'", configTypeNameForLogging, worldName);
             } else {
-                // No prop config. We could crash-out here to prevent loading non-modded worlds, but the user might be recreating a world, so just set a flag load defaults for now
+                // No prop config. We could crash-out here to prevent loading non-modded worlds, but the user might be recreating a world, so just set a flag that allows loading defaults in that case
                 isOnlyLoadingWorldWithoutConfig = true;
                 dimConfig = newBaseOrTempFromDefault(isTempProp, worldPropFile);
             }
@@ -220,7 +226,7 @@ public record DimensionConfig(
                 DEFAULT.tempRange,
                 DEFAULT.tempGradeShift,
                 DEFAULT.bandAlgorithm,
-                DEFAULT.noiseFactor,
+                DEFAULT.noiseFactorRaw,
                 DEFAULT.vanillaNoiseOverride,
                 DEFAULT.dimBlacklist,
                 DEFAULT.dimBlacklistAsWhitelist,
@@ -228,7 +234,11 @@ public record DimensionConfig(
                 DEFAULT.algo1bandVarianceSteepness,
                 DEFAULT.humidityAlgorithm,
                 DEFAULT.humidityTempWeight,
-                DEFAULT.humidityAlgo1MimicScale
+                DEFAULT.humidityAlgo1MimicScale,
+                DEFAULT.bandLimitUpperCount,
+                DEFAULT.bandLimitUpperValue,
+                DEFAULT.bandLimitLowerCount,
+                DEFAULT.bandLimitLowerValue
         );
     }
 
@@ -268,7 +278,7 @@ public record DimensionConfig(
                     Float.parseFloat(prop.getProperty(CommonConfig.tempRangeName)),
                     Float.parseFloat(prop.getProperty(CommonConfig.tempGradeShiftName)),
                     bandAlgorithm,
-                    Integer.parseInt(prop.getProperty(CommonConfig.noiseFactorName)),
+                    Float.parseFloat(prop.getProperty(CommonConfig.noiseFactorName)),
                     Integer.parseInt(prop.getProperty(CommonConfig.vanillaNoiseOverrideName, String.valueOf(DEFAULT.vanillaNoiseOverride))),
                     // Blacklist
                     dimBlacklist,
@@ -280,7 +290,12 @@ public record DimensionConfig(
                     humidityAlgorithm,
                     Float.parseFloat(prop.getProperty(CommonConfig.humidityTempWeightName, String.valueOf(DEFAULT.humidityTempWeight))),
                     // Humidity algo 1 (simple)
-                    Float.parseFloat(prop.getProperty(CommonConfig.humidityAlgo1MimicScaleName, String.valueOf(DEFAULT.humidityAlgo1MimicScale)))
+                    Float.parseFloat(prop.getProperty(CommonConfig.humidityAlgo1MimicScaleName, String.valueOf(DEFAULT.humidityAlgo1MimicScale))),
+                    // band limit
+                    Integer.parseInt(prop.getProperty(CommonConfig.bandLimitUpperCountName, String.valueOf(0))), // default 0 to preserve pre-2.2.0 worlds
+                    Float.parseFloat(prop.getProperty(CommonConfig.bandLimitUpperValueName, String.valueOf(DEFAULT.bandLimitUpperValue))),
+                    Integer.parseInt(prop.getProperty(CommonConfig.bandLimitLowerCountName, String.valueOf(0))), // default 0 to preserve pre-2.2.0 worlds
+                    Float.parseFloat(prop.getProperty(CommonConfig.bandLimitLowerValueName, String.valueOf(DEFAULT.bandLimitLowerValue)))
             );
         } catch (IOException ex) {
             return TbUtils.doCrash(ex, "Error reading world config, crashing-out intentionally to prevent corruption. Full error is above. If you modified the world config manually, please fix it. Otherwise, report this Temperature Bands error.");
@@ -297,7 +312,7 @@ public record DimensionConfig(
             prop.setProperty(CommonConfig.tempRangeName, String.valueOf(configToSave.tempRange));
             prop.setProperty(CommonConfig.tempGradeShiftName, String.valueOf(configToSave.tempGradeShift));
             prop.setProperty(CommonConfig.bandAlgorithmName, String.valueOf(configToSave.bandAlgorithm));
-            prop.setProperty(CommonConfig.noiseFactorName, String.valueOf(configToSave.noiseFactor));
+            prop.setProperty(CommonConfig.noiseFactorName, String.valueOf(configToSave.noiseFactorRaw));
             prop.setProperty(CommonConfig.vanillaNoiseOverrideName, String.valueOf(configToSave.vanillaNoiseOverride));
             // Blacklist
             if (!configToSave.dimBlacklist.isEmpty()) {
@@ -320,6 +335,11 @@ public record DimensionConfig(
             } else if (configToSave.humidityAlgorithm != 0) {
                 TbUtils.doCrash("Unhandled humidity algorithm at config world save, fixme!");
             }
+            // band limit
+            prop.setProperty(CommonConfig.bandLimitUpperCountName, String.valueOf(configToSave.bandLimitUpperCount));
+            prop.setProperty(CommonConfig.bandLimitUpperValueName, String.valueOf(configToSave.bandLimitUpperValue));
+            prop.setProperty(CommonConfig.bandLimitLowerCountName, String.valueOf(configToSave.bandLimitLowerCount));
+            prop.setProperty(CommonConfig.bandLimitLowerValueName, String.valueOf(configToSave.bandLimitLowerValue));
 
             prop.store(worldPropOutputStream, "World-specific Temperature Bands settings. Do not edit!");
         } catch (IOException ex) {

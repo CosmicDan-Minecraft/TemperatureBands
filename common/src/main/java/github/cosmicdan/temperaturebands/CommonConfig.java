@@ -72,14 +72,15 @@ public class CommonConfig {
              [bandAlgorithm] is the algorithm to use for temperature bands.
               - You can configure and read more about each algorithm in their own section below. Recommended to use World Preview if you want to change things.
               - Note that there is only 1 algorithm currently, this config is here just in case I add more later.""";
-    public final ForgeConfigSpec.IntValue noiseFactor;
+    public final ForgeConfigSpec.DoubleValue noiseFactor;
     public static final String noiseFactorName = "configNoiseFactor";
     public static final String noiseFactorTxt = """
              
              [noiseFactor] will, when above zero, incorporate original noise generation into temperature bands to help make the shape and edges of bands a bit nicer.
               - HIGHLY recommended to keep it on.
-              - See each algorithm for details on how noiseFactor is used. The unit is arbitrary and very dependent on bandSize. For e.g. 100 is nice for a bandSize of 2048 but
-                might be too wild if bandSize is decreased, or too tame if bandSize is increased.""";
+              - When specified as a decimal below 1.0, it is treated as a percentage of bandSize. The default of 5% seems to be a good value for any bandSize.
+              - When specified as a number of 1 or above, it is a fixed "block number" amount and NOT dependent on bandSize. This is the old behavior (before 2.2.0), if you
+                do this you should probably keep it around 5% of whatever your bandSize is - otherwise you might see some weirdness.""";
     public final ForgeConfigSpec.IntValue vanillaNoiseOverride;
     public static final String vanillaNoiseOverrideName = "configVanillaNoiseOverride";
     public static final String vanillaNoiseOverrideTxt = """
@@ -168,6 +169,49 @@ public class CommonConfig {
              [humidityAlgo1MimicScale] will scale the humidity bands, in relation to temperature bands.
               - The default of 0.5 for e.g. means that humidity bands will be half as big and twice as frequent as temperature bands (on average).""";
 
+    public static final String sectionBandLimit = "bandLimit";
+    public static final String sectionBandLimitTxt = """
+             [sectionBandLimit] allows you to set a limit on the temperature bands generated; meaning that a fixed temperature will be used after X number of bands.
+              - Can be useful for simulating or complementing world borders, and are accurate based on band size. For instance, if bandSize was 2048 (default), bandPositionShift
+                is 0.25 (default) and the bandLimitUpperValue was 2, then the upper "border" starts at 4096 blocks North (Z = -4096) - assuming vertical bands are not enabled.
+             --------""";
+    public final ForgeConfigSpec.IntValue bandLimitUpperCount;
+    public static final String bandLimitUpperCountName = "bandLimitUpperCount";
+    public static final String bandLimitUpperCountTxt = """
+             
+             [bandLimitUpperCount] is used to set the "upper" limit of temperature bands.
+              - This is for bands in the Northern direction, or the Eastern direction if using vertical temperature bands.
+              - The default of 0 means disabled (no limit).
+              - Requires a little bit of math since it DOES consider the current 'bandPositionShift' setting. For example, lets say you're using the default 'bandPositionShift'
+                value of 0.25 (where origin is in the temperate zone of 'northern hemisphere'), and you want to simulate a "real earth-like" world where there is only a single
+                "hot" band and two "cold" bands at the edges, you would set this value to 2, because the first "cold" band towards the North (or East) is 2 bands away.""";
+    public final ForgeConfigSpec.DoubleValue bandLimitUpperValue;
+    public static final String bandLimitUpperValueName = "bandLimitUpperValue";
+    public static final String bandLimitUpperValueTxt = """
+             
+             [bandLimitUpperValue] is the forced temperature value for the upper temperature band limit.
+              - This is for bands in the Northern direction, or the Eastern direction if using vertical temperature bands.
+              - The default of -1.0 means "coldest".
+              - For the example already given in bandLimitUpperCount, i.e. a value of 2 to simulate 'real-world and northern-hemisphere start', you will want to keep this on -1.0.""";
+    public final ForgeConfigSpec.IntValue bandLimitLowerCount;
+    public static final String bandLimitLowerCountName = "bandLimitLowerCount";
+    public static final String bandLimitLowerCountTxt = """
+             
+             [bandLimitLowerCount] is used to set the "lower" limit of temperature bands.
+              - This is for bands in the Southern direction, or the Western direction if using vertical temperature bands.
+              - The default of 0 means disabled (no limit).
+              - Requires a little bit of math since it DOES consider the current 'bandPositionShift' setting. For example, if following the example already explained in
+                'bandLimitUpperCount' (i.e. simulate 'real-world and northern-hemisphere start'), you would set this to 6, because the first "cold" band towards the South (or West)
+                is 6 bands away.""";
+    public final ForgeConfigSpec.DoubleValue bandLimitLowerValue;
+    public static final String bandLimitLowerValueName = "bandLimitLowerValue";
+    public static final String bandLimitLowerValueTxt = """
+             
+             [bandLimitLowerValue] is the forced temperature value for the lower temperature band limit.
+              - This is for bands in the Southern direction, or the Western direction if using vertical temperature bands.
+              - The default of -1.0 means "coldest".
+              - For the example already given in bandLimitLowerCount, i.e. a value of 6 to simulate 'real-world and northern-hemisphere start', you will want to keep this on -1.0.""";
+
     public CommonConfig(final ForgeConfigSpec.Builder builder) {
         builder.push(sectionGlobal).comment(sectionGlobalTxt);
         copyConfigOnRecreateWorld = builder
@@ -199,7 +243,7 @@ public class CommonConfig {
                 .defineInRange("bandAlgorithm", 1, 1, 1);
         noiseFactor = builder
                 .comment(noiseFactorTxt)
-                .defineInRange("noiseFactor", 100, 0, 1000);
+                .defineInRange("noiseFactor", 0.05, 0, 1000);
         dimBlacklist = builder
                 .comment(dimBlacklistTxt)
                 .define("dimBlacklist", "minecraft:the_nether,minecraft:the_end,");
@@ -233,6 +277,21 @@ public class CommonConfig {
         humidityAlgo1MimicScale = builder
                 .comment(humidityAlgo1MimicScaleTxt)
                 .defineInRange("humidityAlgo1MimicScale", 0.5, 0.1, 1.0);
+        builder.pop();
+
+        builder.push(sectionBandLimit).comment(sectionBandLimitTxt);
+        bandLimitUpperCount = builder
+                .comment(bandLimitUpperCountTxt)
+                .defineInRange(bandLimitUpperCountName, 0, 0, Integer.MAX_VALUE);
+        bandLimitUpperValue = builder
+                .comment(bandLimitUpperValueTxt)
+                .defineInRange(bandLimitUpperValueName, -1.0, -1.0, 1.0);
+        bandLimitLowerCount = builder
+                .comment(bandLimitLowerCountTxt)
+                .defineInRange(bandLimitLowerCountName, 0, 0, Integer.MAX_VALUE);
+        bandLimitLowerValue = builder
+                .comment(bandLimitLowerValueTxt)
+                .defineInRange(bandLimitLowerValueName, -1.0, -1.0, 1.0);
         builder.pop();
     }
 }
