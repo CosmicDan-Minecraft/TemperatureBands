@@ -88,14 +88,15 @@ public class CommonConfig {
              [bandAlgorithm] is the algorithm to use for temperature bands.
               - You can configure and read more about each algorithm in their own section below. Recommended to use World Preview if you want to change things.
               - Note that there is only 1 algorithm currently, this config is here just in case I add more later.""";
-    public final ModConfigSpec.IntValue noiseFactor;
+    public final ModConfigSpec.DoubleValue noiseFactor;
     public static final String noiseFactorName = "configNoiseFactor";
     public static final String noiseFactorTxt = """
              
              [noiseFactor] will, when above zero, incorporate original noise generation into temperature bands to help make the shape and edges of bands a bit nicer.
               - HIGHLY recommended to keep it on.
-              - See each algorithm for details on how noiseFactor is used. The unit is arbitrary and very dependent on bandSize. For e.g. 100 is nice for a bandSize of 2048 but
-                might be too wild if bandSize is decreased, or too tame if bandSize is increased.""";
+              - When specified as a decimal below 1.0, it is treated as a percentage of bandSize. The default of 5% seems to be a good value for any bandSize.
+              - When specified as a number of 1 or above, it is a fixed "block number" amount and NOT dependent on bandSize. This is the old behavior (before 2.2.0), if you
+                do this you should probably keep it around 5% of whatever your bandSize is - otherwise you might see some weirdness.""";
     public final ModConfigSpec.IntValue distanceFunction;
     public static final String distanceFunctionName = "configDistanceFunction";
     public static final String distanceFunctionTxt = """
@@ -206,11 +207,11 @@ public class CommonConfig {
     public static final String humidityResolutionTxt = """
              
              [humidityResolution] is the accuracy or "resolution" for calculating the distance from river and/or ocean for a given area, where lower values means more accuracy.
-              - Represented as a square root, i.e. the default of 3 means each 9x9 area will use the same distance values.
-              - This is a performance vs accuracy choice but the default of 3 seems decently balanced; values below 3 start to become extremely expensive on CPU/worldgen time
-                with only small improvements in smoothness, and values above 3 get a bit too "chunky". The max value of 8 (each 64x64 area having same humidity) results in a
+              - Represented as a square root, i.e. the default of 4 means each 16x16 area will use the same distance values.
+              - This is a performance vs accuracy choice but the default of 4 seems decently balanced; values below 4 start to become extremely expensive on CPU/worldgen time
+                with only small improvements in smoothness, and values above 4 get a bit too "chunky". The max value of 8 (each 64x64 area having same humidity) results in a
                 silly checkerboard look (but is very fast).
-              - If you change this, be sure to check out "climateSamplerResolution" in the "[climatesampler-world]" section too - these two settings are closely related.""";
+              - If you change this, you might want to check out "climateSamplerResolution" in the "[climatesampler-world]" section too - these two settings are closely related.""";
     public final ModConfigSpec.DoubleValue humidityRiverInfluence;
     public static final String humidityRiverInfluenceName = "configHumidityRiverInfluence";
     public static final String humidityRiverInfluenceTxt = """
@@ -264,13 +265,16 @@ public class CommonConfig {
              
              [climateSamplerResolution] is the accuracy or "resolution" for sampling the climate.
               - Currently only used by ocean/river search in the advanced humidity algorithm.
-              - The default of -1 means automatic, which is the cube of humidityResolution. This seems to be the most logical balance between quality and performance - biome edges
+              - The default of -2 is an automatic "square value of humidityResolution". This seems to be the most logical balance between quality and performance - biome edges
                 look natural with sporadic patches of other biomes potential to the nearby humidity/temperature values to make blending a bit more exciting.
+              - A value of -1 is also possible, which was the old default; corresponds to the "cube value of humidityResolution" but it is VERY inaccurate and NOT recommended.
+                It's best to keep this value no higher than the square of humidityResolution, i.e. -2, which results in 16 when humidityResolution is the default 4.
+              - If setting manually, for best results, keep it as a multiple of humidityResolution. Otherwise there may be weirdness or inaccuracies in biome placement.
               - Setting this to a value equal to humidityResolution will provide maximum accuracy but will become VERY expensive on CPU/worldgen time, though that might be desirable
                 if you want all biome edges to be smoother and defined with minimal biome 'patches'.
               - If you've raised humidityResolution (meaning less accuracy) for some performance, it might be useful to manually set this value to something closer to the new
                 humidityResolution rather than leaving on automatic; such a change could result in better overall smoothness without significant efficiency loss. Do note that
-                it's pointless to have this value lower than humidityResolution, though - all that will do is burn CPU time for no reason.'""";
+                it's pointless to have this value lower than humidityResolution, though - all that will do is make the CPU work harder for no gain.""";
     public final ModConfigSpec.BooleanValue climateSamplerShortcuts;
     public static final String climateSamplerShortcutsName = "climateSamplerShortcuts";
     public static final String climateSamplerShortcutsTxt = """
@@ -283,8 +287,52 @@ public class CommonConfig {
               - Enabling/disabling does technically result in changed world generation, but it's only in extremely specific circumstances and in tiny areas. Regardless, it will
                 still be saved to world config.
               - Highly recommended to keep enabled, unless you're using a mod that changes the biome parameters of rivers and/or oceans.
-              - Note that, even if this is set to false, climate sampling for oceans will always be optimized by checking the continentalness noise only, since it's essentially a
-                core rule of ocean vs land.""";
+              - This does include compatibility with Custom Biome Parameters, but ONLY if you've changed the weirdness params of Rivers or the continentalness params of Oceans.
+                If your parameter changes to rivers/oceans include other parameters, then you must disable this - otherwise it may result in false positives/negatives.""";
+
+    public static final String sectionBandLimit = "bandLimit";
+    public static final String sectionBandLimitTxt = """
+             [sectionBandLimit] allows you to set a limit on the temperature bands generated; meaning that a fixed temperature will be used after X number of bands.
+              - Can be useful for simulating or complementing world borders, and are accurate based on band size. For instance, if bandSize was 2048 (default), bandPositionShift
+                is 0.25 (default) and the bandLimitUpperValue was 2, then the upper "border" starts at 4096 blocks North (Z = -4096) - assuming vertical bands are not enabled.
+             --------""";
+    public final ModConfigSpec.IntValue bandLimitUpperCount;
+    public static final String bandLimitUpperCountName = "bandLimitUpperCount";
+    public static final String bandLimitUpperCountTxt = """
+             
+             [bandLimitUpperCount] is used to set the "upper" limit of temperature bands.
+              - This is for bands in the Northern direction, or the Eastern direction if using vertical temperature bands.
+              - The default of 0 means disabled (no limit).
+              - Requires a little bit of math since it DOES consider the current 'bandPositionShift' setting. For example, lets say you're using the default 'bandPositionShift'
+                value of 0.25 (where origin is in the temperate zone of 'northern hemisphere'), and you want to simulate a "real earth-like" world where there is only a single
+                "hot" band and two "cold" bands at the edges, you would set this value to 2, because the first "cold" band towards the North (or East) is 2 bands away.""";
+    public final ModConfigSpec.DoubleValue bandLimitUpperValue;
+    public static final String bandLimitUpperValueName = "bandLimitUpperValue";
+    public static final String bandLimitUpperValueTxt = """
+             
+             [bandLimitUpperValue] is the forced temperature value for the upper temperature band limit.
+              - This is for bands in the Northern direction, or the Eastern direction if using vertical temperature bands.
+              - The default of -1.0 means "coldest".
+              - For the example already given in bandLimitUpperCount, i.e. a value of 2 to simulate 'real-world and northern-hemisphere start', you will want to keep this on -1.0.""";
+    public final ModConfigSpec.IntValue bandLimitLowerCount;
+    public static final String bandLimitLowerCountName = "bandLimitLowerCount";
+    public static final String bandLimitLowerCountTxt = """
+             
+             [bandLimitLowerCount] is used to set the "lower" limit of temperature bands.
+              - This is for bands in the Southern direction, or the Western direction if using vertical temperature bands.
+              - The default of 0 means disabled (no limit).
+              - Requires a little bit of math since it DOES consider the current 'bandPositionShift' setting. For example, if following the example already explained in
+                'bandLimitUpperCount' (i.e. simulate 'real-world and northern-hemisphere start'), you would set this to 6, because the first "cold" band towards the South (or West)
+                is 6 bands away.""";
+    public final ModConfigSpec.DoubleValue bandLimitLowerValue;
+    public static final String bandLimitLowerValueName = "bandLimitLowerValue";
+    public static final String bandLimitLowerValueTxt = """
+             
+             [bandLimitLowerValue] is the forced temperature value for the lower temperature band limit.
+              - This is for bands in the Southern direction, or the Western direction if using vertical temperature bands.
+              - The default of -1.0 means "coldest".
+              - For the example already given in bandLimitLowerCount, i.e. a value of 6 to simulate 'real-world and northern-hemisphere start', you will want to keep this on -1.0.""";
+
 
     public CommonConfig(final ModConfigSpec.Builder builder) {
         builder.push(sectionGlobal).comment(sectionGlobalTxt);
@@ -326,7 +374,7 @@ public class CommonConfig {
                 .defineInRange("bandAlgorithm", 1, 1, 1);
         noiseFactor = builder
                 .comment(noiseFactorTxt)
-                .defineInRange("noiseFactor", 100, 0, 1000);
+                .defineInRange("noiseFactor", 0.05, 0, 1000);
         distanceFunction = builder
                 .comment(distanceFunctionTxt)
                 .defineInRange("distanceFunction", 1, 0, 2);
@@ -368,7 +416,7 @@ public class CommonConfig {
         builder.push(sectionHumidityAlgo2).comment(sectionHumidityAlgo2Txt);
         humidityResolution = builder
                 .comment(humidityResolutionTxt)
-                .defineInRange("humidityResolution", 3, 1, 8);
+                .defineInRange("humidityResolution", 4, 1, 8);
         humidityRiverInfluence = builder
                 .comment(humidityRiverInfluenceTxt)
                 .defineInRange("humidityRiverInfluence", 0.4, 0.0, 5.0);
@@ -386,10 +434,25 @@ public class CommonConfig {
         builder.push(sectionClimateSamplerWorld).comment(sectionClimateSamplerWorldTxt);
         climateSamplerResolution = builder
                 .comment(climateSamplerResolutionTxt)
-                .defineInRange("climateSamplerResolution", -1, -1, 64);
+                .defineInRange("climateSamplerResolution", -2, -2, 64);
         climateSamplerShortcuts = builder
                 .comment(climateSamplerShortcutsTxt)
                 .define("climateSamplerShortcuts", true);
+        builder.pop();
+
+        builder.push(sectionBandLimit).comment(sectionBandLimitTxt);
+        bandLimitUpperCount = builder
+                .comment(bandLimitUpperCountTxt)
+                .defineInRange(bandLimitUpperCountName, 0, 0, Integer.MAX_VALUE);
+        bandLimitUpperValue = builder
+                .comment(bandLimitUpperValueTxt)
+                .defineInRange(bandLimitUpperValueName, -1.0, -1.0, 1.0);
+        bandLimitLowerCount = builder
+                .comment(bandLimitLowerCountTxt)
+                .defineInRange(bandLimitLowerCountName, 0, 0, Integer.MAX_VALUE);
+        bandLimitLowerValue = builder
+                .comment(bandLimitLowerValueTxt)
+                .defineInRange(bandLimitLowerValueName, -1.0, -1.0, 1.0);
         builder.pop();
     }
 }

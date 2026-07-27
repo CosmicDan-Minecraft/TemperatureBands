@@ -3,11 +3,8 @@ package github.cosmicdan.temperaturebands;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.tags.BiomeTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.RandomSequence;
-import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.level.biome.BiomeSource;
 import net.minecraft.world.level.biome.Climate;
 import net.minecraft.world.level.biome.MultiNoiseBiomeSource;
 import net.minecraft.world.level.levelgen.DensityFunction;
@@ -19,7 +16,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-import static github.cosmicdan.temperaturebands.TemperatureBands.CONFIG_GLOBAL;
 import static github.cosmicdan.temperaturebands.TemperatureBands.LOGGER;
 
 public class DimensionData {
@@ -30,11 +26,8 @@ public class DimensionData {
     private final @Nullable DensityFunctions.HolderHolder noiseTemperature;
     private final @Nullable DensityFunctions.HolderHolder noiseHumidity;
     // humidity-related things
-    public MultiNoiseBiomeSource biomeSource;
-    public final Set<Holder<Biome>> biomeOceans = new HashSet<>();
-    public final Set<Holder<Biome>> biomeRivers = new HashSet<>();
-
-    private static final String noneStringForBiomeDump = " - [NONE]";
+    private MultiNoiseBiomeSource biomeSource;
+    private RiverOceanBiomeHelper humidityBiomeHelper;
 
     @SuppressWarnings("LoggingSimilarMessage")
     public DimensionData(boolean isLevelReady, DimensionConfig config, ServerLevel level, NoiseRouter noiseRouter, @Nullable DensityFunctions.HolderHolder noiseTemperature, @Nullable DensityFunctions.HolderHolder noiseHumidity) {
@@ -49,41 +42,8 @@ public class DimensionData {
         if (config == null) {
             TbUtils.doCrash("Tried to create new DimensionData but provided config is null, eh?");
         } else if (isLevelReady && config.humidityAlgorithm() != 0) {
-            // setup and verification for humidity
             biomeSource = TbUtils.findMultiNoiseBiomeSource(level, true);
-            if (biomeSource != null) {
-                // fetch appropriate biomes for humidity
-                Set<Holder<Biome>> possibleBiomes = biomeSource.possibleBiomes();
-                for (Holder<Biome> biomeHolder : possibleBiomes) {
-                    if (biomeHolder.is(BiomeTags.IS_RIVER)) {
-                        biomeRivers.add(biomeHolder);
-                    } else if (biomeHolder.is(BiomeTags.IS_OCEAN)) {
-                        biomeOceans.add(biomeHolder);
-                    }
-                }
-                if (TemperatureBands.CONFIG_GLOBAL.dumpRiverAndOceanBiomes()) {
-                    LOGGER.info("List of all biomes with 'minecraft:is_river' tag for dimension '{}':", level.dimension().identifier());
-                    if (biomeRivers.isEmpty())
-                        LOGGER.info(noneStringForBiomeDump);
-                    else {
-                        for (Holder<Biome> biomeHolder : biomeRivers) {
-                            if (biomeHolder.unwrapKey().isPresent()) {
-                                LOGGER.info(" - {}", biomeHolder.unwrapKey().get().identifier());
-                            }
-                        }
-                    }
-                    LOGGER.info("List of all biomes with 'minecraft:is_ocean' tag for dimension '{}':", level.dimension().identifier());
-                    if (biomeOceans.isEmpty())
-                        LOGGER.info(noneStringForBiomeDump);
-                    else {
-                        for (Holder<Biome> biomeHolder : biomeOceans) {
-                            if (biomeHolder.unwrapKey().isPresent()) {
-                                LOGGER.info(" - {}", biomeHolder.unwrapKey().get().identifier());
-                            }
-                        }
-                    }
-                }
-            }
+            TemperatureBands.logDebug("DimensionData finalized for " + level.dimension().identifier());
         }
     }
 
@@ -162,6 +122,14 @@ public class DimensionData {
         return biomeSource;
     }
 
+    public RiverOceanBiomeHelper getBiomeHelper() {
+        if (humidityBiomeHelper == null) {
+            // happens sometimes e.g. when C2ME is installed
+            humidityBiomeHelper = new RiverOceanBiomeHelper(level, TbUtils.findMultiNoiseBiomeSource(level, false));
+        }
+        return humidityBiomeHelper;
+    }
+
     public Climate.Sampler getClimateSampler() {
         return level.getChunkSource().randomState().sampler();
     }
@@ -178,5 +146,14 @@ public class DimensionData {
                 "level=" + level +
                 '(' + level.hashCode() + ')' +
                 '}';
+    }
+
+    public boolean mightBeOcean(float continentalness) {
+        return getBiomeHelper().mightBeOcean(continentalness);
+    }
+
+
+    public boolean mightBeRiver(float weirdness) {
+        return getBiomeHelper().mightBeRiver(weirdness);
     }
 }
