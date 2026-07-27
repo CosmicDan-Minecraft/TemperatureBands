@@ -224,25 +224,25 @@ public class CommonConfig {
 
         builder.push(sectionWorld).comment(sectionWorldTxt);
         bandSize = builder
-                .comment(bandSizeTxt)
+                .comment(bandSizeTxt + "\nDefault: 2048")
                 .defineInRange("bandSize", 2048, 512, 32768);
         useVerticalBands = builder
                 .comment(useVerticalBandsTxt)
                 .define("useVerticalBands", false);
         bandPositionShift = builder
-                .comment(bandPositionShiftTxt)
+                .comment(bandPositionShiftTxt + "\nDefault: 0.25")
                 .defineInRange("bandPositionShift", 0.25, 0.0, 1.0);
         tempRange = builder
-                .comment(tempRangeTxt)
+                .comment(tempRangeTxt + "\nDefault: 0.65")
                 .defineInRange("tempRange", 0.65, 0.30, 1.0);
         tempGradeShift = builder
-                .comment(tempGradeShiftTxt)
+                .comment(tempGradeShiftTxt + "\nDefault: -0.05")
                 .defineInRange("tempGradeShift", -0.05, -0.5, 0.5);
         bandAlgorithm = builder
-                .comment(bandAlgorithmTxt)
+                .comment(bandAlgorithmTxt + "\nDefault: 1")
                 .defineInRange("bandAlgorithm", 1, 1, 1);
         noiseFactor = builder
-                .comment(noiseFactorTxt)
+                .comment(noiseFactorTxt + "\nDefault: 0.05")
                 .defineInRange("noiseFactor", 0.05, 0, 1000);
         dimBlacklist = builder
                 .comment(dimBlacklistTxt)
@@ -251,46 +251,46 @@ public class CommonConfig {
                 .comment(dimBlacklistAsWhitelistTxt)
                 .define("dimBlacklistAsWhitelist", false);
         vanillaNoiseOverride = builder
-                .comment(vanillaNoiseOverrideTxt)
+                .comment(vanillaNoiseOverrideTxt + "\nDefault: 1")
                 .defineInRange("vanillaNoiseOverride", 1, 0, 2);
         builder.pop();
 
         builder.push(sectionAlgo1).comment(sectionAlgo1Txt);
         algo1bandVariance = builder
-                .comment(algo1bandVarianceTxt)
+                .comment(algo1bandVarianceTxt + "\nDefault: 32")
                 .defineInRange("bandVariance", 32, 0, 16384);
         algo1bandVarianceSteepness = builder
-                .comment(algo1bandVarianceSteepnessTxt)
+                .comment(algo1bandVarianceSteepnessTxt + "\nDefault: 0.2")
                 .defineInRange("algo1bandVarianceSteepness", 0.2, 0.1, 10.0);
         builder.pop();
 
         builder.push(sectionHumidityWorld).comment(sectionHumidityWorldTxt);
         humidityAlgorithm = builder
-                .comment(humidityAlgorithmTxt)
+                .comment(humidityAlgorithmTxt + "\nDefault: 1")
                 .defineInRange("humidityAlgorithm", 1, 0, 1);
         humidityTempWeight = builder
-                .comment(humidityTempWeightTxt)
+                .comment(humidityTempWeightTxt + "\nDefault: 0.4")
                 .defineInRange("humidityTempWeight", 0.4, 0.0, 1.0);
         builder.pop();
 
         builder.push(sectionHumidityAlgo1).comment(sectionHumidityAlgo1Txt);
         humidityAlgo1MimicScale = builder
-                .comment(humidityAlgo1MimicScaleTxt)
+                .comment(humidityAlgo1MimicScaleTxt + "\nDefault: 0.5")
                 .defineInRange("humidityAlgo1MimicScale", 0.5, 0.1, 1.0);
         builder.pop();
 
         builder.push(sectionBandLimit).comment(sectionBandLimitTxt);
         bandLimitUpperCount = builder
-                .comment(bandLimitUpperCountTxt)
+                .comment(bandLimitUpperCountTxt + "\nDefault: 0")
                 .defineInRange(bandLimitUpperCountName, 0, 0, Integer.MAX_VALUE);
         bandLimitUpperValue = builder
-                .comment(bandLimitUpperValueTxt)
+                .comment(bandLimitUpperValueTxt + "\nDefault: -1.0")
                 .defineInRange(bandLimitUpperValueName, -1.0, -1.0, 1.0);
         bandLimitLowerCount = builder
-                .comment(bandLimitLowerCountTxt)
+                .comment(bandLimitLowerCountTxt + "\nDefault: 0")
                 .defineInRange(bandLimitLowerCountName, 0, 0, Integer.MAX_VALUE);
         bandLimitLowerValue = builder
-                .comment(bandLimitLowerValueTxt)
+                .comment(bandLimitLowerValueTxt + "\nDefault: -1.0")
                 .defineInRange(bandLimitLowerValueName, -1.0, -1.0, 1.0);
         builder.pop();
     }
