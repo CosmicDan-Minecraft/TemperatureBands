@@ -200,7 +200,7 @@ public class TbUtils {
 
     public static void benchmarkStart(int batchesSize, int chunks) {
         if (TemperatureBands.isClientSide() && TbUtilsClient.isOnWorldCreateScreen()) {
-            TemperatureBands.LOGGER.info("Starting WorldPreview benchmark, waiting for {} chunks via {} batches to finish...", chunks, batchesSize);
+            TemperatureBands.LOGGER.info("Starting WorldPreview benchmark, waiting for {} samples via {} batches to finish...", chunks, batchesSize);
             benchmarkActive = true;
             benchmarkStart = new AtomicReference<>(Instant.now());
             batchesTotal.set(batchesSize);
@@ -219,7 +219,7 @@ public class TbUtils {
                 double timeMillis = Duration.between(benchmarkStart.get(), Instant.now()).abs().toMillis();
                 long cacheHitCount = BiomeProximityGenerator.benchmarkSampleCacheHitCount.get();
                 long cacheTotalCount = BiomeProximityGenerator.benchmarkSampleTotalCount.get();
-                TemperatureBands.LOGGER.info("WorldPreview benchmark finished. {} chunks via {} batches finished in {} seconds. Average generation speed of {} chunks per second. Sampler cache hit-rate was {}% ({} over {})." ,
+                TemperatureBands.LOGGER.info("WorldPreview benchmark finished. {} samples via {} batches finished in {} seconds. Average speed of {} samples per second. Sampler cache hit-rate was {}% ({} over {})." ,
                         chunksTotal,
                         batchesTotal,
                         String.format("%.2f", timeMillis / 1000.0),
