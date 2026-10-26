@@ -178,11 +178,14 @@ public class TbUtils {
         return null;
     }
 
+    // for World Preview Benchmark (doBenchmark)
     public static volatile boolean benchmarkActive = false;
     public static AtomicInteger batchesTotal = new AtomicInteger(0);
     public static AtomicInteger batchesDone = new AtomicInteger(-1);
     public static AtomicInteger chunksTotal = new AtomicInteger(0);
     private static AtomicReference<Instant> benchmarkStart;
+    // for Level Load Benchmark (doLevelLoadBenchmark)
+    public static long levelLoadBenchmarkStart = -1L;
 
     public static void benchmarkReset() {
         if (TemperatureBands.isClientSide() && TbUtilsClient.isOnWorldCreateScreen()) {

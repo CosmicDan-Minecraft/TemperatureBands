@@ -15,6 +15,15 @@ public class CommonConfig {
               - Do not scroll or resize the window while World Preview is active, it will cause the benchmark to fail or never complete. To restart benchmark, simply enter
                 the World Preview settings menu then exit out. Wait for all visible chunks to generate to see the results in the log/console.
               - If Humidity algorithm is not advanced, or the climate sampler cache is disabled, the 'cache hit-rate' part of results will be incorrect - ignore it.""";
+    public final ModConfigSpec.BooleanValue doLevelLoadBenchmark;
+    public static final String doLevelLoadBenchmarkTxt = """
+             
+             [doLevelLoadBenchmark] will, when true, perform a simple benchmark (time measurement) of initial level loading. In particular, it includes the
+                generation/loading of spawn chunks.
+              - Works on both server and client, unlike the World Preview benchmark.
+              - While the result will appear on any level load, new or existing, it's only useful when creating a world (to record a baseline) and then recreating that
+                world (i.e. same seed) with some changed worldgen settings (e.g. Temperature Bands config).
+              - Enabled by default since it costs practically nothing. Only a single line will be written to the log once the level has finished loading.""";
     public final ModConfigSpec.BooleanValue copyConfigOnRecreateWorld;
     public static final String copyConfigOnRecreateWorldTxt = """
              
@@ -347,6 +356,9 @@ public class CommonConfig {
         doBenchmark = builder
                 .comment(doBenchmarkTxt)
                 .define("doBenchmark", false);
+        doLevelLoadBenchmark = builder
+                .comment(doLevelLoadBenchmarkTxt)
+                .define("doLevelLoadBenchmark", true);
         copyConfigOnRecreateWorld = builder
                 .comment(copyConfigOnRecreateWorldTxt)
                 .define("copyConfigOnRecreateWorld", true);
