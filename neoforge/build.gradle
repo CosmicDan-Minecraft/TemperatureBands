@@ -47,9 +47,17 @@ dependencies {
     forgeRuntimeLibrary("com.github.ben-manes.caffeine:caffeine:3.2.4")
     include "com.github.ben-manes.caffeine:caffeine:3.2.4"
     
+    // JOL (temp for measuring object size)
+    //forgeRuntimeLibrary 'org.openjdk.jol:jol-core:0.17'
+    //include 'org.openjdk.jol:jol-core:0.17'
+    
     // World Preview (NeoForge port via Modrinth)
     modImplementation("maven.modrinth:world-preview-neoforged-(unofficial):y3St0do0")
-    modLocalRuntime("curse.maven:zfastnoise-1460602:7976498")
+    // Chunky
+    localRuntime "curse.maven:chunky-pregenerator-forge-485681:6383261"
+    
+    // Performance mods
+    //modLocalRuntime("curse.maven:zfastnoise-1460602:7976498")
     
     // TESTING MODS
     // Tectonic
@@ -59,8 +67,8 @@ dependencies {
     //modImplementation files('lithosphere 1.6 17.06.2025 (1.20.5 - 1.21.5).jar')
     // Larion
     //modImplementation "curse.maven:larion-world-generation-1150582:6315772"
-    // Chunky
-    localRuntime "curse.maven:chunky-pregenerator-forge-485681:6383261"
+    // Continents
+    //modImplementation "curse.maven:continents-682515:8396863"
 
     // Compat. testing (modded BiomeSource)
     //modImplementation "curse.maven:blueprint-382216:8048607"

@@ -67,6 +67,8 @@ subprojects {
         mappings loom.officialMojangMappings()
         // Caffeine library (fast LruCache) - https://github.com/ben-manes/caffeine
         implementation("com.github.ben-manes.caffeine:caffeine:3.2.4")
+        // JOL (only for dev, for measuring object sizes)
+        //implementation 'org.openjdk.jol:jol-core:0.17'
     }
 
     java {

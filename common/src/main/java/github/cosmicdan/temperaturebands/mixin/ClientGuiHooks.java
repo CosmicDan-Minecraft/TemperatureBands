@@ -1,25 +1,11 @@
 package github.cosmicdan.temperaturebands.mixin;
 
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import com.mojang.serialization.Lifecycle;
 import github.cosmicdan.temperaturebands.DimensionConfig;
 import github.cosmicdan.temperaturebands.TemperatureBands;
-import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.LevelLoadingScreen;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.worldselection.CreateWorldScreen;
 import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
 import net.minecraft.client.gui.screens.worldselection.WorldSelectionList;
-import net.minecraft.core.LayeredRegistryAccess;
-import net.minecraft.network.chat.Component;
-import net.minecraft.server.RegistryLayer;
-import net.minecraft.server.level.progress.StoringChunkProgressListener;
-import net.minecraft.world.level.storage.PrimaryLevelData;
-import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
