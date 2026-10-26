@@ -196,14 +196,14 @@ public class BiomeProximityGenerator implements IGenerator {
 
     public @Nullable ClimateTargetPointEx sampleClimateCached(int blockX, int blockZ) {
         long packedPos = TbUtils.packBlockXZtoLong(blockX, blockZ);
-        if (TbUtils.benchmarkActive)
+        if (CONFIG_GLOBAL.doBenchmark() && CONFIG_GLOBAL.benchmarkCacheStats() && TbUtils.benchmarkActive)
             benchmarkSampleTotalCount.getAndIncrement();
         ClimateTargetPointEx result = climateSamplerCache.getIfPresent(packedPos);
         if (result == null) {
             result = sampleClimate(packedPos);
             if (result != null)
                 climateSamplerCache.put(packedPos, result);
-        } else if (TbUtils.benchmarkActive)
+        } else if (CONFIG_GLOBAL.doBenchmark() && CONFIG_GLOBAL.benchmarkCacheStats() && TbUtils.benchmarkActive)
             benchmarkSampleCacheHitCount.getAndIncrement();
         return result;
     }

@@ -222,15 +222,25 @@ public class TbUtils {
                 double timeMillis = Duration.between(benchmarkStart.get(), Instant.now()).abs().toMillis();
                 long cacheHitCount = BiomeProximityGenerator.benchmarkSampleCacheHitCount.get();
                 long cacheTotalCount = BiomeProximityGenerator.benchmarkSampleTotalCount.get();
-                TemperatureBands.LOGGER.info("WorldPreview benchmark finished. {} samples via {} batches finished in {} seconds. Average speed of {} samples per second. Sampler cache hit-rate was {}% ({} over {})." ,
-                        chunksTotal,
-                        batchesTotal,
-                        String.format("%.2f", timeMillis / 1000.0),
-                        String.format("%.2f", chunksTotal.get() / (timeMillis / 1000.0)),
-                        String.format("%.2f", (cacheHitCount / (double) cacheTotalCount) * 100),
-                        String.format("%,d", cacheHitCount) + " cached reads",
-                        String.format("%,d", cacheTotalCount) + " total sample count"
-                );
+                if (CONFIG_GLOBAL.benchmarkCacheStats()) {
+                    TemperatureBands.LOGGER.info("WorldPreview benchmark finished. {} samples via {} batches finished in {} seconds. Average speed of {} samples per second. Sampler cache hit-rate was {}% ({} over {})." ,
+                            chunksTotal,
+                            batchesTotal,
+                            String.format("%.2f", timeMillis / 1000.0),
+                            String.format("%.2f", chunksTotal.get() / (timeMillis / 1000.0)),
+                            String.format("%.2f", (cacheHitCount / (double) cacheTotalCount) * 100),
+                            String.format("%,d", cacheHitCount) + " cached reads",
+                            String.format("%,d", cacheTotalCount) + " total sample count"
+                    );
+                } else {
+                    TemperatureBands.LOGGER.info("WorldPreview benchmark finished. {} samples via {} batches finished in {} seconds. Average speed of {} samples per second." ,
+                            chunksTotal,
+                            batchesTotal,
+                            String.format("%.2f", timeMillis / 1000.0),
+                            String.format("%.2f", chunksTotal.get() / (timeMillis / 1000.0))
+                    );
+                }
+
                 batchesTotal.set(0);
                 batchesDone.set(-1);
                 chunksTotal.set(0);
