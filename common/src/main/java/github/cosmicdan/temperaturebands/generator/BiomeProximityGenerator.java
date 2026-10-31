@@ -1,37 +1,23 @@
 package github.cosmicdan.temperaturebands.generator;
 
 import com.github.benmanes.caffeine.cache.*;
-import github.cosmicdan.temperaturebands.ClimateTargetPointEx;
 import github.cosmicdan.temperaturebands.DimensionConfig;
 import github.cosmicdan.temperaturebands.DimensionData;
 import github.cosmicdan.temperaturebands.TbUtils;
 import github.cosmicdan.temperaturebands.DensityFunctionEx;
-import net.minecraft.core.Holder;
-import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.level.biome.Climate;
+import github.cosmicdan.temperaturebands.waterlocator.IWaterLocator;
+import github.cosmicdan.temperaturebands.waterlocator.SimpleWaterLocator;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import org.apache.commons.lang3.tuple.Pair;
-import org.jetbrains.annotations.Nullable;
 
-import java.util.Set;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicLong;
-
-import static github.cosmicdan.temperaturebands.TemperatureBands.CONFIG_GLOBAL;
 
 public class BiomeProximityGenerator implements IGenerator {
     public static final int blockY = 64; // TODO: Change to zero. Or just use 3D cache? Make it configurable. 3D cache improves support but costs twice as much cache space.
 
-    public static AtomicLong benchmarkSampleCacheHitCount = new AtomicLong(0);
-    public static AtomicLong benchmarkSampleTotalCount = new AtomicLong(0);
-
     private final Config config;
     // initialized in constructor and/or derived from config arg
-    private final int samplerResolution;
-    private final Cache<Long, ClimateTargetPointEx> climateSamplerCache;
-    private final boolean firstBiomeOnly;
-    private final int noisePartSize;
-    private final int noisePartSizeMiddleOffset;
+    private final IWaterLocator waterLocator;
 
     private DimensionData dimData;
     private boolean biomeSourceError = false;
@@ -66,25 +52,9 @@ public class BiomeProximityGenerator implements IGenerator {
 
     public BiomeProximityGenerator(Config config) {
         this.config = config;
-        if (config.climateSamplerResolutionRaw == -1)
-            this.samplerResolution = config.noiseResolution * config.noiseResolution * config.noiseResolution;
-        else if (config.climateSamplerResolutionRaw == -2)
-            this.samplerResolution = config.noiseResolution * config.noiseResolution;
-        else if (config.climateSamplerResolutionRaw == 0)
-            this.samplerResolution = TbUtils.doCrash("climateSamplerResolution cannot be zero, please fix your config!");
-        else
-            this.samplerResolution =  config.climateSamplerResolutionRaw;
-
-        if (CONFIG_GLOBAL.climateSamplerCacheSize() > 0) {
-            climateSamplerCache = Caffeine.newBuilder()
-                    .maximumWeight((long) CONFIG_GLOBAL.climateSamplerCacheSize() * 1024 * 1024)
-                    .weigher((Long key, ClimateTargetPointEx value) -> value.sizeWithLongKey())
-                    .build();
-        } else
-            climateSamplerCache = null;
-        firstBiomeOnly = (config.secondBiomeInfluence == 0.0);
-        noisePartSize = config.noiseResolution * config.noiseResolution;
-        noisePartSizeMiddleOffset = (int)Math.round(noisePartSize * 0.5);
+        if (true) {
+            waterLocator = new SimpleWaterLocator(config);
+        }
     }
 
     private void onFirstCompute(DimensionData dimData) {
@@ -101,11 +71,10 @@ public class BiomeProximityGenerator implements IGenerator {
             onFirstCompute(dimData);
         if (biomeSourceError)
             return config.owner.computeOriginal(context);
-        int originPosX = scalePosForResolution(context.blockX(), config.noiseResolution, noisePartSize, noisePartSizeMiddleOffset);
-        int originPosZ = scalePosForResolution(context.blockZ(), config.noiseResolution, noisePartSize, noisePartSizeMiddleOffset);
 
         // default value if biome wasn't found
         double noiseValue = -1.0;
+        /*
         Pair<Double, Double> nearestFirstAndMaybeSecondBiomeDistance = getDistanceToNearestBiomesSimple(
                 originPosX,
                 originPosZ,
@@ -114,6 +83,9 @@ public class BiomeProximityGenerator implements IGenerator {
                 config.biomeSearchDistance,
                 samplerResolution
         );
+         */
+        Pair<Double, Double> nearestFirstAndMaybeSecondBiomeDistance = waterLocator.findNearestOceanRiver(context.blockX(), context.blockZ(), dimData);
+
         double nearestFirstBiome = nearestFirstAndMaybeSecondBiomeDistance.getLeft();
         double nearestSecondBiomeMaybe = nearestFirstAndMaybeSecondBiomeDistance.getRight();
         // Humidity has 5 levels, ranging from -1.0 (least humid) to +1.0 (most humid)
@@ -151,88 +123,5 @@ public class BiomeProximityGenerator implements IGenerator {
         }
 
         return noiseValue;
-    }
-
-    private int scalePosForResolution(int pos, int resolution, int partSize, int partSizeMid) {
-        int posPreScaled = (pos >> resolution);
-        return (posPreScaled * partSize) + partSizeMid;
-    }
-
-    // Simple 2D Archimedean spiral check
-    private Pair<Double, Double> getDistanceToNearestBiomesSimple(int originX, int originZ, Set<Holder<Biome>> firstBiomes, Set<Holder<Biome>> secondBiomes, int searchRadiusXZ, int searchStep) {
-        double angle = 0;
-        double radius = 0;
-        double firstBiomeDistance = -1.0;
-        double secondBiomeDistance = -1.0;
-
-        while (radius < searchRadiusXZ) {
-            double xOffset = radius * Math.cos(angle);
-            double zOffset = radius * Math.sin(angle);
-            int thisX = (int) Math.round(originX + xOffset);
-            int thisZ = (int) Math.round(originZ + zOffset);
-            Holder<Biome> holder = getNoiseBiome(thisX, thisZ);
-            if (holder != null && firstBiomeDistance == -1.0 && firstBiomes.contains(holder))
-                firstBiomeDistance = TbUtils.calculateBlockDistance(config.distanceFunction, originX, thisX, originZ, thisZ);
-            else if (holder != null && !firstBiomeOnly && secondBiomeDistance == -1.0 && secondBiomes.contains(holder))
-                secondBiomeDistance = TbUtils.calculateBlockDistance(config.distanceFunction, originX, thisX, originZ, thisZ);
-
-            if (firstBiomeDistance > -1.0 && (secondBiomeDistance > -1.0 || firstBiomeOnly))
-                return Pair.of(firstBiomeDistance, secondBiomeDistance);
-
-            angle += 0.5;
-            radius += (searchStep) / 6.28; // 6.28 = 2π
-        }
-        return Pair.of(firstBiomeDistance, secondBiomeDistance);
-    }
-
-    private @Nullable Holder<Biome> getNoiseBiome(int blockX, int blockZ) {
-        final ClimateTargetPointEx targetPointEx;
-        if (CONFIG_GLOBAL.climateSamplerCacheSize() > 0)
-            targetPointEx = sampleClimateCached(blockX, blockZ);
-        else
-            targetPointEx = sampleClimate(TbUtils.packBlockXZtoLong(blockX, blockZ));
-        return targetPointEx == null ? null : dimData.getBiomeSource().parameters().findValue(targetPointEx.targetPoint());
-    }
-
-    public @Nullable ClimateTargetPointEx sampleClimateCached(int blockX, int blockZ) {
-        long packedPos = TbUtils.packBlockXZtoLong(blockX, blockZ);
-        if (CONFIG_GLOBAL.doBenchmark() && CONFIG_GLOBAL.benchmarkCacheStats() && TbUtils.benchmarkActive)
-            benchmarkSampleTotalCount.getAndIncrement();
-        ClimateTargetPointEx result = climateSamplerCache.getIfPresent(packedPos);
-        if (result == null) {
-            result = sampleClimate(packedPos);
-            if (result != null)
-                climateSamplerCache.put(packedPos, result);
-        } else if (CONFIG_GLOBAL.doBenchmark() && CONFIG_GLOBAL.benchmarkCacheStats() && TbUtils.benchmarkActive)
-            benchmarkSampleCacheHitCount.getAndIncrement();
-        return result;
-    }
-
-    private @Nullable ClimateTargetPointEx sampleClimateFuture(Long packedBlockPos, CompletableFuture<ClimateTargetPointEx> future) {
-        if (future.isCancelled()) {
-            return null;
-        }
-        return sampleClimate(packedBlockPos);
-    }
-
-    public final @Nullable ClimateTargetPointEx sampleClimate(long packedBlockPos) {
-        // Note: if firstBiomeOnly, we're just looking for oceans so only sampling continentalness is required
-        int blockX = TbUtils.unpackBlockFromLongX(packedBlockPos);
-        int blockZ = TbUtils.unpackBlockFromLongZ(packedBlockPos);
-        DensityFunction.SinglePointContext singlePointContext = new DensityFunction.SinglePointContext(blockX, BiomeProximityGenerator.blockY, blockZ);
-        float continentalnessResult = (float) dimData.getClimateSampler().continentalness().compute(singlePointContext);
-        float weirdnessResult = firstBiomeOnly ? 0.0f : (float) dimData.getClimateSampler().weirdness().compute(singlePointContext);
-        boolean doShortcuts = dimData.config.climateSamplerShortcuts();
-        if (!doShortcuts || dimData.mightBeOcean(continentalnessResult) || dimData.mightBeRiver(weirdnessResult)) {
-            float temperatureResult = firstBiomeOnly || doShortcuts ? 0.0f : (float) dimData.getTemperatureNoise().compute(singlePointContext);
-            float humidityResult = firstBiomeOnly || doShortcuts ? 0.0f : (float) config.owner.computeOriginal(singlePointContext); // always use original non-overridden densityfunctions for humidity
-            float erosionResult = firstBiomeOnly ? 0.0f : (float) dimData.getClimateSampler().erosion().compute(singlePointContext);
-            float depthResult = firstBiomeOnly ? 0.0f : (float) dimData.getClimateSampler().depth().compute(singlePointContext);
-            Climate.TargetPoint sampleResultRaw = Climate.target(temperatureResult, humidityResult, continentalnessResult, erosionResult, depthResult, weirdnessResult);
-            return new ClimateTargetPointEx(sampleResultRaw, false);
-        } else {
-            // point is definitely not an ocean or river
-            return null;
-        }
     }
 }
