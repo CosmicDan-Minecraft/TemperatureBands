@@ -20,6 +20,7 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static github.cosmicdan.temperaturebands.TemperatureBands.CONFIG_GLOBAL;
@@ -184,6 +185,9 @@ public class TbUtils {
     public static AtomicInteger batchesDone = new AtomicInteger(-1);
     public static AtomicInteger chunksTotal = new AtomicInteger(0);
     private static AtomicReference<Instant> benchmarkStart;
+    // for sampler cache stats
+    public static AtomicLong benchmarkSampleCacheHitCount = new AtomicLong(0);
+    public static AtomicLong benchmarkSampleTotalCount = new AtomicLong(0);
     // for Level Load Benchmark (doLevelLoadBenchmark)
     public static long levelLoadBenchmarkStart = -1L;
 
@@ -196,8 +200,8 @@ public class TbUtils {
             batchesTotal.set(0);
             batchesDone.set(-1);
             chunksTotal.set(0);
-            BiomeProximityGenerator.benchmarkSampleTotalCount.set(0);
-            BiomeProximityGenerator.benchmarkSampleCacheHitCount.set(0);
+            benchmarkSampleTotalCount.set(0);
+            benchmarkSampleCacheHitCount.set(0);
         }
     }
 
@@ -209,8 +213,8 @@ public class TbUtils {
             batchesTotal.set(batchesSize);
             batchesDone.set(0);
             chunksTotal.set(chunks);
-            BiomeProximityGenerator.benchmarkSampleTotalCount.set(0);
-            BiomeProximityGenerator.benchmarkSampleCacheHitCount.set(0);
+            benchmarkSampleTotalCount.set(0);
+            benchmarkSampleCacheHitCount.set(0);
         }
     }
 
@@ -220,8 +224,8 @@ public class TbUtils {
             if (batchesDone.get() >= batchesTotal.get()) {
                 benchmarkActive = false;
                 double timeMillis = Duration.between(benchmarkStart.get(), Instant.now()).abs().toMillis();
-                long cacheHitCount = BiomeProximityGenerator.benchmarkSampleCacheHitCount.get();
-                long cacheTotalCount = BiomeProximityGenerator.benchmarkSampleTotalCount.get();
+                long cacheHitCount = benchmarkSampleCacheHitCount.get();
+                long cacheTotalCount = benchmarkSampleTotalCount.get();
                 if (CONFIG_GLOBAL.benchmarkCacheStats()) {
                     TemperatureBands.LOGGER.info("WorldPreview benchmark finished. {} samples via {} batches finished in {} seconds. Average speed of {} samples per second. Sampler cache hit-rate was {}% ({} over {})." ,
                             chunksTotal,
