@@ -43,17 +43,14 @@ public class TbUtils {
         return outputCsv;
     }
 
-    public static double calculateBlockDistance(int configuredDistanceFunction, int startX, int endX, int startZ, int endZ) {
+    public static double calculateBlockDistance(double configuredDistanceFunction, double startX, double endX, double startZ, double endZ) {
         if (configuredDistanceFunction == 0) {
             // Manhattan distance
             return Math.abs(startX - endX) + Math.abs(startZ - endZ);
-        } else if (configuredDistanceFunction == 2) {
-            // Pure (hypotenuse)
-            return Math.hypot(Math.abs(startX - endX), Math.abs(startZ - endZ));
-        } else {
+        } else if (configuredDistanceFunction == 1) {
             // Octile (diagonal first then cardinal)
-            long distanceX = Math.abs(startX - endX);
-            long distanceZ = Math.abs(startZ - endZ);
+            double distanceX = Math.abs(startX - endX);
+            double distanceZ = Math.abs(startZ - endZ);
             double straightCost = 1.0;
             double diagonalCost = Math.sqrt(2);
 
@@ -62,6 +59,14 @@ public class TbUtils {
             } else {
                 return ((diagonalCost * distanceX) + (straightCost * (distanceZ - distanceX)));
             }
+        } else if (configuredDistanceFunction == 2) {
+            // Pure (Euclidean Safe)
+            return Math.hypot(Math.abs(startX - endX), Math.abs(startZ - endZ));
+        } else { // 3
+            // Optimal (Euclidean Fast)
+            double dx = endX - startX;
+            double dz = endZ - startZ;
+            return Math.sqrt((dx * dx) + (dz * dz));
         }
     }
 
