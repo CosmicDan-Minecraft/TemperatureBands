@@ -53,6 +53,7 @@ dependencies {
     
     // World Preview (NeoForge port via Modrinth)
     modImplementation("maven.modrinth:world-preview-neoforged-(unofficial):y3St0do0")
+    
     // Chunky
     localRuntime "curse.maven:chunky-pregenerator-forge-485681:6383261"
     
@@ -61,8 +62,15 @@ dependencies {
     
     // TESTING MODS
     // Tectonic
-    //modImplementation("curse.maven:lithostitched-936015:8252082")
-    //modImplementation("curse.maven:tectonic-686836:7903156")
+    //modImplementation("curse.maven:lithostitched-936015:9170709")
+    //include("curse.maven:lithostitched-936015:9170709")
+    //modImplementation("curse.maven:tectonic-686836:8855043")
+    //include("curse.maven:tectonic-686836:8855043")
+    //modImplementation "maven.modrinth:apollib:1.2.0-neoforge-21.1"
+    //include "maven.modrinth:apollib:1.2.0-neoforge-21.1"
+    //implementation "de.marhali:json5-java:3.0.0"
+    //include "de.marhali:json5-java:3.0.0"
+    //forgeRuntimeLibrary "de.marhali:json5-java:3.0.0"
     // Lithosphere
     //modImplementation files('lithosphere 1.6 17.06.2025 (1.20.5 - 1.21.5).jar')
     // Larion

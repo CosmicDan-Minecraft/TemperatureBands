@@ -1,10 +1,10 @@
 package github.cosmicdan.temperaturebands;
 
-import github.cosmicdan.temperaturebands.generator.BiomeProximityGenerator;
 import net.minecraft.CrashReport;
 import net.minecraft.ReportedException;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.biome.BiomeSource;
+import net.minecraft.world.level.biome.Climate;
 import net.minecraft.world.level.biome.MultiNoiseBiomeSource;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.DensityFunctions;
@@ -17,11 +17,14 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import static github.cosmicdan.temperaturebands.TemperatureBands.CONFIG_GLOBAL;
 import static github.cosmicdan.temperaturebands.TemperatureBands.LOGGER;
@@ -184,15 +187,66 @@ public class TbUtils {
         return null;
     }
 
+    public static List<Integer> intListDeserialize(String listRaw) {
+        if (listRaw == null || listRaw.trim().isEmpty())
+            return List.of();
+
+        return Arrays.stream(listRaw.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(Integer::parseInt)
+                .collect(Collectors.toList());
+    }
+
+    public static String intListSerialize(List<? extends Integer> list) {
+        if (list == null || list.isEmpty()) {
+            return "";
+        }
+        return list.stream()
+                .map(String::valueOf) // Equivalent to String.valueOf(integer)
+                .collect(Collectors.joining(","));
+    }
+
+    public static void determine2dDimensions(Climate.Sampler sampler, boolean[] isDimension2d) {
+        DensityFunction.SinglePointContext firstContext = new DensityFunction.SinglePointContext(0, 0, 0);
+        Climate.TargetPoint firstPoint = Climate.target(
+                (float) sampler.temperature().compute(firstContext),
+                0.0f,
+                (float) sampler.continentalness().compute(firstContext),
+                (float) sampler.erosion().compute(firstContext),
+                (float) sampler.depth().compute(firstContext),
+                (float) sampler.weirdness().compute(firstContext)
+        );
+        DensityFunction.SinglePointContext secondContext = new DensityFunction.SinglePointContext(0, 200, 0);
+        Climate.TargetPoint secondPoint = Climate.target(
+                (float) sampler.temperature().compute(secondContext),
+                0.0f,
+                (float) sampler.continentalness().compute(secondContext),
+                (float) sampler.erosion().compute(secondContext),
+                (float) sampler.depth().compute(secondContext),
+                (float) sampler.weirdness().compute(secondContext)
+        );
+
+        if (firstPoint.temperature() == secondPoint.temperature())
+            isDimension2d[0] = true;
+        if (firstPoint.humidity() == secondPoint.humidity())
+            isDimension2d[1] = true;
+        if (firstPoint.continentalness() == secondPoint.continentalness())
+            isDimension2d[2] = true;
+        if (firstPoint.erosion() == secondPoint.erosion())
+            isDimension2d[3] = true;
+        if (firstPoint.depth() == secondPoint.depth())
+            isDimension2d[4] = true;
+        if (firstPoint.weirdness() == secondPoint.weirdness())
+            isDimension2d[5] = true;
+    }
+
     // for World Preview Benchmark (doBenchmark)
     public static volatile boolean benchmarkActive = false;
     public static AtomicInteger batchesTotal = new AtomicInteger(0);
     public static AtomicInteger batchesDone = new AtomicInteger(-1);
     public static AtomicInteger chunksTotal = new AtomicInteger(0);
     private static AtomicReference<Instant> benchmarkStart;
-    // for sampler cache stats
-    public static AtomicLong benchmarkSampleCacheHitCount = new AtomicLong(0);
-    public static AtomicLong benchmarkSampleTotalCount = new AtomicLong(0);
     // for Level Load Benchmark (doLevelLoadBenchmark)
     public static long levelLoadBenchmarkStart = -1L;
 
@@ -205,8 +259,6 @@ public class TbUtils {
             batchesTotal.set(0);
             batchesDone.set(-1);
             chunksTotal.set(0);
-            benchmarkSampleTotalCount.set(0);
-            benchmarkSampleCacheHitCount.set(0);
         }
     }
 
@@ -214,42 +266,32 @@ public class TbUtils {
         if (TemperatureBands.isClientSide() && TbUtilsClient.isOnWorldCreateScreen()) {
             TemperatureBands.LOGGER.info("Starting WorldPreview benchmark, waiting for {} samples via {} batches to finish...", chunks, batchesSize);
             benchmarkActive = true;
-            benchmarkStart = new AtomicReference<>(Instant.now());
             batchesTotal.set(batchesSize);
             batchesDone.set(0);
             chunksTotal.set(chunks);
-            benchmarkSampleTotalCount.set(0);
-            benchmarkSampleCacheHitCount.set(0);
+            benchmarkStart = new AtomicReference<>(Instant.now());
         }
     }
 
     public static void benchmarkBatchDone() {
         if (TemperatureBands.isClientSide() && TbUtilsClient.isOnWorldCreateScreen()) {
+            while (benchmarkStart == null) {
+                try {
+                    // Sometimes happens when the benchmark is too fast, just wait (World Preview always calls this from another thread)
+                    //noinspection BusyWait
+                    Thread.sleep(10);
+                } catch (InterruptedException ignored) {}
+            }
             batchesDone.getAndIncrement();
             if (batchesDone.get() >= batchesTotal.get()) {
                 benchmarkActive = false;
                 double timeMillis = Duration.between(benchmarkStart.get(), Instant.now()).abs().toMillis();
-                long cacheHitCount = benchmarkSampleCacheHitCount.get();
-                long cacheTotalCount = benchmarkSampleTotalCount.get();
-                if (CONFIG_GLOBAL.benchmarkCacheStats()) {
-                    TemperatureBands.LOGGER.info("WorldPreview benchmark finished. {} samples via {} batches finished in {} seconds. Average speed of {} samples per second. Sampler cache hit-rate was {}% ({} over {})." ,
-                            chunksTotal,
-                            batchesTotal,
-                            String.format("%.2f", timeMillis / 1000.0),
-                            String.format("%.2f", chunksTotal.get() / (timeMillis / 1000.0)),
-                            String.format("%.2f", (cacheHitCount / (double) cacheTotalCount) * 100),
-                            String.format("%,d", cacheHitCount) + " cached reads",
-                            String.format("%,d", cacheTotalCount) + " total sample count"
-                    );
-                } else {
-                    TemperatureBands.LOGGER.info("WorldPreview benchmark finished. {} samples via {} batches finished in {} seconds. Average speed of {} samples per second." ,
-                            chunksTotal,
-                            batchesTotal,
-                            String.format("%.2f", timeMillis / 1000.0),
-                            String.format("%.2f", chunksTotal.get() / (timeMillis / 1000.0))
-                    );
-                }
-
+                TemperatureBands.LOGGER.info("WorldPreview benchmark finished. {} samples via {} batches finished in {} seconds. Average speed of {} samples per second." ,
+                        chunksTotal,
+                        batchesTotal,
+                        String.format("%.2f", timeMillis / 1000.0),
+                        String.format("%.2f", chunksTotal.get() / (timeMillis / 1000.0))
+                );
                 batchesTotal.set(0);
                 batchesDone.set(-1);
                 chunksTotal.set(0);

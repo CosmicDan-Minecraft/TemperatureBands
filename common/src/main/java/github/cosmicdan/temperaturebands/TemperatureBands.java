@@ -14,6 +14,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.lang.management.ManagementFactory;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public final class TemperatureBands {
     public static final String MOD_NAME = "TemperatureBands";
@@ -33,6 +34,9 @@ public final class TemperatureBands {
     public static boolean isDeleteScreenActive = false;
 
     private static final Map<String, Set<String>> failedDimensionNoiseReplacements = new HashMap<>();
+
+    public static AtomicInteger strongholdCountTotal = new AtomicInteger(-1);
+    public static AtomicInteger strongholdCountCurrent = new AtomicInteger(0);
 
     public TemperatureBands(final IModPlatform modPlatform) {
         // Register common config

@@ -1,16 +1,13 @@
-package github.cosmicdan.temperaturebands.waterlocator;
+package github.cosmicdan.temperaturebands.climatesampler;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import github.cosmicdan.temperaturebands.ClimateTargetPointEx;
-import github.cosmicdan.temperaturebands.DimensionData;
-import github.cosmicdan.temperaturebands.TbUtils;
+import github.cosmicdan.temperaturebands.*;
 import github.cosmicdan.temperaturebands.generator.BiomeProximityGenerator;
 import net.minecraft.core.Holder;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.Climate;
 import net.minecraft.world.level.levelgen.DensityFunction;
-import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.Nullable;
 
 import static github.cosmicdan.temperaturebands.TemperatureBands.CONFIG_GLOBAL;
@@ -19,24 +16,27 @@ import static github.cosmicdan.temperaturebands.TemperatureBands.CONFIG_GLOBAL;
  * Simple water locator performs a 2D Archimedean spiral search.
  * Original algorithm - not very accurate nor fast. Kept for backwards compatibility only.
  */
-public class SimpleWaterLocator implements IWaterLocator {
+public class SimpleSampler implements IClimateSampler {
     private final BiomeProximityGenerator.Config config;
-    private final int samplerResolution;
     private final Cache<Long, ClimateTargetPointEx> climateSamplerCache;
-    private final boolean firstBiomeOnly;
+
+    private final int noiseResolution;
+    private final int samplerResolution;
+    private final boolean oceansOnly;
     private final int noisePartSize;
     private final int noisePartSizeMiddleOffset;
 
-    public SimpleWaterLocator(BiomeProximityGenerator.Config configIn) {
-        config = configIn;
-        if (config.climateSamplerResolutionRaw() == -1)
-            this.samplerResolution = config.noiseResolution() * config.noiseResolution() * config.noiseResolution();
-        else if (config.climateSamplerResolutionRaw() == -2)
-            this.samplerResolution = config.noiseResolution() * config.noiseResolution();
-        else if (config.climateSamplerResolutionRaw() == 0)
+    public SimpleSampler(BiomeProximityGenerator.Config genConfig, DimensionConfig dimConfig) {
+        config = genConfig;
+        noiseResolution = dimConfig.humidityResolution();
+        if (dimConfig.climateSamplerResolution() == -1)
+            this.samplerResolution = noiseResolution * noiseResolution * noiseResolution;
+        else if (dimConfig.climateSamplerResolution() == -2)
+            this.samplerResolution = noiseResolution * noiseResolution;
+        else if (dimConfig.climateSamplerResolution() == 0)
             this.samplerResolution = TbUtils.doCrash("climateSamplerResolution cannot be zero, please fix your config!");
         else
-            this.samplerResolution =  config.climateSamplerResolutionRaw();
+            this.samplerResolution =  dimConfig.climateSamplerResolution();
         if (CONFIG_GLOBAL.climateSamplerCacheSize() > 0) {
             climateSamplerCache = Caffeine.newBuilder()
                     .maximumWeight((long) CONFIG_GLOBAL.climateSamplerCacheSize() * 1024 * 1024)
@@ -44,40 +44,54 @@ public class SimpleWaterLocator implements IWaterLocator {
                     .build();
         } else
             climateSamplerCache = null;
-        firstBiomeOnly = (config.secondBiomeInfluence() == 0.0);
-        noisePartSize = config.noiseResolution() * config.noiseResolution();
+        oceansOnly = (config.algo2SecondBiomeInfluence() == 0.0);
+        noisePartSize = noiseResolution * noiseResolution;
         noisePartSizeMiddleOffset = (int)Math.round(noisePartSize * 0.5);
+    }
+
+    @Override
+    public void onFirstCompute(DimensionData dimData, BiomeProximityGenerator.Config config) {
+        // no-op
+    }
+
+    @Override
+    public double calculateHumidity(DensityFunction.FunctionContext context, DimensionData dimData) {
+        TbUtils.doCrash("Tried to call calculateHumidity on SimpleSampler, this is only for later samplers! Fix me!");
+        return 0.0;
     }
 
     // Simple 2D Archimedean spiral check
     @Override
-    public Pair<Double, Double> findNearestOceanRiver(int startX, int startZ, DimensionData dimData) {
-        int originPosX = scalePosForResolution(startX, config.noiseResolution(), noisePartSize, noisePartSizeMiddleOffset);
-        int originPosZ = scalePosForResolution(startZ, config.noiseResolution(), noisePartSize, noisePartSizeMiddleOffset);
+    public double[] findNearestOceanRiver(int startX, int startZ, DimensionData dimData) {
+
+        int originPosX = scalePosForResolution(startX, noiseResolution, noisePartSize, noisePartSizeMiddleOffset);
+        int originPosZ = scalePosForResolution(startZ, noiseResolution, noisePartSize, noisePartSizeMiddleOffset);
 
         double angle = 0;
         double radius = 0;
         double firstBiomeDistance = -1.0;
         double secondBiomeDistance = -1.0;
 
-        while (radius < config.biomeSearchDistance()) {
+        while (radius < config.algo2BiomeSearchDistance()) {
             double xOffset = radius * Math.cos(angle);
             double zOffset = radius * Math.sin(angle);
             int thisX = (int) Math.round(originPosX + xOffset);
             int thisZ = (int) Math.round(originPosZ + zOffset);
             Holder<Biome> holder = getNoiseBiome(thisX, thisZ, dimData);
-            if (holder != null && firstBiomeDistance == -1.0 && config.owner().getBiomesFirst().contains(holder))
+            //if (holder != null && firstBiomeDistance == -1.0 && dimData.getLegacyHelper().biomeOceans.contains(holder))
+            if (holder != null && firstBiomeDistance == -1.0 && dimData.getLegacyHelper().isOcean(holder))
                 firstBiomeDistance = TbUtils.calculateBlockDistance(config.distanceFunction(), originPosX, thisX, originPosZ, thisZ);
-            else if (holder != null && !firstBiomeOnly && secondBiomeDistance == -1.0 && config.owner().getBiomesSecond().contains(holder))
+            //else if (holder != null && !oceansOnly && secondBiomeDistance == -1.0 && dimData.getLegacyHelper().biomeRivers.contains(holder))
+            else if (holder != null && !oceansOnly && secondBiomeDistance == -1.0 && dimData.getLegacyHelper().isRiver(holder))
                 secondBiomeDistance = TbUtils.calculateBlockDistance(config.distanceFunction(), originPosX, thisX, originPosZ, thisZ);
 
-            if (firstBiomeDistance > -1.0 && (secondBiomeDistance > -1.0 || firstBiomeOnly))
-                return Pair.of(firstBiomeDistance, secondBiomeDistance);
+            if (firstBiomeDistance > -1.0 && (secondBiomeDistance > -1.0 || oceansOnly))
+                return new double[]{firstBiomeDistance, secondBiomeDistance};
 
             angle += 0.5;
             radius += (samplerResolution) / 6.28; // 6.28 = 2π
         }
-        return Pair.of(firstBiomeDistance, secondBiomeDistance);
+        return new double[]{firstBiomeDistance, secondBiomeDistance};
     }
 
     private int scalePosForResolution(int pos, int resolution, int partSize, int partSizeMid) {
@@ -96,15 +110,12 @@ public class SimpleWaterLocator implements IWaterLocator {
 
     public @Nullable ClimateTargetPointEx sampleClimateCached(int blockX, int blockZ, DimensionData dimData) {
         long packedPos = TbUtils.packBlockXZtoLong(blockX, blockZ);
-        if (CONFIG_GLOBAL.doBenchmark() && CONFIG_GLOBAL.benchmarkCacheStats() && TbUtils.benchmarkActive)
-            TbUtils.benchmarkSampleTotalCount.getAndIncrement();
         ClimateTargetPointEx result = climateSamplerCache.getIfPresent(packedPos);
         if (result == null) {
             result = sampleClimate(packedPos, dimData);
             if (result != null)
                 climateSamplerCache.put(packedPos, result);
-        } else if (CONFIG_GLOBAL.doBenchmark() && CONFIG_GLOBAL.benchmarkCacheStats() && TbUtils.benchmarkActive)
-            TbUtils.benchmarkSampleCacheHitCount.getAndIncrement();
+        }
         return result;
     }
 
@@ -112,15 +123,15 @@ public class SimpleWaterLocator implements IWaterLocator {
         // Note: if firstBiomeOnly, we're just looking for oceans so only sampling continentalness is required
         int blockX = TbUtils.unpackBlockFromLongX(packedBlockPos);
         int blockZ = TbUtils.unpackBlockFromLongZ(packedBlockPos);
-        DensityFunction.SinglePointContext singlePointContext = new DensityFunction.SinglePointContext(blockX, BiomeProximityGenerator.blockY, blockZ);
+        DensityFunction.SinglePointContext singlePointContext = new DensityFunction.SinglePointContext(blockX, PlatformConstants.BLOCK_Y_FIXED, blockZ);
         float continentalnessResult = (float) dimData.getClimateSampler().continentalness().compute(singlePointContext);
-        float weirdnessResult = firstBiomeOnly ? 0.0f : (float) dimData.getClimateSampler().weirdness().compute(singlePointContext);
+        float weirdnessResult = oceansOnly ? 0.0f : (float) dimData.getClimateSampler().weirdness().compute(singlePointContext);
         boolean doShortcuts = dimData.config.climateSamplerShortcuts();
-        if (!doShortcuts || dimData.mightBeOcean(continentalnessResult) || dimData.mightBeRiver(weirdnessResult)) {
-            float temperatureResult = firstBiomeOnly || doShortcuts ? 0.0f : (float) dimData.getTemperatureNoise().compute(singlePointContext);
-            float humidityResult = firstBiomeOnly || doShortcuts ? 0.0f : (float) config.owner().computeOriginal(singlePointContext); // always use original non-overridden densityfunctions for humidity
-            float erosionResult = firstBiomeOnly ? 0.0f : (float) dimData.getClimateSampler().erosion().compute(singlePointContext);
-            float depthResult = firstBiomeOnly ? 0.0f : (float) dimData.getClimateSampler().depth().compute(singlePointContext);
+        if (!doShortcuts || dimData.getLegacyHelper().mightBeOcean(continentalnessResult) || dimData.getLegacyHelper().mightBeRiver(weirdnessResult)) {
+            float temperatureResult = oceansOnly || doShortcuts ? 0.0f : (float) dimData.getTemperatureNoise().compute(singlePointContext);
+            float humidityResult = oceansOnly || doShortcuts ? 0.0f : (float) config.owner().computeOriginal(singlePointContext); // always use original non-overridden densityfunctions for humidity
+            float erosionResult = oceansOnly ? 0.0f : (float) dimData.getClimateSampler().erosion().compute(singlePointContext);
+            float depthResult = oceansOnly ? 0.0f : (float) dimData.getClimateSampler().depth().compute(singlePointContext);
             Climate.TargetPoint sampleResultRaw = Climate.target(temperatureResult, humidityResult, continentalnessResult, erosionResult, depthResult, weirdnessResult);
             return new ClimateTargetPointEx(sampleResultRaw, false);
         } else {

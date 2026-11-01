@@ -2,8 +2,10 @@ package github.cosmicdan.temperaturebands.mixin;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.mojang.datafixers.DataFixer;
 import github.cosmicdan.temperaturebands.*;
 import github.cosmicdan.temperaturebands.DensityFunctionEx;
+import github.cosmicdan.temperaturebands.util.ChunkGenStructStateHooksInj;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.core.RegistryAccess;
@@ -13,17 +15,23 @@ import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.progress.ChunkProgressListener;
 import net.minecraft.util.profiling.ProfilerFiller;
+import net.minecraft.util.thread.BlockableEventLoop;
 import net.minecraft.world.RandomSequences;
 import net.minecraft.world.level.CustomSpawner;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.chunk.ChunkGenerator;
+import net.minecraft.world.level.chunk.ChunkGeneratorStructureState;
+import net.minecraft.world.level.chunk.LightChunkGetter;
 import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.dimension.LevelStem;
+import net.minecraft.world.level.entity.ChunkStatusUpdateListener;
 import net.minecraft.world.level.levelgen.*;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplateManager;
 import net.minecraft.world.level.levelgen.synth.NormalNoise;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.storage.ServerLevelData;
 import net.minecraft.world.level.storage.WritableLevelData;
-import org.jspecify.annotations.NonNull;
+import org.jetbrains.annotations.NotNull;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -88,6 +96,10 @@ public abstract class LevelHooks {
         @Final
         ServerLevel level;
 
+        @Shadow
+        @Final
+        private ChunkGeneratorStructureState chunkGeneratorState;
+
         /**
          * Second hook that's called during level (world) creation/load, after LevelStorageSourceHooks. Note that the level object is still not initialized.
          * Responsible for remembering which NoiseRouters need to be overridden with modded ones.
@@ -118,6 +130,24 @@ public abstract class LevelHooks {
             }
             return original.call(noiseGeneratorSettings, holderGetter, seed);
         }
+
+        /**
+         * Responsible for setting the owned DimData on instances of ChunkGeneratorStructureState.
+         * Used for StrongholdHooks features.
+         */
+        @Inject(
+                method = "<init>",
+                at = @At("RETURN")
+        )
+        public void onCreationDone(ServerLevel serverLevel, LevelStorageSource.LevelStorageAccess levelStorageAccess, DataFixer dataFixer, StructureTemplateManager structureTemplateManager, Executor executor, BlockableEventLoop blockableEventLoop, LightChunkGetter lightChunkGetter, ChunkGenerator chunkGenerator, ChunkProgressListener chunkProgressListener, ChunkStatusUpdateListener chunkStatusUpdateListener, Supplier supplier, int i, boolean bl, CallbackInfo ci) {
+            DimensionData dimDataMaybe = TemperatureBands.DIMENSION_DATA_CACHE.getIfPresent(level.dimension().location().toString());
+            if (dimDataMaybe != null) {
+                // only continue if this dimension actually has dimData (i.e. was whitelisted)
+                ChunkGenStructStateHooksInj chunkGenStructStateEx = (ChunkGenStructStateHooksInj) chunkGeneratorState;
+                chunkGenStructStateEx.tb$_createState(dimDataMaybe);
+            }
+        }
+
     }
 
     @Mixin(NoiseRouter.class)
@@ -150,7 +180,7 @@ public abstract class LevelHooks {
             DensityFunction currentFunction = instance;
             if (currentFunction.equals(temperature) || currentFunction.equals(vegetation)) {
                 // First find the dimension(data) that this NoiseRouter belongs to
-                for (Map.Entry<String, @NonNull DimensionData> dimDataEntry : TemperatureBands.DIMENSION_DATA_CACHE.asMap().entrySet()) {
+                for (Map.Entry<String, @NotNull DimensionData> dimDataEntry : TemperatureBands.DIMENSION_DATA_CACHE.asMap().entrySet()) {
                     if (dimDataEntry.getValue().getNoiseRouter().equals(temperatureBands_$getSelf())) {
                         String dimensionName = dimDataEntry.getKey();
                         DimensionData dimensionData = dimDataEntry.getValue();

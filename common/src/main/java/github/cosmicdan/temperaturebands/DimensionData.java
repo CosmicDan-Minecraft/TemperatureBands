@@ -1,6 +1,10 @@
 package github.cosmicdan.temperaturebands;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import github.cosmicdan.temperaturebands.biomehelper.LegacyHelper;
+import github.cosmicdan.temperaturebands.biomehelper.SmartHelper;
 import net.minecraft.core.Holder;
+import net.minecraft.core.QuartPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.RandomSequence;
@@ -13,7 +17,9 @@ import net.minecraft.world.level.levelgen.synth.NormalNoise;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 
 import static github.cosmicdan.temperaturebands.TemperatureBands.LOGGER;
 
@@ -26,7 +32,16 @@ public class DimensionData {
     private final @Nullable DensityFunctions.HolderHolder noiseHumidity;
     // humidity-related things
     private MultiNoiseBiomeSource biomeSource;
-    private RiverOceanBiomeHelper humidityBiomeHelper;
+    private LegacyHelper legacyHelper;
+    private SmartHelper smartHelper;
+    private Cache<Long, CachedClimatePoint> cacheClassic;
+
+    private final AtomicReferenceArray<CacheEntry> cache;
+
+    // config-derived
+    private final int cacheMask;
+
+    private record CacheEntry(long packedKey, CachedClimatePoint point) {}
 
     @SuppressWarnings("LoggingSimilarMessage")
     public DimensionData(boolean isLevelReady, DimensionConfig config, ServerLevel level, NoiseRouter noiseRouter, @Nullable DensityFunctions.HolderHolder noiseTemperature, @Nullable DensityFunctions.HolderHolder noiseHumidity) {
@@ -40,10 +55,31 @@ public class DimensionData {
         // sanity check
         if (config == null) {
             TbUtils.doCrash("Tried to create new DimensionData but provided config is null, eh?");
-        } else if (isLevelReady && config.humidityAlgorithm() != 0) {
-            biomeSource = TbUtils.findMultiNoiseBiomeSource(level, true);
-            TemperatureBands.logDebug("DimensionData finalized for " + level.dimension().location());
+            cache = null;
+            cacheMask = 0;
+        } else {
+            if (config.humidityAlgorithm() >= 3) {
+                int cacheSize = 1 << config.humidityAlgo3cacheSize();
+                cache = new AtomicReferenceArray<>(cacheSize);
+                cacheMask = cacheSize - 1;
+            } else {
+                cache = null;
+                cacheMask = 0;
+            }
+            if (isLevelReady && config.humidityAlgorithm() != 0) {
+                biomeSource = TbUtils.findMultiNoiseBiomeSource(level, true);
+                TemperatureBands.logDebug("DimensionData finalized for " + level.dimension().location());
+            }
+
         }
+    }
+
+    public boolean isCacheRecyclerPossible() {
+        return config.humidityAlgorithm() >= 3;
+    }
+
+    public boolean isCacheReady() {
+        return cache != null;
     }
 
     public NoiseRouter getNoiseRouter() {
@@ -121,12 +157,20 @@ public class DimensionData {
         return biomeSource;
     }
 
-    public RiverOceanBiomeHelper getBiomeHelper() {
-        if (humidityBiomeHelper == null) {
+    public LegacyHelper getLegacyHelper() {
+        if (legacyHelper == null) {
             // happens sometimes e.g. when C2ME is installed
-            humidityBiomeHelper = new RiverOceanBiomeHelper(level, TbUtils.findMultiNoiseBiomeSource(level, false));
+            legacyHelper = new LegacyHelper(level, TbUtils.findMultiNoiseBiomeSource(level, false));
         }
-        return humidityBiomeHelper;
+        return legacyHelper;
+    }
+
+    public SmartHelper getSmartHelper() {
+        if (smartHelper == null) {
+            // happens sometimes e.g. when C2ME is installed
+            smartHelper = new SmartHelper(this, level, TbUtils.findMultiNoiseBiomeSource(level, false));
+        }
+        return smartHelper;
     }
 
     public Climate.Sampler getClimateSampler() {
@@ -139,20 +183,55 @@ public class DimensionData {
         return noiseTemperature;
     }
 
+    public CachedClimatePoint getCachedPoint(int blockX, int blockYignored, int blockZ) {
+        // Round-down to nearest multiple of 2. Minecraft actually uses a 4x4x4 resolution for climate noise, but this causes accuracy issues when calculating distance.
+        blockX = blockX & ~1;
+        blockZ = blockZ & ~1;
+        long packedKey = ((long) blockX << 32) | (blockZ & 0xFFFFFFFFL);
+
+        // Apply the MurmurHash3 avalanche step to reduce hash collisions in the cache (maximizes bucket array spread)
+        long mixedKey = packedKey;
+        mixedKey ^= mixedKey >>> 33;
+        mixedKey *= 0xff51afd7ed558ccdL;
+        mixedKey ^= mixedKey >>> 33;
+        mixedKey *= 0xc4ceb9fe1a85ec53L;
+        mixedKey ^= mixedKey >>> 33;
+
+        CachedClimatePoint cachedPoint;
+
+        int slot = (int) (mixedKey & cacheMask);
+        CacheEntry entry = cache.get(slot);
+        if (entry != null && entry.packedKey() == packedKey)
+            cachedPoint = entry.point();
+        else {
+            // Cache miss or hash collision
+            cachedPoint = new CachedClimatePoint();
+            cache.set(slot, new CacheEntry(packedKey, cachedPoint));
+        }
+        return cachedPoint;
+    }
+
+    public Climate.TargetPoint sampleFinal(int quartX, int quartY, int quartZ, Climate.Sampler sampler) {
+        int blockX = QuartPos.toBlock(quartX);
+        int blockY = QuartPos.toBlock(quartY);
+        int blockZ = QuartPos.toBlock(quartZ);
+        CachedClimatePoint cachedPoint = getCachedPoint(blockX, blockY, blockZ);
+
+        return Climate.target(
+                cachedPoint.getOrComputeDimensionUnquantized(0, sampler, blockX, blockY, blockZ, false),
+                cachedPoint.getOrComputeDimensionUnquantized(1, sampler, blockX, blockY, blockZ, false),
+                cachedPoint.getOrComputeDimensionUnquantized(2, sampler, blockX, blockY, blockZ, false),
+                cachedPoint.getOrComputeDimensionUnquantized(3, sampler, blockX, blockY, blockZ, false),
+                cachedPoint.getOrComputeDimensionUnquantized(4, sampler, blockX, blockY, blockZ, false),
+                cachedPoint.getOrComputeDimensionUnquantized(5, sampler, blockX, blockY, blockZ, false)
+        );
+    }
+
     @Override
     public String toString() {
         return "DimensionData{" +
                 "level=" + level +
                 '(' + level.hashCode() + ')' +
                 '}';
-    }
-
-    public boolean mightBeOcean(float continentalness) {
-        return getBiomeHelper().mightBeOcean(continentalness);
-    }
-
-
-    public boolean mightBeRiver(float weirdness) {
-        return getBiomeHelper().mightBeRiver(weirdness);
     }
 }

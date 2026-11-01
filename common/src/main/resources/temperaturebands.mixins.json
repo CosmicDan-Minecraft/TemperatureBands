@@ -6,7 +6,8 @@
   "client": [
     "ClientGuiHooks$CreateWorldScreenHooks",
     "ClientGuiHooks$SelectWorldScreenHooks",
-    "ClientGuiHooks$WorldSelectionListEntryHooks"
+    "ClientGuiHooks$WorldSelectionListEntryHooks",
+    "ClientGuiHooks$LevelLoadingScreenHooks"
   ],
   "mixins": [
     "LevelHooks$ChunkMapHooks",
@@ -14,7 +15,9 @@
     "LevelHooks$NoiseRouterHooks",
     "LevelHooks$ServerLevelHooks",
     "RandomStateHooks",
-    "MinecraftServerHooks"
+    "MinecraftServerHooks",
+    "CacheRecyclerHooks$MultiNoiseBiomeSourceHooks",
+    "StrongholdHooks$ChunkGenStructStateHooks"
   ],
   "injectors": {
     "defaultRequire": 1

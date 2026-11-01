@@ -2,6 +2,8 @@ package github.cosmicdan.temperaturebands;
 
 import net.neoforged.neoforge.common.ModConfigSpec;
 
+import java.util.List;
+
 public class CommonConfig {
     public static final String sectionGlobal = "global";
     public static final String sectionGlobalTxt = """
@@ -14,8 +16,7 @@ public class CommonConfig {
                 i.e. whenever chunk previews start to generate).
               - Do not scroll or resize the window while World Preview is active, it will cause the benchmark to fail or never complete. To restart benchmark, simply enter
                 the World Preview settings menu then exit out. Wait for all visible chunks to generate to see the results in the log/console.
-              - This does have a small performance cost, which ALWAYS applies - even if World Preview is not active - so be sure to disable this once you're done testing.
-              - If Humidity algorithm is not advanced, or the climate sampler cache is disabled, the 'cache hit-rate' part of results will be incorrect - ignore it.""";
+              - This does have a small performance cost, which ALWAYS applies - even if World Preview is not active - so be sure to disable this once you're done testing.""";
     public final ModConfigSpec.BooleanValue doLevelLoadBenchmark;
     public static final String doLevelLoadBenchmarkTxt = """
              
@@ -25,19 +26,14 @@ public class CommonConfig {
               - While the result will appear on any level load, new or existing, it's only useful when creating a world (to record a baseline) and then recreating that
                 world (i.e. same seed) with some changed worldgen settings (e.g. Temperature Bands config).
               - Enabled by default since it costs practically nothing. Only a single line will be written to the log once the level has finished loading.""";
-    public final ModConfigSpec.BooleanValue benchmarkCacheStats;
-    public static final String benchmarkCacheStatsTxt = """
-             
-             [benchmarkCacheStats] will, if true, include measurement of cache hits with benchmarks.
-              - Disabled by default since it has a small (but measurable) performance cost.
-              - Probably not useful for most people, unless you're making significant changes to 'humidityResolution' and 'climateSamplerResolution' and want to make
-                sure your settings are cache-friendly (you'll want to aim for a cache hit-rate of at least 20%, otherwise the cache is probably not helping much).""";
     public final ModConfigSpec.BooleanValue copyConfigOnRecreateWorld;
     public static final String copyConfigOnRecreateWorldTxt = """
              
              [copyConfigOnRecreateWorld] will, when true, copy the previous world Temperature Bands config to the new world when "Recreate" is being done.
               - Set this to false if you want to "upgrade" your world with new features and defaults after updating the mod. You will still need to Recreate the world.
-              - Relevant for client only. Servers will need to manually recreate their worlds (e.g. set the same seed/settings in server config and delete old world).""";
+              - Relevant for client only. Servers will need to manually recreate their worlds (e.g. set the same seed/settings in server config and delete old world).
+              - WARNING: If true, and your Stronghold config settings in the source world are different to the Stronghold settings in this config, the recreated world
+                might use whatever setting is specified in this config file anyway (rather than the source world). To avoid this, restart the game client.""";
     public final ModConfigSpec.ConfigValue<String> ignoreDimensionFailures;
     public static final String ignoreDimensionFailuresTxt = """
 
@@ -49,19 +45,16 @@ public class CommonConfig {
     public static final String dumpRiverAndOceanBiomesTxt = """
 
              [dumpRiverAndOceanBiomes] will, if set to true, dump a list of all biomes with 'minecraft:is_river' and 'minecraft:is_ocean' tags from each dimension to console/log.
-              - Might be useful for modpack creators (in relation to humidity algorithms)""";
-    public static final String sectionClimateSamplerPerf = "climatesampler-performance";
-    public static final String sectionClimateSamplerPerfTxt = """
-             [climatesampler-performance] are global climate sampler settings related to performance (shared by all worlds, not saved per-world).
-              - A custom climate sampler is used when calculating humidity based on proximity to rivers and/or oceans. These settings are currently only relevant if the 'advanced'
-                humidity algorithm is enabled (which is the default for new worlds, but left disabled for existing worlds).
-             --------""";
-    public final ModConfigSpec.IntValue climateSamplerCacheSize;
-    public static final String climateSamplerCacheSizeTxt = """
+              - Might be useful for modpack creators (in relation to humidity algorithms).
+              - If the Refined Humidity algorithm is used, this will also dump the parameter ranges of each noise dimension for the detected ocean/river biomes.""";
+    public final ModConfigSpec.BooleanValue showStrongholdProgress;
+    public static final String showStrongholdProgressTxt = """
+            
+            [showStrongholdProgress] will, when true, show the progress of calculating Stronghold spawn locations when generating a new world on the client.
+             - Just a small QoL feature. Some worldgen mods (e.g. Lithosphere) when used in combination with Advanced/Refined humidity can be VERY slow with this process.
+               Advanced Humidity basically takes forever and is unusable, and Refined humidity can take 2 or more minutes for this process to finish.
+             - Be sure to check out the [stronghold-generation-tweaks] section for options to speed up this process!""";
 
-             [climateSamplerCacheSize] is the size of our custom climate sampler, in megabytes.
-              - The default of 5Mb can hold almost 50 thousand samples which should be more than enough for any environment.
-              - Setting to zero will disable caching, which is NOT recommended - you will have much higher CPU *and* memory usage without the cache.""";
     public static final String sectionWorld = "world";
     public static final String sectionWorldTxt = """
              [world] are general defaults for new worlds. These will apply to newly-generated worlds only, existing worlds will remember their own settings.
@@ -198,22 +191,21 @@ public class CommonConfig {
              
              [humidityAlgorithm] is the algorithm to use for humidity (aka vegetation).
               - You can configure and read more about each algorithm in their own section below. Recommended to use World Preview if you want to change things around.
-              - A value of 2 (default) uses a "realistic" humidity calculation based on proximity to rivers and/or oceans. Can be a little slow, but still not as slow as many
-                worldgen mods, and it's definitely worth it (in my opinion).
+              - A value of 3 (default) is the "refined" algorithm, based on proximity factors like algorithm 2 but faster and nicer.
+              - A value of 2 is a simple proximity check against rivers and/or oceans. It's not recommended as it has been succeeded by algorithm 3.
+                It's still kept here for compatibility with older worlds, though.
               - A value of 1 uses a much simpler 'humidity bands' algorithm that run perpendicular to temperature bands.
-              - A value of 0 will disable humidity feature entirely, keeping vanilla random noise humidity.
-              - Do note that with advanced humidity, some worldgen mods may become extremely slow. One example of this is Lithosphere. In these cases it might be best to use
-                simple humidity, or at least turning off river influence (Lithosphere in particular doesn't generate many rivers anyway).""";
+              - A value of 0 will disable humidity feature entirely, keeping vanilla random noise humidity.""";
     public final ModConfigSpec.DoubleValue humidityTempWeight;
     public static final String humidityTempWeightName = "humidityTempWeight";
     public static final String humidityTempWeightTxt = """
              
              [humidityTempWeight] is how much the temperature will additionally influence humidity.
-              - Applies to all humidity algorithms, and is the final adjustment to the humidity value.
-              - For humidity algorithm 2 (advanced) it introduces some biome variation between the warmer and cooler sides of the temperate (middle temperature) bands.
-              - For humidity algorithm 1 (bands perpendicular to temperature), it applies some angle via narrowing/widening on the humidity bands - as you approach the cold
-                band, lower-humidity biomes will become wider; as you approach the hot band, higher-humidity biomes will become wider.
-              - Setting to 0.0 will disable this function.""";
+              - For humidity algorithm 3 (Refined) and 2 (Advanced) it introduces some biome variation between the warmer and cooler sides of the temperate
+                (middle temperature) bands.
+              - For humidity algorithm 1 (Simple, i.e. bands perpendicular to temperature), it applies some angle via narrowing/widening on the humidity bands - as you
+                approach the cold band, lower-humidity biomes will become wider; as you approach the hot band, higher-humidity biomes will become wider.
+              - Setting to 0.0 will disable this function, which may result in a *tiny* performance improvement.""";
 
     public static final String sectionHumidityAlgo1 = "humidity-algorithm1";
     public static final String sectionHumidityAlgo1Txt = """
@@ -227,18 +219,13 @@ public class CommonConfig {
               - The default of 0.5 for e.g. means that humidity bands will be half as big and twice as frequent as temperature bands (on average).""";
     public static final String sectionHumidityAlgo2 = "humidity-algorithm2";
     public static final String sectionHumidityAlgo2Txt = """
-             [sectionHumidityAlgo2] are the world-specific settings for the 'advanced' humidity algorithm, i.e. humidity based on proximity to rivers and/or oceans.
+             [sectionHumidityAlgo2] are the world-specific settings for the 'advanced' humidity algorithm, i.e. the classic ocean/river proximity algorithm.
+              - This has been largely succeeded by the new "refined" algorithm 3. Not recommended since it's pretty lousy, but kept for backwards-compatibility with
+                older worlds.
+              - This is a coarse, brute-force and random sampler/search algorithm. It's not very fast, not very accurate, and can regularly produce "artifacts" e.g.
+                tiny and noisy patches of humid biomes.
+              - Reminder: None of these settings apply to the new default "refined" humidity algorithm, see the new section "humidity-algorithm3" for configuring that.
              --------""";
-    public final ModConfigSpec.IntValue humidityResolution;
-    public static final String humidityResolutionName = "configHumidityResolution";
-    public static final String humidityResolutionTxt = """
-             
-             [humidityResolution] is the accuracy or "resolution" for calculating the distance from river and/or ocean for a given area, where lower values means more accuracy.
-              - Represented as a square root, i.e. the default of 4 means each 16x16 area will use the same distance values.
-              - This is a performance vs accuracy choice but the default of 4 seems decently balanced; values below 4 start to become extremely expensive on CPU/worldgen time
-                with only small improvements in smoothness, and values above 4 get a bit too "chunky". The max value of 8 (each 64x64 area having same humidity) results in a
-                silly checkerboard look (but is very fast).
-              - If you change this, you might want to check out "climateSamplerResolution" in the "[climatesampler-world]" section too - these two settings are closely related.""";
     public final ModConfigSpec.DoubleValue humidityRiverInfluence;
     public static final String humidityRiverInfluenceName = "configHumidityRiverInfluence";
     public static final String humidityRiverInfluenceTxt = """
@@ -281,22 +268,32 @@ public class CommonConfig {
               - This adjustment happens before humidityTempWeight but after everything else.
               - Setting to 0.0 will disable this function, though it won't provide any performance benefit and biome transitions will be (subjectively) worse.""";
 
-    public static final String sectionClimateSamplerWorld = "climatesampler-world";
-    public static final String sectionClimateSamplerWorldTxt = """
-             [climatesampler-world] are the world-specific settings for the climate sampler. Currently only used by humidity.
-                Unlike the climatesampler-performance settings, these DO affect worldgen.
-             --------""";
+    public final ModConfigSpec.IntValue humidityResolution;
+    public static final String humidityResolutionName = "configHumidityResolution";
+    public static final String humidityResolutionTxt = """
+             
+             [humidityResolution] is the accuracy or "resolution" for calculating the distance from river and/or ocean for a given area, where lower values means more accuracy.
+              - Represented as a square root, i.e. the default of 4 means each 16x16 area will use the same distance values.
+              - This is a performance vs accuracy choice but the default of 4 seems decently balanced; values below 4 start to become extremely expensive on CPU/worldgen time
+                with only small improvements in smoothness, and values above 4 get a bit too "chunky". The max value of 8 (each 64x64 area having same humidity) results in a
+                silly checkerboard look (but is very fast).""";
+    public final ModConfigSpec.IntValue climateSamplerCacheSize;
+    public static final String climateSamplerCacheSizeTxt = """
+
+             [climateSamplerCacheSize] is the size of the cache for this humidity algorithm, in megabytes (roughly).
+              - The default of 5Mb can hold almost 50 thousand samples which should be more than enough for any environment.
+              - Setting to zero will disable caching, which is NOT recommended - you will have much higher CPU *and* memory usage without the cache.""";
     public final ModConfigSpec.IntValue climateSamplerResolution;
     public static final String climateSamplerResolutionName = "configClimateSamplerResolution";
     public static final String climateSamplerResolutionTxt = """
              
              [climateSamplerResolution] is the accuracy or "resolution" for sampling the climate.
-              - Currently only used by ocean/river search in the advanced humidity algorithm.
               - The default of -2 is an automatic "square value of humidityResolution". This seems to be the most logical balance between quality and performance - biome edges
                 look natural with sporadic patches of other biomes potential to the nearby humidity/temperature values to make blending a bit more exciting.
               - A value of -1 is also possible, which was the old default; corresponds to the "cube value of humidityResolution" but it is VERY inaccurate and NOT recommended.
                 It's best to keep this value no higher than the square of humidityResolution, i.e. -2, which results in 16 when humidityResolution is the default 4.
-              - If setting manually, for best results, keep it as a multiple of humidityResolution. Otherwise there may be weirdness or inaccuracies in biome placement.
+              - If setting manually, for best results, keep it as a multiple of humidityResolution. Otherwise there may be lots of weirdness in biome placement, or even humidity being
+                wrongly "shifted".
               - Setting this to a value equal to humidityResolution will provide maximum accuracy but will become VERY expensive on CPU/worldgen time, though that might be desirable
                 if you want all biome edges to be smoother and defined with minimal biome 'patches'.
               - If you've raised humidityResolution (meaning less accuracy) for some performance, it might be useful to manually set this value to something closer to the new
@@ -316,6 +313,154 @@ public class CommonConfig {
               - Highly recommended to keep enabled, unless you're using a mod that changes the biome parameters of rivers and/or oceans.
               - This does include compatibility with Custom Biome Parameters, but ONLY if you've changed the weirdness params of Rivers or the continentalness params of Oceans.
                 If your parameter changes to rivers/oceans include other parameters, then you must disable this - otherwise it may result in false positives/negatives.""";
+    public static final String sectionHumidityAlgo3 = "humidity-algorithm3";
+    public static final String sectionHumidityAlgo3Txt = """
+             [sectionHumidityAlgo2] are the world-specific settings for the 'refined' humidity algorithm, i.e. humidity based on proximity to rivers and/or oceans.
+              - Based on the "advanced" algorithm (algorithm2), but much faster, more accurate, and more interesting. The new default in 3.0.0.
+             --------""";
+    public final ModConfigSpec.IntValue humidity3_searchDistanceOceans;
+    public static final String humidity3_searchDistanceOceansName = "humidity3_searchDistanceOceans";
+    public static final String humidity3_searchDistanceOceansTxt = """
+            
+            [humidity3_searchDistanceOceans] is the maximal x/z block range to search for oceans.
+             - If set to zero, ocean search will be disabled, meaning they will have no effect on humidity.
+             - Searching for oceans is fairly fast, both for vanilla and most worldgen mods, since it's only based on continentalness noise which is usually cheap - so don't be
+               afraid to increase this distance if you desire.""";
+    public final ModConfigSpec.IntValue humidity3_searchDistanceRivers;
+    public static final String humidity3_searchDistanceRiversName = "humidity3_searchDistanceRivers";
+    public static final String humidity3_searchDistanceRiversTxt = """
+            
+            [humidity3_searchDistanceRivers] is the maximal x/z block range to search for rivers.
+             - If set to zero, rivers search will be disabled, meaning they will have no effect on humidity.
+             - Searching for rivers is much more expensive than oceans, since it's largely based on weirdness which is usually among the most expensive noises (especially for
+               heavy worldgen mods like Lithosphere), so be careful with setting this higher.""";
+    public final ModConfigSpec.DoubleValue humidity3_noiseWeightOcean;
+    public static final String humidity3_noiseWeightOceanName = "humidity3_noiseWeightOcean";
+    public static final String humidity3_noiseWeightOceanTxt = """
+            
+            [humidity3_noiseWeightOcean] is the weight of humidity provided by oceans.
+             - Best considered as a ratio of how important or "heavy" the humidity of oceans are compared to river humidity. If river search is disabled, it acts as a
+               baseline "max humidity" value before the final scaling (via noiseRange setting below) is performed.
+             - If set to zero, will have no effect on humidity, BUT SEARCHING WILL STILL BE PERFORMED FOR NO REASON - set distance to 0 instead if you want to disable.
+             - If you disable searching for rivers, you will want to increase this value (and/or noiseRange, below) otherwise you'll never get high-humidity biomes.""";
+    public final ModConfigSpec.DoubleValue humidity3_noiseWeightRiver;
+    public static final String humidity3_noiseWeightRiverName = "humidity3_noiseWeightRiver";
+    public static final String humidity3_noiseWeightRiverTxt = """
+            
+            [humidity3_noiseWeightRiver] is the "value" of humidity provided by rivers.
+             - As above, except for rivers instead of oceans; it is the value that river humidity provides relative to oceans (or, if ocean search is disabled, it
+               acts as a baseline "max humidity" value before the final scaling via noiseRange is performed).""";
+    public final ModConfigSpec.DoubleValue humidity3_noiseRange;
+    public static final String humidity3_noiseRangeName = "humidity3_noiseRange";
+    public static final String humidity3_noiseRangeTxt = """
+            
+            [humidity3_noiseRange] represents the absolute and final range of humidity that will be used.
+             - Once the ocean/river humidity values are calculated via their weight and actual-distance-over-max-distance, they are combined, then scaled by this value
+               and converted into a bipolar range. I.e. the default of 0.6 means the final humidity will always range from -0.6 to +0.6, regardless of what the literal
+               noise weight values are for oceans/rivers (they will be re-scaled).
+             - The default of 0.6 prevents the extremely wet or dry biomes from dominating the world too much. Increasing this will make them more common, and vice versa,
+               but be careful not to set so low that wettest/dryest biomes can never be generated (with vanilla biome parameters that would happen around 0.4).
+             - If you use a biome mod that adds new biomes at the extreme ends, you may want to increase this.""";
+    public final ModConfigSpec.IntValue humidity3_cellSize;
+    public static final String humidity3_cellSizeName = "humidity3_cellSize";
+    public static final String humidity3_cellSizeTxt = """
+            
+            [humidity3_cellSize] is the size of each "macro cell" used during the search for oceans/rivers.
+             - Lower values mean higher accuracy and more expensive search process. 64 seems to be enough for vanilla biome sizes.
+             - Best kept as a power-of-two (e.g. 16, 32, 64, 128, etc.) but not strictly necessary.
+             - If you're using a worldgen mod that makes biomes much bigger, you might be able to increase this to 128 or even 256 for
+               improved performance without much loss of quality.
+             - If you change this, you might want to change the cellSubsampling sizes below, too.""";
+    public final ModConfigSpec.IntValue humidity3_cellSubsamplingOcean;
+    public static final String humidity3_cellSubsamplingOceanName = "humidity3_cellSubsamplingOcean";
+    public static final String humidity3_cellSubsamplingOceanTxt = """
+            
+            [humidity3_cellSubsamplingOcean] is the level of subsampling to do on a cell when an ocean is detected.
+             - This is used to narrow-down a more accurate distance value for oceans, with higher values being more accurate and costing more performance.
+             - It is directly related to the "macro" cellSize above. I.e. if cell size is changed, you might want to change this too.
+             - The algorithm is an origin-based binary search with comparison on continentalness noise in order to find the nearest ocean, where this value specifies the
+               maximum amount of times to shrink the "sub-cell" window.
+             - The default value of 2 is suitable for oceans when cellSize is also at the default of 64, since oceans are quite large.
+             - There is a soft upper-limit to this value, though it's dependent on cellSize and wont cause any issues if set too high (the algorithm will handle this fine);
+               since the smallest sub-cell size can only be 2x2 (64x64 > 32x32 > 16x16 > 8x8 > 4x4 > 2x2 = max of 5 subsamples possible with starting cellSize of 64).
+             - A value of zero will disable subsampling completely, which will result in a minor performance boost (for oceans specifically) but a sharp loss in accuracy -
+               specifically, humidity distance will be calculated from the center of each cell (i.e. 64x64 by default).""";
+    public final ModConfigSpec.IntValue humidity3_cellSubsamplingRiver;
+    public static final String humidity3_cellSubsamplingRiverName = "humidity3_cellSubsamplingRiver";
+    public static final String humidity3_cellSubsamplingRiverTxt = """
+            
+            [humidity3_cellSubsamplingRiver] is the level of subsampling to do on a cell when a river is detected.
+             - This is used to narrow-down a more accurate distance value for rivers, with higher values being more accurate and costing more performance.
+             - It is directly related to the "macro" cellSize above. I.e. if cell size is changed, you might want to change this too.
+             - Algorithm is similar to Oceans, but since rivers are much smaller than oceans and can have sudden turns we generally want this to be higher than ocean subsampling.
+               Searching for rivers is slightly different than oceans - for each macro cell (i.e. 64x64), we sample the four corners *and* the center of the cell, then we check
+               if any of the 4 cell edges *or* the 4 lines from each corner to the center have a zero-crossing of weirdness - if so, it means a valley PV exists in this cell,
+               so there is a strong possibility that a river exists here too. Then we home-in on the lowest weirdness that still fits within river biome parameters with a bias
+               towards the origin (in order to find the closest river - this part is the same as ocean searches).
+             - As with ocean subsampling, there is a soft upper-limit to this value, though it's dependent on cellSize and wont cause any issues if set too high.""";
+    public final ModConfigSpec.IntValue humidity3_cacheSize;
+    public static final String humidity3_cacheSizeName = "humidity3_cacheSize";
+    public static final String humidity3_cacheSizeTxt = """
+            
+            [humidity3_cacheSize] is the size of the cache when using refined humidity.
+             - Represented as a power-of-two for number of entries. The default of 17 equates to 131,072 cache entries, which is about 12 megabytes of RAM.
+             - Unlike the previous humidity algorithm, we no longer use a heavy-weight Window-LFU cache but a "directly-mapped atomic ring buffer". While it may not be as
+               space-efficient as the older cache, it is MUCH faster thanks to being completely lock-free via hardware memory visibility (i.e. CAS writes) and zero overheads.
+             - For the above reason, the size needs to be bigger than the old cache to be effective, and increasing the size more could measurably improve performance during
+               heavy worldgen tasks (e.g. chunk pregeneration and World Preview).
+             - Also note that this cache is utilized by cache recycle below, which makes the slightly-higher RAM usage for this cache more than worth it.""";
+    public final ModConfigSpec.BooleanValue humidity3_cacheRecycleWorld;
+    public static final String humidity3_cacheRecycleWorldName = "humidity3_cacheRecycleWorld";
+    public static final String humidity3_cacheRecycleWorldTxt = """
+            
+            [humidity3_cacheRecycleWorld] will, when true, "recycle" cached climate values from humidity searches into the world chunk generation process.
+             - Improves in-game chunk generation time, drastically so for heavy world-gen mods like Lithosphere. It costs nothing to have, so only disable if it causes
+               crashes with other tweaking/performance mods (but it shouldn't, if it does please report and I'll try and fix it).
+             - Note that World Preview will not be any faster at all from this, since it doesn't do 3D sampling. But if you enable level-load benchmark, you'll see that the
+               time taken to load into a newly-created world for e.g. (where spawn chunks need to be generated) happens much faster.
+             - Trivia: Took a lot of work to get this right but it was worth it! For e.g. we have to detect 2D/3D noise parameters at runtime, then only cache values that
+               are based on 2D noise (most are) since that's all the humidity cache needs; whereas 3D noise parameters (like depth) are always fresh and never cached.""";
+    public final ModConfigSpec.IntValue humidity3_shortcutsLevel;
+    public static final String humidity3_shortcutsLevelName = "humidity3_shortcutsLevel";
+    public static final String humidity3_shortcutsLevelTxt = """
+            
+            [humidity3_shortcutsLevel] is the level of shortcuts to take during climate sampling.
+             - Higher values represent more shortcuts taken, at the cost of possible false positives/negatives when searching for oceans/rivers.
+             - A value of 0 will disable all shortcuts, meaning all climate dimensions will always be computed when sampling for humidity. Only recommended as a last resort.
+             - A value of 1 will enable all shortcuts. Only the relevant biome parameters for oceans/rivers will be calculated from noise, along with a fast biome check
+               against known ocean/river biome parameters.
+             - Currently only those two options for now, I may add more in future if needed.""";
+    public final ModConfigSpec.ConfigValue<List<? extends Integer>> humidity3_climateDimensionSampleOrderOcean;
+    public static final String humidity3_climateDimensionSampleOrderOceanName = "humidity3_climateDimensionSampleOrderOcean";
+    public static final String humidity3_climateDimensionSampleOrderOceanTxt = """
+            
+            [humidity3_climateDimensionSampleOrderOcean] is the order of climate dimensions to sample for when searching for oceans.
+             - This is an advanced setting for fine-tuning performance *if* you use mods that drastically change biome parameters.
+             - The default value is suitable for vanilla and most mods.
+             - This setting only has relevance when certain shortcuts are enabled (see humidity3_shortcutsLevel for specifics). It may also act as the default
+               dimension-sample order in some cases under other shortcut levels.
+             - Must be six numbers, with each number representing the standard 6 climate dimensions:
+                 0 = Temperature
+                 1 = Humidity
+                 2 = Continentalness
+                 3 = Erosion
+                 4 = Depth
+                 5 = Weirdness
+             - Depth (4) and Humidity (5) can be anywhere, since Depth is ignored in the 2D biome space which humidity is based on, and obviously humidity can't sample
+               itself (so is also skipped);
+             - For oceans, continentalness is first since it's the first defining factor for oceans (with vanilla biome parameters it's the only defining factor; so if the
+               shortcutsLevel is appropriate then only continentalness needs to be computed when searching for oceans).
+             - Default: [2, 0, 3, 5, 4, 1]""";
+    public final ModConfigSpec.ConfigValue<List<? extends Integer>> humidity3_climateDimensionSampleOrderRiver;
+    public static final String humidity3_climateDimensionSampleOrderRiverName = "humidity3_climateDimensionSampleOrderRiver";
+    public static final String humidity3_climateDimensionSampleOrderRiverTxt = """
+            
+            [humidity3_climateDimensionSampleOrderRiver] is the order of climate dimensions to sample for when searching for rivers.
+             - For rivers, continentalness is first since it's generally the fastest noise to compute, and it needs to resolve as non-ocean. Second is weirdness, and while
+               this is often the most expensive climate dimension to sample, it is the next most-important dimension for rivers (i.e. Valleys PV range). Next is erosion, since
+               that is also sometimes important, though this could be different with biome mods (along with the remaining dimensions).
+             - For more information, refer to the similar config option above for oceans (humidity3_climateDimensionSampleOrderOcean).
+             - Default: [2, 5, 3, 0, 4, 1]""";
 
     public static final String sectionBandLimit = "bandLimit";
     public static final String sectionBandLimitTxt = """
@@ -360,6 +505,44 @@ public class CommonConfig {
               - The default of -1.0 means "coldest".
               - For the example already given in bandLimitLowerCount, i.e. a value of 6 to simulate 'real-world and northern-hemisphere start', you will want to keep this on -1.0.""";
 
+    public static final String sectionStronghold = "stronghold-generation-tweaks";
+    public static final String sectionStrongholdTxt = """
+             [stronghold-generation-tweaks] provides some optional tweaks to Stronghold generation.
+              - Not really related to any features of this mod, but it can be very useful if you're using a heavy worldgen mod (e.g. Lithosphere) and are sick of waiting for Strongholds
+                whenever you create a new world.
+              - Stronghold calculation is fast on vanilla worldgen (and simple worldgen mods) but is a severe bottleneck on initial world creation for heavy worldgen mods like 
+                Lithosphere.
+              - Refer to the wiki article for background info on how Strongholds are generated: https://minecraft.wiki/w/Stronghold#Java_Edition
+              - WARNING: When recreating a world, this function can be buggy if the source world config and mod default config (i.e. this file) differ, regardless of what
+                'copyConfigOnRecreateWorld' is set to. It seems to happen only if you recreate a world after loading/recreating a world beforehand without restarting the entire game.
+                If in doubt, always restart Minecraft when you want to recreate a final "ready to play" world if the source world config and this mod config differ.
+             --------""";
+                // TODO: Look into that. Is Minecraft caching stronghold spawn positions for the same seed or something?
+    public final ModConfigSpec.IntValue strongholdCalcOverride;
+    public static final String strongholdCalcOverrideName = "strongholdCalcOverride";
+    public static final String strongholdCalcOverrideTxt = """
+            
+            [strongholdCalcOverride] provides options for overriding the initial stronghold spawn calculation process.
+             - See the section text above, specifically the web link, for context info on how Stronghold calculation is done in vanilla.
+             - A setting of 0 will leave Stronghold spawn calculation untouched, i.e. each spawn candidate will search nearby for biomes in the "#stronghold_biased_to" tag.
+               Keep this default setting if you experience crashes or other problems, you're probably using another mod that modifies the same code area.
+             - A setting of 1 will change Stronghold spawn calculation to immediately use the given chunk without any ideal spawn search at all. This is the fastest option, but it
+               will often mean a Stronghold spawns in the ocean. A good option to have if you're working on a mod(pack) and want new world gen to be as fast as possible when testing.
+             - A setting of 2 will replicate vanilla logic, but will allow 'strongholdCalcRange' from below to function.
+             - A setting of 3 will replicate vanilla logic, but instead check "any land", which is much faster than vanilla's full biome sampling while still trying to keep them out of
+               oceans most of the time (but they could still spawn near/under coastlines, or under rivers/swamps). It is a decent option to use for heavy worldgen like Lithosphere.
+                - The "any land" condition is satisfied by sampling for continentalness, and checking if that continentalness value is "above" any biome that exists in the #is_ocean
+                  biome tag.
+                - Consider increasing the "strongholdCalcRange" setting below if using this (if you really want to make sure Strongholds don't spawn in oceans) since it's much faster
+                  than the full biome sampling that vanilla usually does.
+            """;
+    public final ModConfigSpec.IntValue strongholdCalcRange;
+    public static final String strongholdCalcRangeName = "strongholdCalcRange";
+    public static final String strongholdCalcRangeTxt = """
+            
+            [strongholdCalcRange] allows you to override the distance when searching for ideal Stronghold spawns.
+             - The default of 0 means use the unmodified vanilla value, which is %s (measured as a block radius).
+             - This setting only works if the above 'strongholdCalcOverride' setting is 2 or above.""".formatted(PlatformConstants.STRONGHOLD_SEARCH_RANGE_DEFAULT);
 
     public CommonConfig(final ModConfigSpec.Builder builder) {
         builder.push(sectionGlobal).comment(sectionGlobalTxt);
@@ -369,9 +552,6 @@ public class CommonConfig {
         doLevelLoadBenchmark = builder
                 .comment(doLevelLoadBenchmarkTxt)
                 .define("doLevelLoadBenchmark", true);
-        benchmarkCacheStats = builder
-                .comment(benchmarkCacheStatsTxt)
-                .define("benchmarkCacheStats", false);
         copyConfigOnRecreateWorld = builder
                 .comment(copyConfigOnRecreateWorldTxt)
                 .define("copyConfigOnRecreateWorld", true);
@@ -381,12 +561,9 @@ public class CommonConfig {
         dumpRiverAndOceanBiomes = builder
                 .comment(dumpRiverAndOceanBiomesTxt)
                 .define("dumpRiverAndOceanBiomes", false);
-        builder.pop();
-
-        builder.push(sectionClimateSamplerPerf).comment(sectionClimateSamplerPerfTxt);
-        climateSamplerCacheSize = builder
-                .comment(climateSamplerCacheSizeTxt)
-                .defineInRange("climateSamplerCacheSize", 5, 0, 128);
+        showStrongholdProgress = builder
+                .comment(showStrongholdProgressTxt)
+                .define("humidity3_showStrongholdProgress", true);
         builder.pop();
 
         builder.push(sectionWorld).comment(sectionWorldTxt);
@@ -437,7 +614,7 @@ public class CommonConfig {
         builder.push(sectionHumidityWorld).comment(sectionHumidityWorldTxt);
         humidityAlgorithm = builder
                 .comment(humidityAlgorithmTxt)
-                .defineInRange("humidityAlgorithm", 2, 0, 2);
+                .defineInRange("humidityAlgorithm", 3, 0, 3);
         humidityTempWeight = builder
                 .comment(humidityTempWeightTxt)
                 .defineInRange("humidityTempWeight", 0.4, 0.0, 1.0);
@@ -450,9 +627,6 @@ public class CommonConfig {
         builder.pop();
 
         builder.push(sectionHumidityAlgo2).comment(sectionHumidityAlgo2Txt);
-        humidityResolution = builder
-                .comment(humidityResolutionTxt)
-                .defineInRange("humidityResolution", 4, 1, 8);
         humidityRiverInfluence = builder
                 .comment(humidityRiverInfluenceTxt)
                 .defineInRange("humidityRiverInfluence", 0.4, 0.0, 5.0);
@@ -465,15 +639,68 @@ public class CommonConfig {
         humidityMiddleWeight = builder
                 .comment(humidityMiddleWeightTxt)
                 .defineInRange("humidityMiddleWeight", 0.3, 0.0, 1.0);
-        builder.pop();
-
-        builder.push(sectionClimateSamplerWorld).comment(sectionClimateSamplerWorldTxt);
+        humidityResolution = builder
+                .comment(humidityResolutionTxt)
+                .defineInRange("humidityResolution", 4, 1, 8);
+        climateSamplerCacheSize = builder
+                .comment(climateSamplerCacheSizeTxt)
+                .defineInRange("climateSamplerCacheSize", 5, 0, 128);
         climateSamplerResolution = builder
                 .comment(climateSamplerResolutionTxt)
                 .defineInRange("climateSamplerResolution", -2, -2, 64);
         climateSamplerShortcuts = builder
                 .comment(climateSamplerShortcutsTxt)
                 .define("climateSamplerShortcuts", true);
+        builder.pop();
+
+        builder.push(sectionHumidityAlgo3).comment(sectionHumidityAlgo3Txt);
+        humidity3_searchDistanceOceans = builder
+                .comment(humidity3_searchDistanceOceansTxt)
+                .defineInRange(humidity3_searchDistanceOceansName, 512, 0, 8192);
+        humidity3_searchDistanceRivers = builder
+                .comment(humidity3_searchDistanceRiversTxt)
+                .defineInRange(humidity3_searchDistanceRiversName, 256, 0, 8192);
+        humidity3_noiseWeightOcean = builder
+                .comment(humidity3_noiseWeightOceanTxt)
+                .defineInRange(humidity3_noiseWeightOceanName, 0.4, 0.0, 1.0);
+        humidity3_noiseWeightRiver = builder
+                .comment(humidity3_noiseWeightRiverTxt)
+                .defineInRange(humidity3_noiseWeightRiverName, 0.3, 0.0, 1.0);
+        humidity3_noiseRange = builder
+                .comment(humidity3_noiseRangeTxt)
+                .defineInRange(humidity3_noiseRangeName, 0.6, 0.1, 1.0);
+        humidity3_cellSize = builder
+                .comment(humidity3_cellSizeTxt)
+                .defineInRange(humidity3_cellSizeName, 64, 0, 512);
+        humidity3_cellSubsamplingOcean = builder
+                .comment(humidity3_cellSubsamplingOceanTxt)
+                .defineInRange(humidity3_cellSubsamplingOceanName, 2, 0, Integer.MAX_VALUE);
+        humidity3_cellSubsamplingRiver = builder
+                .comment(humidity3_cellSubsamplingRiverTxt)
+                .defineInRange(humidity3_cellSubsamplingRiverName, 5, 0, Integer.MAX_VALUE);
+        humidity3_cacheSize = builder
+                .comment(humidity3_cacheSizeTxt)
+                .defineInRange(humidity3_cacheSizeName, 17, 0, 30);
+        humidity3_cacheRecycleWorld = builder
+                .comment(humidity3_cacheRecycleWorldTxt)
+                .define("humidity3_cacheRecycleWorld", true);
+        humidity3_shortcutsLevel = builder
+                .comment(humidity3_shortcutsLevelTxt)
+                .defineInRange(humidity3_shortcutsLevelName, 1, 0, 1);
+        humidity3_climateDimensionSampleOrderOcean = builder
+                .comment(humidity3_climateDimensionSampleOrderOceanTxt)
+                .defineList(humidity3_climateDimensionSampleOrderOceanName,
+                            () -> List.of(2, 0, 3, 5, 4, 1),
+                            () -> 0,
+                            element -> element instanceof Integer
+                    );
+        humidity3_climateDimensionSampleOrderRiver = builder
+                .comment(humidity3_climateDimensionSampleOrderRiverTxt)
+                .defineList(humidity3_climateDimensionSampleOrderRiverName,
+                        () -> List.of(2, 5, 3, 0, 4, 1),
+                        () -> 0,
+                        element -> element instanceof Integer
+                );
         builder.pop();
 
         builder.push(sectionBandLimit).comment(sectionBandLimitTxt);
@@ -489,6 +716,15 @@ public class CommonConfig {
         bandLimitLowerValue = builder
                 .comment(bandLimitLowerValueTxt)
                 .defineInRange(bandLimitLowerValueName, -1.0, -1.0, 1.0);
+        builder.pop();
+
+        builder.push(sectionStronghold).comment(sectionStrongholdTxt);
+        strongholdCalcOverride = builder
+                .comment(strongholdCalcOverrideTxt)
+                .defineInRange(strongholdCalcOverrideName, 0, 0, 3);
+        strongholdCalcRange = builder
+                .comment(strongholdCalcRangeTxt)
+                .defineInRange(strongholdCalcRangeName, 0, 0, Integer.MAX_VALUE);
         builder.pop();
     }
 }
