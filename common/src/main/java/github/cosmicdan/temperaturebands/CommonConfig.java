@@ -12,11 +12,13 @@ public class CommonConfig {
     public final ModConfigSpec.BooleanValue doBenchmark;
     public static final String doBenchmarkTxt = """
              
-             [doBenchmark] will, if World Preview is installed, do a benchmark when opening the 'Preview' tab (and after closing the World Preview settings menu,
+             [doBenchmark] will, if "World Preview (Unofficial Fork)" is installed, do a benchmark when opening the 'Preview' tab (and after closing the World Preview settings menu,
                 i.e. whenever chunk previews start to generate).
               - Do not scroll or resize the window while World Preview is active, it will cause the benchmark to fail or never complete. To restart benchmark, simply enter
                 the World Preview settings menu then exit out. Wait for all visible chunks to generate to see the results in the log/console.
-              - This does have a small performance cost, which ALWAYS applies - even if World Preview is not active - so be sure to disable this once you're done testing.""";
+              - This does have a small performance cost, which ALWAYS applies - even if World Preview is not active - so be sure to disable this once you're done testing.
+              - The option "Enable drag preloading" must be disabled in World Preview settings for benchmark to work, which isn't the default. You will be reminded in the log output
+                to do this if this still needs to be done (benchmarking won't work until you make this change).""";
     public final ModConfigSpec.BooleanValue doLevelLoadBenchmark;
     public static final String doLevelLoadBenchmarkTxt = """
              
@@ -563,7 +565,7 @@ public class CommonConfig {
                 .define("dumpRiverAndOceanBiomes", false);
         showStrongholdProgress = builder
                 .comment(showStrongholdProgressTxt)
-                .define("humidity3_showStrongholdProgress", true);
+                .define("showStrongholdProgress", true);
         builder.pop();
 
         builder.push(sectionWorld).comment(sectionWorldTxt);

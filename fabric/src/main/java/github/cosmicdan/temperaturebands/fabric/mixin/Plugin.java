@@ -24,17 +24,16 @@ public class Plugin implements IMixinConfigPlugin {
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
-        if (targetClassName.startsWith("com.caeruleusTait.world.preview.")) {
+        if (targetClassName.startsWith("caeruleusTait.world.preview.")) {
             if (FabricLoader.getInstance().isModLoaded("world_preview")) {
                 if (!doneLogMsg) {
                     TemperatureBands.LOGGER.info("World Preview detected; applying benchmark-related hooks. Please report if you see a mixin error after this line, it means World Preview has changed and benchmark may no longer work properly.");
                     doneLogMsg = true;
                 }
                 return true;
-            } else
-                return false;
+            }
         }
-        return true;
+        return false;
     }
 
     @Override

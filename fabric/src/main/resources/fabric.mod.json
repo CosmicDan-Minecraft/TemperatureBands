@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "id": "temperaturebands",
   "version": "${version}",
+  "accessWidener": "temperaturebands.accesswidener",
   "name": "Temperature Bands",
   "description": "Modifies world generation to place biomes into repeating temperature bands. Compatible with most worldgen mods.",
   "authors": [
