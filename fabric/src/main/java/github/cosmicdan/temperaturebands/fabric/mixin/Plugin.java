@@ -1,6 +1,7 @@
 package github.cosmicdan.temperaturebands.fabric.mixin;
 
 import com.llamalad7.mixinextras.MixinExtrasBootstrap;
+import github.cosmicdan.temperaturebands.TemperatureBands;
 import net.fabricmc.loader.api.FabricLoader;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
@@ -23,10 +24,16 @@ public class Plugin implements IMixinConfigPlugin {
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
-        if (targetClassName.startsWith("com.caeruleusTait.world.preview.")) {
-            return FabricLoader.getInstance().isModLoaded("world_preview");
+        if (targetClassName.startsWith("caeruleusTait.world.preview.")) {
+            if (FabricLoader.getInstance().isModLoaded("world_preview")) {
+                if (!doneLogMsg) {
+                    TemperatureBands.LOGGER.info("World Preview detected; applying benchmark-related hooks. Please report if you see a mixin error after this line, it means World Preview has changed and benchmark may no longer work properly.");
+                    doneLogMsg = true;
+                }
+                return true;
+            }
         }
-        return true;
+        return false;
     }
 
     @Override

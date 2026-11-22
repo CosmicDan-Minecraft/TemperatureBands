@@ -45,7 +45,7 @@ configurations {
 dependencies {
     forge "net.minecraftforge:forge:$rootProject.minecraft_version-$rootProject.forge_version"
 
-    common(project(path: ':common', configuration: 'namedElements')) { transitive false }
+    common(project(path: ':common', configuration: 'namedElements')) { transitive = false }
     shadowBundle project(path: ':common', configuration: 'transformProductionForge')
 
     // MixinExtras
@@ -57,7 +57,7 @@ dependencies {
     include "com.github.ben-manes.caffeine:caffeine:3.2.4"
 
     // World Preview (1.20.1)
-    modImplementation("curse.maven:world-preview-891429:5686690")
+    modImplementation("curse.maven:world-preview-unofficial-port-1634892:9436376")
     // Compat. testing (modded BiomeSource)
     modImplementation("curse.maven:blueprint-382216:8048579")
 }
@@ -83,6 +83,8 @@ remapJar {
     //Old, might still be needed...?
     //dependsOn shadowJar
     archiveClassifier = null
+    injectAccessWidener = true
+    atAccessWideners.add(loom.accessWidenerPath.get().asFile.name)
 }
 
 // Extras from CosmicDan, check if these are still needed...

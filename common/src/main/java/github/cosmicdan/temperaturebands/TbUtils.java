@@ -274,6 +274,12 @@ public class TbUtils {
     }
 
     public static void benchmarkBatchDone() {
+        // always sleep for a moment
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException ignored) {}
+        if (!benchmarkActive)
+            return;
         if (TemperatureBands.isClientSide() && TbUtilsClient.isOnWorldCreateScreen()) {
             while (benchmarkStart == null) {
                 try {
