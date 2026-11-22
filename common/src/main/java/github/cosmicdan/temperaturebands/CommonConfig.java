@@ -129,12 +129,14 @@ public class CommonConfig {
     public static final String distanceFunctionTxt = """
 
             [distanceFunction] provides a choice in algorithm for calculating distances (currently only used by the default/advanced humidity stuff).
-             - A value of 1 is the default and uses "octile" distance which is reasonably fast and accurate.
+             - A value of 3 is the "Optimal" or "Euclidean Fast" distance, which uses square root. It is reasonably fast and very accurate, and the current default.
              - A value of 0 uses "Manhattan" (or "taxi cab") distance which is faster but a bit inaccurate.
-             - A value of 2 uses "real" or "Euclidean" distance via hypotenuse calculation, which is a bit slower but gives maximum accuracy.
-             - Recommended to leave on 1 (octile). While Euclidean distance is only about 3% slower, it doesn't look any better - just "different".
-               Although Euclidean might give better smoothness if you're using very high accuracy for humidity and climate sampler. Manhattan distance is about 5%
-               faster than octile but looks kinda bad - can be very "noisy" and regularly "skips" biome transitions.""";
+             - A value of 1 is the old default and uses "octile" distance which is reasonably fast and accurate, but on the new advanced humidity code it creates polygonal
+               edges at biome-humidity changes.
+             - A value of 2 is the "Pure" or "Euclidean Safe" distance, which uses hypotenuse. It is the slowest but most accurate. Better to use 3, it is only kept for
+               backwards compatibility.
+             - Recommended to leave on 3. There isn't much performance difference between all of these, but 3 is only a tiny bit less accurate than 2 while much nicer than the
+               others.""";
     public final ForgeConfigSpec.IntValue vanillaNoiseOverride;
     public static final String vanillaNoiseOverrideName = "configVanillaNoiseOverride";
     public static final String vanillaNoiseOverrideTxt = """
@@ -412,8 +414,8 @@ public class CommonConfig {
                 .comment(noiseFactorTxt + "\nDefault: 0.05")
                 .defineInRange("noiseFactor", 0.05, 0, 1000);
         distanceFunction = builder
-                .comment(distanceFunctionTxt + "\nDefault: 1")
-                .defineInRange("distanceFunction", 1, 0, 2);
+                .comment(distanceFunctionTxt + "\nDefault: 3")
+                .defineInRange("distanceFunction", 3, 0, 3);
         dimBlacklist = builder
                 .comment(dimBlacklistTxt)
                 .define("dimBlacklist", "minecraft:the_nether,minecraft:the_end,");
