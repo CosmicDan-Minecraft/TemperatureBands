@@ -7,6 +7,7 @@ public record GlobalConfig(
         // Global settings (not per-world)
         boolean doBenchmark,
         boolean doLevelLoadBenchmark,
+        boolean benchmarkCacheStats,
         boolean copyConfigOnRecreateWorld,
         Set<String> ignoreDimensionFailures,
         boolean dumpRiverAndOceanBiomes,
@@ -21,6 +22,7 @@ public record GlobalConfig(
         return new GlobalConfig(
                 loadedConfig.doBenchmark.get(),
                 loadedConfig.doLevelLoadBenchmark.get(),
+                loadedConfig.benchmarkCacheStats.get(),
                 loadedConfig.copyConfigOnRecreateWorld.get(),
                 ignoreDimensionFailures,
                 loadedConfig.dumpRiverAndOceanBiomes.get(),

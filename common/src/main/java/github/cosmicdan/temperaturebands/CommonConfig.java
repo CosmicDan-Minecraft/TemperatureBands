@@ -26,6 +26,13 @@ public class CommonConfig {
               - While the result will appear on any level load, new or existing, it's only useful when creating a world (to record a baseline) and then recreating that
                 world (i.e. same seed) with some changed worldgen settings (e.g. Temperature Bands config).
               - Enabled by default since it costs practically nothing. Only a single line will be written to the log once the level has finished loading.""";
+    public final ForgeConfigSpec.BooleanValue benchmarkCacheStats;
+    public static final String benchmarkCacheStatsTxt = """
+             
+             [benchmarkCacheStats] will, if true, include measurement of cache hits with benchmarks.
+              - Disabled by default since it has a small (but measurable) performance cost.
+              - Probably not useful for most people, unless you're making significant changes to 'humidityResolution' and 'climateSamplerResolution' and want to make
+                sure your settings are cache-friendly (you'll want to aim for a cache hit-rate of at least 20%, otherwise the cache is probably not helping much).""";
     public final ForgeConfigSpec.BooleanValue copyConfigOnRecreateWorld;
     public static final String copyConfigOnRecreateWorldTxt = """
              
@@ -362,6 +369,9 @@ public class CommonConfig {
         doLevelLoadBenchmark = builder
                 .comment(doLevelLoadBenchmarkTxt)
                 .define("doLevelLoadBenchmark", true);
+        benchmarkCacheStats = builder
+                .comment(benchmarkCacheStatsTxt)
+                .define("benchmarkCacheStats", false);
         copyConfigOnRecreateWorld = builder
                 .comment(copyConfigOnRecreateWorldTxt)
                 .define("copyConfigOnRecreateWorld", true);
