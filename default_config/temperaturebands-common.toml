@@ -2,16 +2,28 @@
 	#[global] settings are not world-specific. These will apply to all worlds and will not save per-world since they don't affect world generation.
 	#--------
 	#
-	#[doBenchmark] will, if World Preview is installed, do a benchmark when opening the 'Preview' tab (and after closing the World Preview settings menu,
+	#[doBenchmark] will, if "World Preview (Unofficial Fork)" is installed, do a benchmark when opening the 'Preview' tab (and after closing the World Preview settings menu,
 	#   i.e. whenever chunk previews start to generate).
 	# - Do not scroll or resize the window while World Preview is active, it will cause the benchmark to fail or never complete. To restart benchmark, simply enter
 	#   the World Preview settings menu then exit out. Wait for all visible chunks to generate to see the results in the log/console.
-	# - If Humidity algorithm is not advanced, or the climate sampler cache is disabled, the 'cache hit-rate' part of results will be incorrect - ignore it.
+	# - This does have a small performance cost, which ALWAYS applies - even if World Preview is not active - so be sure to disable this once you're done testing.
+	# - The option "Enable drag preloading" must be disabled in World Preview settings for benchmark to work, which isn't the default. You will be reminded in the log output
+	#   to do this if this still needs to be done (benchmarking won't work until you make this change).
 	doBenchmark = false
+	#
+	#[doLevelLoadBenchmark] will, when true, perform a simple benchmark (time measurement) of initial level loading. In particular, it includes the
+	#   generation/loading of spawn chunks.
+	# - Works on both server and client, unlike the World Preview benchmark.
+	# - While the result will appear on any level load, new or existing, it's only useful when creating a world (to record a baseline) and then recreating that
+	#   world (i.e. same seed) with some changed worldgen settings (e.g. Temperature Bands config).
+	# - Enabled by default since it costs practically nothing. Only a single line will be written to the log once the level has finished loading.
+	doLevelLoadBenchmark = true
 	#
 	#[copyConfigOnRecreateWorld] will, when true, copy the previous world Temperature Bands config to the new world when "Recreate" is being done.
 	# - Set this to false if you want to "upgrade" your world with new features and defaults after updating the mod. You will still need to Recreate the world.
 	# - Relevant for client only. Servers will need to manually recreate their worlds (e.g. set the same seed/settings in server config and delete old world).
+	# - WARNING: If true, and your Stronghold config settings in the source world are different to the Stronghold settings in this config, the recreated world
+	#   might use whatever setting is specified in this config file anyway (rather than the source world). To avoid this, restart the game client.
 	copyConfigOnRecreateWorld = true
 	#
 	#[ignoreDimensionFailures] is a list of dimensions to ignore logging errors about when replacing their temperature/humidity functions fail.
@@ -21,21 +33,15 @@
 	ignoreDimensionFailures = "minecraft:the_end,"
 	#
 	#[dumpRiverAndOceanBiomes] will, if set to true, dump a list of all biomes with 'minecraft:is_river' and 'minecraft:is_ocean' tags from each dimension to console/log.
-	# - Might be useful for modpack creators (in relation to humidity algorithms)
+	# - Might be useful for modpack creators (in relation to humidity algorithms).
+	# - If the Refined Humidity algorithm is used, this will also dump the parameter ranges of each noise dimension for the detected ocean/river biomes.
 	dumpRiverAndOceanBiomes = false
-
-[climatesampler-performance]
-	#[climatesampler-performance] are global climate sampler settings related to performance (shared by all worlds, not saved per-world).
-	# - A custom climate sampler is used when calculating humidity based on proximity to rivers and/or oceans. These settings are currently only relevant if the 'advanced'
-	#   humidity algorithm is enabled (which is the default for new worlds, but left disabled for existing worlds).
-	#--------
 	#
-	#[climateSamplerCacheSize] is the size of our custom climate sampler, in megabytes.
-	# - The default of 5Mb can hold almost 50 thousand samples which should be more than enough for any environment.
-	# - Setting to zero will disable caching, which is NOT recommended - you will have much higher CPU *and* memory usage without the cache.
-	# Default: 5
-	# Range: 0 ~ 128
-	climateSamplerCacheSize = 5
+	#[showStrongholdProgress] will, when true, show the progress of calculating Stronghold spawn locations when generating a new world on the client.
+	# - Just a small QoL feature. Some worldgen mods (e.g. Lithosphere) when used in combination with Advanced/Refined humidity can be VERY slow with this process.
+	#   Advanced Humidity basically takes forever and is unusable, and Refined humidity can take 2 or more minutes for this process to finish.
+	# - Be sure to check out the [stronghold-generation-tweaks] section for options to speed up this process!
+	showStrongholdProgress = true
 
 [world]
 	#[world] are general defaults for new worlds. These will apply to newly-generated worlds only, existing worlds will remember their own settings.
@@ -96,15 +102,17 @@
 	noiseFactor = 0.05
 	#
 	#[distanceFunction] provides a choice in algorithm for calculating distances (currently only used by the default/advanced humidity stuff).
-	# - A value of 1 is the default and uses "octile" distance which is reasonably fast and accurate.
+	# - A value of 3 is the "Optimal" or "Euclidean Fast" distance, which uses square root. It is reasonably fast and very accurate, and the current default.
 	# - A value of 0 uses "Manhattan" (or "taxi cab") distance which is faster but a bit inaccurate.
-	# - A value of 2 uses "real" or "Euclidean" distance via hypotenuse calculation, which is a bit slower but gives maximum accuracy.
-	# - Recommended to leave on 1 (octile). While Euclidean distance is only about 3% slower, it doesn't look any better - just "different".
-	#   Although Euclidean might give better smoothness if you're using very high accuracy for humidity and climate sampler. Manhattan distance is about 5%
-	#   faster than octile but looks kinda bad - can be very "noisy" and regularly "skips" biome transitions.
-	# Default: 1
-	# Range: 0 ~ 2
-	distanceFunction = 1
+	# - A value of 1 is the old default and uses "octile" distance which is reasonably fast and accurate, but on the new advanced humidity code it creates polygonal
+	#   edges at biome-humidity changes.
+	# - A value of 2 is the "Pure" or "Euclidean Safe" distance, which uses hypotenuse. It is the slowest but most accurate. Better to use 3, it is only kept for
+	#   backwards compatibility.
+	# - Recommended to leave on 3. There isn't much performance difference between all of these, but 3 is only a tiny bit less accurate than 2 while much nicer than the
+	#   others.
+	# Default: 3
+	# Range: 0 ~ 3
+	distanceFunction = 3
 	#
 	#[dimBlacklist] specifies a blacklist of dimensions to exclude from *all* modifications.
 	# - Separate with commas. Trailing comma doesn't matter.
@@ -159,22 +167,21 @@
 	#
 	#[humidityAlgorithm] is the algorithm to use for humidity (aka vegetation).
 	# - You can configure and read more about each algorithm in their own section below. Recommended to use World Preview if you want to change things around.
-	# - A value of 2 (default) uses a "realistic" humidity calculation based on proximity to rivers and/or oceans. Can be a little slow, but still not as slow as many
-	#   worldgen mods, and it's definitely worth it (in my opinion).
+	# - A value of 3 (default) is the "refined" algorithm, based on proximity factors like algorithm 2 but faster and nicer.
+	# - A value of 2 is a simple proximity check against rivers and/or oceans. It's not recommended as it has been succeeded by algorithm 3.
+	#   It's still kept here for compatibility with older worlds, though.
 	# - A value of 1 uses a much simpler 'humidity bands' algorithm that run perpendicular to temperature bands.
 	# - A value of 0 will disable humidity feature entirely, keeping vanilla random noise humidity.
-	# - Do note that with advanced humidity, some worldgen mods may become extremely slow. One example of this is Lithosphere. In these cases it might be best to use
-	#   simple humidity, or at least turning off river influence (Lithosphere in particular doesn't generate many rivers anyway).
-	# Default: 2
-	# Range: 0 ~ 2
-	humidityAlgorithm = 2
+	# Default: 3
+	# Range: 0 ~ 3
+	humidityAlgorithm = 3
 	#
 	#[humidityTempWeight] is how much the temperature will additionally influence humidity.
-	# - Applies to all humidity algorithms, and is the final adjustment to the humidity value.
-	# - For humidity algorithm 2 (advanced) it introduces some biome variation between the warmer and cooler sides of the temperate (middle temperature) bands.
-	# - For humidity algorithm 1 (bands perpendicular to temperature), it applies some angle via narrowing/widening on the humidity bands - as you approach the cold
-	#   band, lower-humidity biomes will become wider; as you approach the hot band, higher-humidity biomes will become wider.
-	# - Setting to 0.0 will disable this function.
+	# - For humidity algorithm 3 (Refined) and 2 (Advanced) it introduces some biome variation between the warmer and cooler sides of the temperate
+	#   (middle temperature) bands.
+	# - For humidity algorithm 1 (Simple, i.e. bands perpendicular to temperature), it applies some angle via narrowing/widening on the humidity bands - as you
+	#   approach the cold band, lower-humidity biomes will become wider; as you approach the hot band, higher-humidity biomes will become wider.
+	# - Setting to 0.0 will disable this function, which may result in a *tiny* performance improvement.
 	# Default: 0.4
 	# Range: 0.0 ~ 1.0
 	humidityTempWeight = 0.4
@@ -190,18 +197,13 @@
 	humidityAlgo1MimicScale = 0.5
 
 [humidity-algorithm2]
-	#[sectionHumidityAlgo2] are the world-specific settings for the 'advanced' humidity algorithm, i.e. humidity based on proximity to rivers and/or oceans.
+	#[sectionHumidityAlgo2] are the world-specific settings for the 'advanced' humidity algorithm, i.e. the classic ocean/river proximity algorithm.
+	# - This has been largely succeeded by the new "refined" algorithm 3. Not recommended since it's pretty lousy, but kept for backwards-compatibility with
+	#   older worlds.
+	# - This is a coarse, brute-force and random sampler/search algorithm. It's not very fast, not very accurate, and can regularly produce "artifacts" e.g.
+	#   tiny and noisy patches of humid biomes.
+	# - Reminder: None of these settings apply to the new default "refined" humidity algorithm, see the new section "humidity-algorithm3" for configuring that.
 	#--------
-	#
-	#[humidityResolution] is the accuracy or "resolution" for calculating the distance from river and/or ocean for a given area, where lower values means more accuracy.
-	# - Represented as a square root, i.e. the default of 4 means each 16x16 area will use the same distance values.
-	# - This is a performance vs accuracy choice but the default of 4 seems decently balanced; values below 4 start to become extremely expensive on CPU/worldgen time
-	#   with only small improvements in smoothness, and values above 4 get a bit too "chunky". The max value of 8 (each 64x64 area having same humidity) results in a
-	#   silly checkerboard look (but is very fast).
-	# - If you change this, you might want to check out "climateSamplerResolution" in the "[climatesampler-world]" section too - these two settings are closely related.
-	# Default: 4
-	# Range: 1 ~ 8
-	humidityResolution = 4
 	#
 	#[humidityRiverInfluence] determines how much rivers should contribute to final humidity value.
 	# - The default of 0.4 means 40% of river closeness will be added to the base humidity that was determined by ocean closeness.
@@ -243,19 +245,30 @@
 	# Default: 0.3
 	# Range: 0.0 ~ 1.0
 	humidityMiddleWeight = 0.3
-
-[climatesampler-world]
-	#[climatesampler-world] are the world-specific settings for the climate sampler. Currently only used by humidity.
-	#   Unlike the climatesampler-performance settings, these DO affect worldgen.
-	#--------
+	#
+	#[humidityResolution] is the accuracy or "resolution" for calculating the distance from river and/or ocean for a given area, where lower values means more accuracy.
+	# - Represented as a square root, i.e. the default of 4 means each 16x16 area will use the same distance values.
+	# - This is a performance vs accuracy choice but the default of 4 seems decently balanced; values below 4 start to become extremely expensive on CPU/worldgen time
+	#   with only small improvements in smoothness, and values above 4 get a bit too "chunky". The max value of 8 (each 64x64 area having same humidity) results in a
+	#   silly checkerboard look (but is very fast).
+	# Default: 4
+	# Range: 1 ~ 8
+	humidityResolution = 4
+	#
+	#[climateSamplerCacheSize] is the size of the cache for this humidity algorithm, in megabytes (roughly).
+	# - The default of 5Mb can hold almost 50 thousand samples which should be more than enough for any environment.
+	# - Setting to zero will disable caching, which is NOT recommended - you will have much higher CPU *and* memory usage without the cache.
+	# Default: 5
+	# Range: 0 ~ 128
+	climateSamplerCacheSize = 5
 	#
 	#[climateSamplerResolution] is the accuracy or "resolution" for sampling the climate.
-	# - Currently only used by ocean/river search in the advanced humidity algorithm.
 	# - The default of -2 is an automatic "square value of humidityResolution". This seems to be the most logical balance between quality and performance - biome edges
 	#   look natural with sporadic patches of other biomes potential to the nearby humidity/temperature values to make blending a bit more exciting.
 	# - A value of -1 is also possible, which was the old default; corresponds to the "cube value of humidityResolution" but it is VERY inaccurate and NOT recommended.
 	#   It's best to keep this value no higher than the square of humidityResolution, i.e. -2, which results in 16 when humidityResolution is the default 4.
-	# - If setting manually, for best results, keep it as a multiple of humidityResolution. Otherwise there may be weirdness or inaccuracies in biome placement.
+	# - If setting manually, for best results, keep it as a multiple of humidityResolution. Otherwise there may be lots of weirdness in biome placement, or even humidity being
+	#   wrongly "shifted".
 	# - Setting this to a value equal to humidityResolution will provide maximum accuracy but will become VERY expensive on CPU/worldgen time, though that might be desirable
 	#   if you want all biome edges to be smoother and defined with minimal biome 'patches'.
 	# - If you've raised humidityResolution (meaning less accuracy) for some performance, it might be useful to manually set this value to something closer to the new
@@ -276,6 +289,148 @@
 	# - This does include compatibility with Custom Biome Parameters, but ONLY if you've changed the weirdness params of Rivers or the continentalness params of Oceans.
 	#   If your parameter changes to rivers/oceans include other parameters, then you must disable this - otherwise it may result in false positives/negatives.
 	climateSamplerShortcuts = true
+
+[humidity-algorithm3]
+	#[sectionHumidityAlgo2] are the world-specific settings for the 'refined' humidity algorithm, i.e. humidity based on proximity to rivers and/or oceans.
+	# - Based on the "advanced" algorithm (algorithm2), but much faster, more accurate, and more interesting. The new default in 3.0.0.
+	#--------
+	#
+	#[humidity3_searchDistanceOceans] is the maximal x/z block range to search for oceans.
+	# - If set to zero, ocean search will be disabled, meaning they will have no effect on humidity.
+	# - Searching for oceans is fairly fast, both for vanilla and most worldgen mods, since it's only based on continentalness noise which is usually cheap - so don't be
+	#   afraid to increase this distance if you desire.
+	# Default: 512
+	# Range: 0 ~ 8192
+	humidity3_searchDistanceOceans = 512
+	#
+	#[humidity3_searchDistanceRivers] is the maximal x/z block range to search for rivers.
+	# - If set to zero, rivers search will be disabled, meaning they will have no effect on humidity.
+	# - Searching for rivers is much more expensive than oceans, since it's largely based on weirdness which is usually among the most expensive noises (especially for
+	#   heavy worldgen mods like Lithosphere), so be careful with setting this higher.
+	# Default: 256
+	# Range: 0 ~ 8192
+	humidity3_searchDistanceRivers = 256
+	#
+	#[humidity3_noiseWeightOcean] is the weight of humidity provided by oceans.
+	# - Best considered as a ratio of how important or "heavy" the humidity of oceans are compared to river humidity. If river search is disabled, it acts as a
+	#   baseline "max humidity" value before the final scaling (via noiseRange setting below) is performed.
+	# - If set to zero, will have no effect on humidity, BUT SEARCHING WILL STILL BE PERFORMED FOR NO REASON - set distance to 0 instead if you want to disable.
+	# - If you disable searching for rivers, you will want to increase this value (and/or noiseRange, below) otherwise you'll never get high-humidity biomes.
+	# Default: 0.4
+	# Range: 0.0 ~ 1.0
+	humidity3_noiseWeightOcean = 0.4
+	#
+	#[humidity3_noiseWeightRiver] is the "value" of humidity provided by rivers.
+	# - As above, except for rivers instead of oceans; it is the value that river humidity provides relative to oceans (or, if ocean search is disabled, it
+	#   acts as a baseline "max humidity" value before the final scaling via noiseRange is performed).
+	# Default: 0.3
+	# Range: 0.0 ~ 1.0
+	humidity3_noiseWeightRiver = 0.3
+	#
+	#[humidity3_noiseRange] represents the absolute and final range of humidity that will be used.
+	# - Once the ocean/river humidity values are calculated via their weight and actual-distance-over-max-distance, they are combined, then scaled by this value
+	#   and converted into a bipolar range. I.e. the default of 0.6 means the final humidity will always range from -0.6 to +0.6, regardless of what the literal
+	#   noise weight values are for oceans/rivers (they will be re-scaled).
+	# - The default of 0.6 prevents the extremely wet or dry biomes from dominating the world too much. Increasing this will make them more common, and vice versa,
+	#   but be careful not to set so low that wettest/dryest biomes can never be generated (with vanilla biome parameters that would happen around 0.4).
+	# - If you use a biome mod that adds new biomes at the extreme ends, you may want to increase this.
+	# Default: 0.6
+	# Range: 0.1 ~ 1.0
+	humidity3_noiseRange = 0.6
+	#
+	#[humidity3_cellSize] is the size of each "macro cell" used during the search for oceans/rivers.
+	# - Lower values mean higher accuracy and more expensive search process. 64 seems to be enough for vanilla biome sizes.
+	# - Best kept as a power-of-two (e.g. 16, 32, 64, 128, etc.) but not strictly necessary.
+	# - If you're using a worldgen mod that makes biomes much bigger, you might be able to increase this to 128 or even 256 for
+	#   improved performance without much loss of quality.
+	# - If you change this, you might want to change the cellSubsampling sizes below, too.
+	# Default: 64
+	# Range: 0 ~ 512
+	humidity3_cellSize = 64
+	#
+	#[humidity3_cellSubsamplingOcean] is the level of subsampling to do on a cell when an ocean is detected.
+	# - This is used to narrow-down a more accurate distance value for oceans, with higher values being more accurate and costing more performance.
+	# - It is directly related to the "macro" cellSize above. I.e. if cell size is changed, you might want to change this too.
+	# - The algorithm is an origin-based binary search with comparison on continentalness noise in order to find the nearest ocean, where this value specifies the
+	#   maximum amount of times to shrink the "sub-cell" window.
+	# - The default value of 2 is suitable for oceans when cellSize is also at the default of 64, since oceans are quite large.
+	# - There is a soft upper-limit to this value, though it's dependent on cellSize and wont cause any issues if set too high (the algorithm will handle this fine);
+	#   since the smallest sub-cell size can only be 2x2 (64x64 > 32x32 > 16x16 > 8x8 > 4x4 > 2x2 = max of 5 subsamples possible with starting cellSize of 64).
+	# - A value of zero will disable subsampling completely, which will result in a minor performance boost (for oceans specifically) but a sharp loss in accuracy -
+	#   specifically, humidity distance will be calculated from the center of each cell (i.e. 64x64 by default).
+	# Default: 2
+	# Range: > 0
+	humidity3_cellSubsamplingOcean = 2
+	#
+	#[humidity3_cellSubsamplingRiver] is the level of subsampling to do on a cell when a river is detected.
+	# - This is used to narrow-down a more accurate distance value for rivers, with higher values being more accurate and costing more performance.
+	# - It is directly related to the "macro" cellSize above. I.e. if cell size is changed, you might want to change this too.
+	# - Algorithm is similar to Oceans, but since rivers are much smaller than oceans and can have sudden turns we generally want this to be higher than ocean subsampling.
+	#   Searching for rivers is slightly different than oceans - for each macro cell (i.e. 64x64), we sample the four corners *and* the center of the cell, then we check
+	#   if any of the 4 cell edges *or* the 4 lines from each corner to the center have a zero-crossing of weirdness - if so, it means a valley PV exists in this cell,
+	#   so there is a strong possibility that a river exists here too. Then we home-in on the lowest weirdness that still fits within river biome parameters with a bias
+	#   towards the origin (in order to find the closest river - this part is the same as ocean searches).
+	# - As with ocean subsampling, there is a soft upper-limit to this value, though it's dependent on cellSize and wont cause any issues if set too high.
+	# Default: 5
+	# Range: > 0
+	humidity3_cellSubsamplingRiver = 5
+	#
+	#[humidity3_cacheSize] is the size of the cache when using refined humidity.
+	# - Represented as a power-of-two for number of entries. The default of 17 equates to 131,072 cache entries, which is about 12 megabytes of RAM.
+	# - Unlike the previous humidity algorithm, we no longer use a heavy-weight Window-LFU cache but a "directly-mapped atomic ring buffer". While it may not be as
+	#   space-efficient as the older cache, it is MUCH faster thanks to being completely lock-free via hardware memory visibility (i.e. CAS writes) and zero overheads.
+	# - For the above reason, the size needs to be bigger than the old cache to be effective, and increasing the size more could measurably improve performance during
+	#   heavy worldgen tasks (e.g. chunk pregeneration and World Preview).
+	# - Also note that this cache is utilized by cache recycle below, which makes the slightly-higher RAM usage for this cache more than worth it.
+	# Default: 17
+	# Range: 0 ~ 30
+	humidity3_cacheSize = 17
+	#
+	#[humidity3_cacheRecycleWorld] will, when true, "recycle" cached climate values from humidity searches into the world chunk generation process.
+	# - Improves in-game chunk generation time, drastically so for heavy world-gen mods like Lithosphere. It costs nothing to have, so only disable if it causes
+	#   crashes with other tweaking/performance mods (but it shouldn't, if it does please report and I'll try and fix it).
+	# - Note that World Preview will not be any faster at all from this, since it doesn't do 3D sampling. But if you enable level-load benchmark, you'll see that the
+	#   time taken to load into a newly-created world for e.g. (where spawn chunks need to be generated) happens much faster.
+	# - Trivia: Took a lot of work to get this right but it was worth it! For e.g. we have to detect 2D/3D noise parameters at runtime, then only cache values that
+	#   are based on 2D noise (most are) since that's all the humidity cache needs; whereas 3D noise parameters (like depth) are always fresh and never cached.
+	humidity3_cacheRecycleWorld = true
+	#
+	#[humidity3_shortcutsLevel] is the level of shortcuts to take during climate sampling.
+	# - Higher values represent more shortcuts taken, at the cost of possible false positives/negatives when searching for oceans/rivers.
+	# - A value of 0 will disable all shortcuts, meaning all climate dimensions will always be computed when sampling for humidity. Only recommended as a last resort.
+	# - A value of 1 will enable all shortcuts. Only the relevant biome parameters for oceans/rivers will be calculated from noise, along with a fast biome check
+	#   against known ocean/river biome parameters.
+	# - Currently only those two options for now, I may add more in future if needed.
+	# Default: 1
+	# Range: 0 ~ 1
+	humidity3_shortcutsLevel = 1
+	#
+	#[humidity3_climateDimensionSampleOrderOcean] is the order of climate dimensions to sample for when searching for oceans.
+	# - This is an advanced setting for fine-tuning performance *if* you use mods that drastically change biome parameters.
+	# - The default value is suitable for vanilla and most mods.
+	# - This setting only has relevance when certain shortcuts are enabled (see humidity3_shortcutsLevel for specifics). It may also act as the default
+	#   dimension-sample order in some cases under other shortcut levels.
+	# - Must be six numbers, with each number representing the standard 6 climate dimensions:
+	#     0 = Temperature
+	#     1 = Humidity
+	#     2 = Continentalness
+	#     3 = Erosion
+	#     4 = Depth
+	#     5 = Weirdness
+	# - Depth (4) and Humidity (5) can be anywhere, since Depth is ignored in the 2D biome space which humidity is based on, and obviously humidity can't sample
+	#   itself (so is also skipped);
+	# - For oceans, continentalness is first since it's the first defining factor for oceans (with vanilla biome parameters it's the only defining factor; so if the
+	#   shortcutsLevel is appropriate then only continentalness needs to be computed when searching for oceans).
+	# - Default: [2, 0, 3, 5, 4, 1]
+	humidity3_climateDimensionSampleOrderOcean = [2, 0, 3, 5, 4, 1]
+	#
+	#[humidity3_climateDimensionSampleOrderRiver] is the order of climate dimensions to sample for when searching for rivers.
+	# - For rivers, continentalness is first since it's generally the fastest noise to compute, and it needs to resolve as non-ocean. Second is weirdness, and while
+	#   this is often the most expensive climate dimension to sample, it is the next most-important dimension for rivers (i.e. Valleys PV range). Next is erosion, since
+	#   that is also sometimes important, though this could be different with biome mods (along with the remaining dimensions).
+	# - For more information, refer to the similar config option above for oceans (humidity3_climateDimensionSampleOrderOcean).
+	# - Default: [2, 5, 3, 0, 4, 1]
+	humidity3_climateDimensionSampleOrderRiver = [2, 5, 3, 0, 4, 1]
 
 [bandLimit]
 	#[sectionBandLimit] allows you to set a limit on the temperature bands generated; meaning that a fixed temperature will be used after X number of bands.
@@ -318,3 +473,40 @@
 	# Default: -1.0
 	# Range: -1.0 ~ 1.0
 	bandLimitLowerValue = -1.0
+
+[stronghold-generation-tweaks]
+	#[stronghold-generation-tweaks] provides some optional tweaks to Stronghold generation.
+	# - Not really related to any features of this mod, but it can be very useful if you're using a heavy worldgen mod (e.g. Lithosphere) and are sick of waiting for Strongholds
+	#   whenever you create a new world.
+	# - Stronghold calculation is fast on vanilla worldgen (and simple worldgen mods) but is a severe bottleneck on initial world creation for heavy worldgen mods like
+	#   Lithosphere.
+	# - Refer to the wiki article for background info on how Strongholds are generated: https://minecraft.wiki/w/Stronghold#Java_Edition
+	# - WARNING: When recreating a world, this function can be buggy if the source world config and mod default config (i.e. this file) differ, regardless of what
+	#   'copyConfigOnRecreateWorld' is set to. It seems to happen only if you recreate a world after loading/recreating a world beforehand without restarting the entire game.
+	#   If in doubt, always restart Minecraft when you want to recreate a final "ready to play" world if the source world config and this mod config differ.
+	#--------
+	#
+	#[strongholdCalcOverride] provides options for overriding the initial stronghold spawn calculation process.
+	# - See the section text above, specifically the web link, for context info on how Stronghold calculation is done in vanilla.
+	# - A setting of 0 will leave Stronghold spawn calculation untouched, i.e. each spawn candidate will search nearby for biomes in the "#stronghold_biased_to" tag.
+	#   Keep this default setting if you experience crashes or other problems, you're probably using another mod that modifies the same code area.
+	# - A setting of 1 will change Stronghold spawn calculation to immediately use the given chunk without any ideal spawn search at all. This is the fastest option, but it
+	#   will often mean a Stronghold spawns in the ocean. A good option to have if you're working on a mod(pack) and want new world gen to be as fast as possible when testing.
+	# - A setting of 2 will replicate vanilla logic, but will allow 'strongholdCalcRange' from below to function.
+	# - A setting of 3 will replicate vanilla logic, but instead check "any land", which is much faster than vanilla's full biome sampling while still trying to keep them out of
+	#   oceans most of the time (but they could still spawn near/under coastlines, or under rivers/swamps). It is a decent option to use for heavy worldgen like Lithosphere.
+	#    - The "any land" condition is satisfied by sampling for continentalness, and checking if that continentalness value is "above" any biome that exists in the #is_ocean
+	#      biome tag.
+	#    - Consider increasing the "strongholdCalcRange" setting below if using this (if you really want to make sure Strongholds don't spawn in oceans) since it's much faster
+	#      than the full biome sampling that vanilla usually does.
+	#
+	# Default: 0
+	# Range: 0 ~ 3
+	strongholdCalcOverride = 0
+	#
+	#[strongholdCalcRange] allows you to override the distance when searching for ideal Stronghold spawns.
+	# - The default of 0 means use the unmodified vanilla value, which is 112 (measured as a block radius).
+	# - This setting only works if the above 'strongholdCalcOverride' setting is 2 or above.
+	# Default: 0
+	# Range: > 0
+	strongholdCalcRange = 0
