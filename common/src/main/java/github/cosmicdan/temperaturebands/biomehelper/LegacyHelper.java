@@ -1,4 +1,4 @@
-package github.cosmicdan.temperaturebands;
+package github.cosmicdan.temperaturebands.biomehelper;
 
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
@@ -15,17 +15,17 @@ import org.jetbrains.annotations.Nullable;
 import java.util.HashSet;
 import java.util.Set;
 
-import static github.cosmicdan.temperaturebands.TemperatureBands.LOGGER;
+/**
+ * Only used by SimpleSampler
+ */
+public class LegacyHelper extends BiomeHelperBase {
 
-public class RiverOceanBiomeHelper {
-    private static final String noneStringForBiomeDump = " - [NONE]";
-
-    public final Set<Holder<Biome>> biomeOceans = new HashSet<>();
-    public final Set<Holder<Biome>> biomeRivers = new HashSet<>();
+    private final Set<Holder<Biome>> biomeOceans = new HashSet<>();
+    private final Set<Holder<Biome>> biomeRivers = new HashSet<>();
     private final BiomeParamSet oceanParamSet = new BiomeParamSet();
     private final BiomeParamSet riverParamSet = new BiomeParamSet();
 
-    public RiverOceanBiomeHelper(ServerLevel level, @Nullable MultiNoiseBiomeSource biomeSource) {
+    public LegacyHelper(ServerLevel level, @Nullable MultiNoiseBiomeSource biomeSource) {
         if (biomeSource != null) {
             // fetch appropriate biomes for humidity
             Set<Holder<Biome>> possibleBiomes = biomeSource.possibleBiomes();
@@ -37,12 +37,8 @@ public class RiverOceanBiomeHelper {
                 }
             }
             // do dump if configured
-            if (TemperatureBands.CONFIG_GLOBAL.dumpRiverAndOceanBiomes()) {
-                LOGGER.info("List of all biomes with 'minecraft:is_river' tag for dimension '{}':", level.dimension().location());
-                doDump(biomeRivers);
-                LOGGER.info("List of all biomes with 'minecraft:is_ocean' tag for dimension '{}':", level.dimension().location());
-                doDump(biomeOceans);
-            }
+            dumpBiomeInfoIfConfigured(level, biomeOceans, biomeRivers, null);
+
             // make param sets for detecting river/oceans later. We do this because their params might be changed e.g. from CustomBiomeParameters mod
             for (Pair<Climate.ParameterPoint, Holder<Biome>> biomeParamPair : biomeSource.parameters().values()) {
                 if (biomeParamPair.getSecond().is(BiomeTags.IS_RIVER)) {
@@ -55,16 +51,12 @@ public class RiverOceanBiomeHelper {
         }
     }
 
-    private void doDump(Set<Holder<Biome>> biomeSet) {
-        if (biomeSet.isEmpty())
-            LOGGER.info(noneStringForBiomeDump);
-        else {
-            for (Holder<Biome> biomeHolder : biomeSet) {
-                if (biomeHolder.unwrapKey().isPresent()) {
-                    LOGGER.info(" - {}", biomeHolder.unwrapKey().get().location());
-                }
-            }
-        }
+    public boolean isOcean(Holder<Biome> biomeHolder) {
+        return biomeOceans.contains(biomeHolder);
+    }
+
+    public boolean isRiver(Holder<Biome> biomeHolder) {
+        return biomeRivers.contains(biomeHolder);
     }
 
     public boolean mightBeOcean(float continentalness) {

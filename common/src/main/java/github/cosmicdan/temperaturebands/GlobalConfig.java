@@ -7,12 +7,12 @@ public record GlobalConfig(
         // Global settings (not per-world)
         boolean doBenchmark,
         boolean doLevelLoadBenchmark,
-        boolean benchmarkCacheStats,
         boolean copyConfigOnRecreateWorld,
         Set<String> ignoreDimensionFailures,
         boolean dumpRiverAndOceanBiomes,
         // Global climate sampler settings (not per-world)
-        int climateSamplerCacheSize
+        int climateSamplerCacheSize,
+        boolean showStrongholdProgress
 ) {
     public static GlobalConfig create(CommonConfig loadedConfig) {
         // prepare ignoreDimensionFailures set
@@ -22,11 +22,11 @@ public record GlobalConfig(
         return new GlobalConfig(
                 loadedConfig.doBenchmark.get(),
                 loadedConfig.doLevelLoadBenchmark.get(),
-                loadedConfig.benchmarkCacheStats.get(),
                 loadedConfig.copyConfigOnRecreateWorld.get(),
                 ignoreDimensionFailures,
                 loadedConfig.dumpRiverAndOceanBiomes.get(),
-                loadedConfig.climateSamplerCacheSize.get()
+                loadedConfig.climateSamplerCacheSize.get(),
+                loadedConfig.showStrongholdProgress.get()
         );
     }
 }

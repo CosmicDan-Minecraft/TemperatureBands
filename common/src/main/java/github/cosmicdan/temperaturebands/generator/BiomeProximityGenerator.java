@@ -1,23 +1,14 @@
 package github.cosmicdan.temperaturebands.generator;
 
-import com.github.benmanes.caffeine.cache.*;
-import github.cosmicdan.temperaturebands.DimensionConfig;
-import github.cosmicdan.temperaturebands.DimensionData;
-import github.cosmicdan.temperaturebands.TbUtils;
-import github.cosmicdan.temperaturebands.DensityFunctionEx;
-import github.cosmicdan.temperaturebands.waterlocator.IWaterLocator;
-import github.cosmicdan.temperaturebands.waterlocator.SimpleWaterLocator;
+import github.cosmicdan.temperaturebands.*;
+import github.cosmicdan.temperaturebands.climatesampler.IClimateSampler;
+import github.cosmicdan.temperaturebands.climatesampler.RefinedSampler;
+import github.cosmicdan.temperaturebands.climatesampler.SimpleSampler;
 import net.minecraft.world.level.levelgen.DensityFunction;
-import org.apache.commons.lang3.tuple.Pair;
-
-import java.util.concurrent.*;
 
 public class BiomeProximityGenerator implements IGenerator {
-    public static final int blockY = 64; // TODO: Change to zero. Or just use 3D cache? Make it configurable. 3D cache improves support but costs twice as much cache space.
-
     private final Config config;
-    // initialized in constructor and/or derived from config arg
-    private final IWaterLocator waterLocator;
+    private final IClimateSampler biomeSampler;
 
     private DimensionData dimData;
     private boolean biomeSourceError = false;
@@ -25,35 +16,58 @@ public class BiomeProximityGenerator implements IGenerator {
     public record Config(
             DensityFunctionEx owner,
             boolean isTempDimension,
-            int noiseResolution,
-            int climateSamplerResolutionRaw,
-            float secondBiomeInfluence,
-            int biomeSearchDistance,
+            int humidityAlgorithm,
+            float algo2SecondBiomeInfluence,
+            int algo2BiomeSearchDistance,
             int distanceFunction,
-            float baseNoisePercent,
-            float middleWeight,
-            float tempWeight
+            float algo2BaseNoisePercent,
+            float algo2MiddleWeight,
+            float tempWeight,
+            // algo3 config
+            int algo3searchDistanceOcean,
+            int algo3searchDistanceRiver,
+            double algo3noiseWeightOcean,
+            double algo3noiseWeightRiver,
+            double algo3noiseRange,
+            int algo3cellSize,
+            int algo3cellSubsamplingOcean,
+            int algo3cellSubsamplingRiver,
+            int algo3shortcutsLevel
     ) {}
 
-    public static BiomeProximityGenerator create(DensityFunctionEx owner, DimensionConfig config) {
+    public static BiomeProximityGenerator create(DensityFunctionEx owner, DimensionConfig dimConfig) {
         return new BiomeProximityGenerator(new BiomeProximityGenerator.Config(
                 owner,
-                config.type().equals(DimensionConfig.ConfigType.TEMP),
-                config.humidityResolution(),
-                config.climateSamplerResolution(),
-                config.humidityRiverInfluence(),
-                config.humiditySearchDistance(),
-                config.distanceFunction(),
-                config.humidityBaseNoisePercent(),
-                config.humidityMiddleWeight(),
-                config.humidityTempWeight()
-        ));
+                dimConfig.type().equals(DimensionConfig.ConfigType.TEMP),
+                dimConfig.humidityAlgorithm(),
+                dimConfig.humidityRiverInfluence(),
+                dimConfig.humiditySearchDistance(),
+                dimConfig.distanceFunction(),
+                dimConfig.humidityBaseNoisePercent(),
+                dimConfig.humidityMiddleWeight(),
+                dimConfig.humidityTempWeight(),
+                // algo3 config
+                dimConfig.humidityAlgo3searchDistanceOcean(),
+                dimConfig.humidityAlgo3searchDistanceRiver(),
+                dimConfig.humidityAlgo3noiseWeightOcean(),
+                dimConfig.humidityAlgo3noiseWeightRiver(),
+                dimConfig.humidityAlgo3noiseRange(),
+                dimConfig.humidityAlgo3cellSize(),
+                dimConfig.humidityAlgo3subsampleAmountOcean(),
+                dimConfig.humidityAlgo3subsampleAmountRiver(),
+                dimConfig.humidityAlgo3shortcutsLevel()
+        ), dimConfig);
     }
 
-    public BiomeProximityGenerator(Config config) {
+    public BiomeProximityGenerator(Config config, DimensionConfig dimConfig) {
         this.config = config;
-        if (true) {
-            waterLocator = new SimpleWaterLocator(config);
+        if (config.humidityAlgorithm == 2) {
+            biomeSampler = new SimpleSampler(config, dimConfig);
+        } else if (config.humidityAlgorithm == 3) {
+            biomeSampler = new RefinedSampler(config, dimConfig);
+        } else {
+            TbUtils.doCrash("Invalid 'humidityAlgorithm' value: " +  config.humidityAlgorithm);
+            biomeSampler = null;
         }
     }
 
@@ -63,6 +77,11 @@ public class BiomeProximityGenerator implements IGenerator {
             TbUtils.doCrash("dimData must not be null");
         else if (dimData.getBiomeSource() == null)
             biomeSourceError = true;
+        else {
+            biomeSampler.onFirstCompute(dimData, config);
+            if (config.humidityAlgorithm >= 3)
+                TbUtils.determine2dDimensions(dimData.getClimateSampler(), CachedClimatePoint.IS_DIMENSION_2D);
+        }
     }
 
     @Override
@@ -72,22 +91,6 @@ public class BiomeProximityGenerator implements IGenerator {
         if (biomeSourceError)
             return config.owner.computeOriginal(context);
 
-        // default value if biome wasn't found
-        double noiseValue = -1.0;
-        /*
-        Pair<Double, Double> nearestFirstAndMaybeSecondBiomeDistance = getDistanceToNearestBiomesSimple(
-                originPosX,
-                originPosZ,
-                config.owner.getBiomesFirst(),
-                config.owner.getBiomesSecond(),
-                config.biomeSearchDistance,
-                samplerResolution
-        );
-         */
-        Pair<Double, Double> nearestFirstAndMaybeSecondBiomeDistance = waterLocator.findNearestOceanRiver(context.blockX(), context.blockZ(), dimData);
-
-        double nearestFirstBiome = nearestFirstAndMaybeSecondBiomeDistance.getLeft();
-        double nearestSecondBiomeMaybe = nearestFirstAndMaybeSecondBiomeDistance.getRight();
         // Humidity has 5 levels, ranging from -1.0 (least humid) to +1.0 (most humid)
         // Level 0 = -1.00 to -0.35
         // Level 1 = -0.35 to -0.10
@@ -95,26 +98,40 @@ public class BiomeProximityGenerator implements IGenerator {
         // Level 3 = +0.10 to +0.30
         // Level 4 = +0.30 to +1.00
 
+        if (config.humidityAlgorithm == 2)
+            return onComputeLegacy(context, dimData);
+        else //if (config.humidityAlgorithm == 3)
+            return biomeSampler.calculateHumidity(context, dimData);
+    }
+
+    private double onComputeLegacy(DensityFunction.FunctionContext context, DimensionData dimData) {
+        double[] nearestFirstAndMaybeSecondBiomeDistance = biomeSampler.findNearestOceanRiver(context.blockX(), context.blockZ(), dimData);
+
+        double nearestFirstBiome = nearestFirstAndMaybeSecondBiomeDistance[0];
+        double nearestSecondBiomeMaybe = nearestFirstAndMaybeSecondBiomeDistance[1];
+
+        // default value if biome wasn't found
+        double noiseValue = -1.0;
         if (nearestFirstBiome >= 0.0) {
             // Determine densityfunctions (e.g. humidity) as a percentage (0.0 to 1.0)
-            noiseValue = 1.0 - (nearestFirstBiome / config.biomeSearchDistance);
+            noiseValue = 1.0 - (nearestFirstBiome / config.algo2BiomeSearchDistance);
             // Convert from percentage to the range MC wants (vanilla expects -1.0 to +1.0)
             noiseValue = (noiseValue * 2.0) - 1.0;
         }
 
         if (nearestSecondBiomeMaybe >= 0.0) {
             // add second biome (e.g. river) influence
-            double noiseValueSecondBiome = 1.0 - (nearestSecondBiomeMaybe / config.biomeSearchDistance);
-            noiseValue = noiseValue + (noiseValueSecondBiome * config.secondBiomeInfluence);
+            double noiseValueSecondBiome = 1.0 - (nearestSecondBiomeMaybe / config.algo2BiomeSearchDistance);
+            noiseValue = noiseValue + (noiseValueSecondBiome * config.algo2SecondBiomeInfluence);
         }
 
-        if (config.baseNoisePercent > 0.0)
+        if (config.algo2BaseNoisePercent > 0.0)
             // use humidityNoiseFactor for this point to soften the edges a bit
-            noiseValue += (config.owner.computeOriginal(context) * config.baseNoisePercent);
+            noiseValue += (config.owner.computeOriginal(context) * config.algo2BaseNoisePercent);
 
         // apply some "middle weightiness"
-        if (config.middleWeight > 0.0)
-            noiseValue = TbUtils.pullTowardsZeroLinear(noiseValue, config.middleWeight);
+        if (config.algo2MiddleWeight > 0.0)
+            noiseValue = TbUtils.pullTowardsZeroLinear(noiseValue, config.algo2MiddleWeight);
 
         // finally do temperature adjustment
         if (config.tempWeight > 0.0) {

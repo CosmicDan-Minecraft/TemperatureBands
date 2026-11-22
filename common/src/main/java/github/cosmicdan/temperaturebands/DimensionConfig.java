@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
@@ -46,20 +47,36 @@ public record DimensionConfig(
         float humidityMiddleWeight,
         //public static float humidityRange = 2.0f, // Vanilla clamps humidity between -1.0 and +1.0. If you want that same clamping range, set this to 2.0. The default of 1.6 means it will be clamped to between -0.8 and +0.8 which takes
         //public static float humidityCenterWeight = 3.0f, // The "weightiness" towards middle values for humidity. Vanilla humidity generation tends to favour values closer to the middle, so this is used reduce the amount of humidity extremes (e.g. too much Jungle and Savanna). The default value seems good to me.
-        // Climate sampler settings (world-specific)
         int climateSamplerResolution,
         boolean climateSamplerShortcuts,
+        // band limit settings
         int bandLimitUpperCount,
         float bandLimitUpperValue,
         int bandLimitLowerCount,
-        float bandLimitLowerValue
+        float bandLimitLowerValue,
+        // Humidity algo 3 (refined) config
+        int humidityAlgo3searchDistanceOcean,
+        int humidityAlgo3searchDistanceRiver,
+        double humidityAlgo3noiseWeightOcean,
+        double humidityAlgo3noiseWeightRiver,
+        double humidityAlgo3noiseRange,
+        int humidityAlgo3cellSize,
+        int humidityAlgo3subsampleAmountOcean,
+        int humidityAlgo3subsampleAmountRiver,
+        int humidityAlgo3cacheSize,
+        boolean humidityAlgo3cacheRecycleWorld,
+        int humidityAlgo3shortcutsLevel,
+        List<? extends Integer> humidity3_climateDimensionSampleOrderOcean,
+        List<? extends Integer> humidity3_climateDimensionSampleOrderRiver,
+        int strongholdCalcOverride,
+        int strongholdCalcRange
 ) {
 
     public enum ConfigType {
         DEFAULT, // the default config as loaded from the usual mod config file on startup
         BASE, // A base config which only applies to the base overworld dimension
         TEMP, // A temporary base config, which may be generated instead of BASE for some reason e.g. World Preview.
-        DIMENSION // TODO: A final config with dimension-specific values assigned (doesn't apply to overworld)
+        DIMENSION // TODO: Dimension-specific settings maybe? Will need complicated refactors...
     }
 
     /** Default dimension configs, as set on startup from mod config**/
@@ -148,7 +165,23 @@ public record DimensionConfig(
                 loadedConfig.bandLimitUpperCount.get(),
                 loadedConfig.bandLimitUpperValue.get().floatValue(),
                 loadedConfig.bandLimitLowerCount.get(),
-                loadedConfig.bandLimitLowerValue.get().floatValue()
+                loadedConfig.bandLimitLowerValue.get().floatValue(),
+                // humidity algo 3
+                loadedConfig.humidity3_searchDistanceOceans.get(),
+                loadedConfig.humidity3_searchDistanceRivers.get(),
+                loadedConfig.humidity3_noiseWeightOcean.get(),
+                loadedConfig.humidity3_noiseWeightRiver.get(),
+                loadedConfig.humidity3_noiseRange.get(),
+                loadedConfig.humidity3_cellSize.get(),
+                loadedConfig.humidity3_cellSubsamplingOcean.get(),
+                loadedConfig.humidity3_cellSubsamplingRiver.get(),
+                loadedConfig.humidity3_cacheSize.get(),
+                loadedConfig.humidity3_cacheRecycleWorld.get(),
+                loadedConfig.humidity3_shortcutsLevel.get(),
+                loadedConfig.humidity3_climateDimensionSampleOrderOcean.get(),
+                loadedConfig.humidity3_climateDimensionSampleOrderRiver.get(),
+                loadedConfig.strongholdCalcOverride.get(),
+                loadedConfig.strongholdCalcRange.get()
         );
     }
 
@@ -159,7 +192,7 @@ public record DimensionConfig(
     }
 
     private static void validateHumidityAlgorithmValue(int humidityAlgorithm) {
-        if (humidityAlgorithm < 0 || humidityAlgorithm > 2) {
+        if (humidityAlgorithm < 0 || humidityAlgorithm > 3) {
             TbUtils.doCrash("Unrecognized humidityAlgorithm value '" + humidityAlgorithm + "' on loading default config, did you downgrade the mod?");
         }
     }
@@ -266,7 +299,22 @@ public record DimensionConfig(
                 DEFAULT.bandLimitUpperCount,
                 DEFAULT.bandLimitUpperValue,
                 DEFAULT.bandLimitLowerCount,
-                DEFAULT.bandLimitLowerValue
+                DEFAULT.bandLimitLowerValue,
+                DEFAULT.humidityAlgo3searchDistanceOcean,
+                DEFAULT.humidityAlgo3searchDistanceRiver,
+                DEFAULT.humidityAlgo3noiseWeightOcean,
+                DEFAULT.humidityAlgo3noiseWeightRiver,
+                DEFAULT.humidityAlgo3noiseRange,
+                DEFAULT.humidityAlgo3cellSize,
+                DEFAULT.humidityAlgo3subsampleAmountOcean,
+                DEFAULT.humidityAlgo3subsampleAmountRiver,
+                DEFAULT.humidityAlgo3cacheSize,
+                DEFAULT.humidityAlgo3cacheRecycleWorld,
+                DEFAULT.humidityAlgo3shortcutsLevel,
+                DEFAULT.humidity3_climateDimensionSampleOrderOcean,
+                DEFAULT.humidity3_climateDimensionSampleOrderRiver,
+                DEFAULT.strongholdCalcOverride,
+                DEFAULT.strongholdCalcRange
         );
     }
 
@@ -332,7 +380,24 @@ public record DimensionConfig(
                     Integer.parseInt(prop.getProperty(CommonConfig.bandLimitUpperCountName, String.valueOf(0))), // default 0 to preserve pre-2.2.0 worlds
                     Float.parseFloat(prop.getProperty(CommonConfig.bandLimitUpperValueName, String.valueOf(DEFAULT.bandLimitUpperValue))),
                     Integer.parseInt(prop.getProperty(CommonConfig.bandLimitLowerCountName, String.valueOf(0))), // default 0 to preserve pre-2.2.0 worlds
-                    Float.parseFloat(prop.getProperty(CommonConfig.bandLimitLowerValueName, String.valueOf(DEFAULT.bandLimitLowerValue)))
+                    Float.parseFloat(prop.getProperty(CommonConfig.bandLimitLowerValueName, String.valueOf(DEFAULT.bandLimitLowerValue))),
+                    // Humidity algo 3 (refined)
+                    Integer.parseInt(prop.getProperty(CommonConfig.humidity3_searchDistanceOceansName, String.valueOf(DEFAULT.humidityAlgo3searchDistanceOcean))),
+                    Integer.parseInt(prop.getProperty(CommonConfig.humidity3_searchDistanceRiversName, String.valueOf(DEFAULT.humidityAlgo3searchDistanceRiver))),
+                    Double.parseDouble(prop.getProperty(CommonConfig.humidity3_noiseWeightOceanName, String.valueOf(DEFAULT.humidityAlgo3noiseWeightOcean))),
+                    Double.parseDouble(prop.getProperty(CommonConfig.humidity3_noiseWeightRiverName, String.valueOf(DEFAULT.humidityAlgo3noiseWeightRiver))),
+                    Double.parseDouble(prop.getProperty(CommonConfig.humidity3_noiseRangeName, String.valueOf(DEFAULT.humidityAlgo3noiseRange))),
+                    Integer.parseInt(prop.getProperty(CommonConfig.humidity3_cellSizeName, String.valueOf(DEFAULT.humidityAlgo3cellSize))),
+                    Integer.parseInt(prop.getProperty(CommonConfig.humidity3_cellSubsamplingOceanName, String.valueOf(DEFAULT.humidityAlgo3subsampleAmountOcean))),
+                    Integer.parseInt(prop.getProperty(CommonConfig.humidity3_cellSubsamplingRiverName, String.valueOf(DEFAULT.humidityAlgo3subsampleAmountRiver))),
+                    Integer.parseInt(prop.getProperty(CommonConfig.humidity3_cacheSizeName, String.valueOf(DEFAULT.humidityAlgo3cacheSize))),
+                    Boolean.parseBoolean(prop.getProperty(CommonConfig.humidity3_cacheRecycleWorldName, String.valueOf(DEFAULT.humidityAlgo3cacheRecycleWorld))),
+                    Integer.parseInt(prop.getProperty(CommonConfig.humidity3_shortcutsLevelName, String.valueOf(DEFAULT.humidityAlgo3shortcutsLevel))),
+                    TbUtils.intListDeserialize(prop.getProperty(CommonConfig.humidity3_climateDimensionSampleOrderOceanName, TbUtils.intListSerialize(DEFAULT.humidity3_climateDimensionSampleOrderOcean))),
+                    TbUtils.intListDeserialize(prop.getProperty(CommonConfig.humidity3_climateDimensionSampleOrderRiverName, TbUtils.intListSerialize(DEFAULT.humidity3_climateDimensionSampleOrderRiver))),
+                    // stronghold tweaks
+                    Integer.parseInt(prop.getProperty(CommonConfig.strongholdCalcOverrideName, String.valueOf(DEFAULT.strongholdCalcOverride))),
+                    Integer.parseInt(prop.getProperty(CommonConfig.strongholdCalcRangeName, String.valueOf(DEFAULT.strongholdCalcRange)))
             );
         } catch (IOException ex) {
             return TbUtils.doCrash(ex, "Error reading world config, crashing-out intentionally to prevent corruption. Full error is above. If you modified the world config manually, please fix it. Otherwise, report this Temperature Bands error.");
@@ -377,6 +442,21 @@ public record DimensionConfig(
                 prop.setProperty(CommonConfig.humiditySearchDistanceName, String.valueOf(configToSave.humiditySearchDistance));
                 prop.setProperty(CommonConfig.humidityBaseNoisePercentName, String.valueOf(configToSave.humidityBaseNoisePercent));
                 prop.setProperty(CommonConfig.humidityMiddleWeightName, String.valueOf(configToSave.humidityMiddleWeight));
+            } else if (configToSave.humidityAlgorithm == 3) {
+                // Humidity algo 3 (refined)
+                prop.setProperty(CommonConfig.humidity3_searchDistanceOceansName, String.valueOf(configToSave.humidityAlgo3searchDistanceOcean));
+                prop.setProperty(CommonConfig.humidity3_searchDistanceRiversName, String.valueOf(configToSave.humidityAlgo3searchDistanceRiver));
+                prop.setProperty(CommonConfig.humidity3_noiseWeightOceanName, String.valueOf(configToSave.humidityAlgo3noiseWeightOcean));
+                prop.setProperty(CommonConfig.humidity3_noiseWeightRiverName, String.valueOf(configToSave.humidityAlgo3noiseWeightRiver));
+                prop.setProperty(CommonConfig.humidity3_noiseRangeName, String.valueOf(configToSave.humidityAlgo3noiseRange));
+                prop.setProperty(CommonConfig.humidity3_cellSizeName, String.valueOf(configToSave.humidityAlgo3cellSize));
+                prop.setProperty(CommonConfig.humidity3_cellSubsamplingOceanName, String.valueOf(configToSave.humidityAlgo3subsampleAmountOcean));
+                prop.setProperty(CommonConfig.humidity3_cellSubsamplingRiverName, String.valueOf(configToSave.humidityAlgo3subsampleAmountRiver));
+                prop.setProperty(CommonConfig.humidity3_cacheSizeName, String.valueOf(configToSave.humidityAlgo3cacheSize));
+                prop.setProperty(CommonConfig.humidity3_cacheRecycleWorldName, String.valueOf(configToSave.humidityAlgo3cacheRecycleWorld));
+                prop.setProperty(CommonConfig.humidity3_shortcutsLevelName, String.valueOf(configToSave.humidityAlgo3shortcutsLevel));
+                prop.setProperty(CommonConfig.humidity3_climateDimensionSampleOrderOceanName, TbUtils.intListSerialize(configToSave.humidity3_climateDimensionSampleOrderOcean));
+                prop.setProperty(CommonConfig.humidity3_climateDimensionSampleOrderRiverName, TbUtils.intListSerialize(configToSave.humidity3_climateDimensionSampleOrderRiver));
             } else if (configToSave.humidityAlgorithm != 0) {
                 TbUtils.doCrash("Unhandled humidity algorithm at config world save, fixme!");
             }
@@ -387,6 +467,9 @@ public record DimensionConfig(
             prop.setProperty(CommonConfig.bandLimitUpperValueName, String.valueOf(configToSave.bandLimitUpperValue));
             prop.setProperty(CommonConfig.bandLimitLowerCountName, String.valueOf(configToSave.bandLimitLowerCount));
             prop.setProperty(CommonConfig.bandLimitLowerValueName, String.valueOf(configToSave.bandLimitLowerValue));
+            // stronghold tweaks
+            prop.setProperty(CommonConfig.strongholdCalcOverrideName, String.valueOf(configToSave.strongholdCalcOverride));
+            prop.setProperty(CommonConfig.strongholdCalcRangeName, String.valueOf(configToSave.strongholdCalcRange));
 
             prop.store(worldPropOutputStream, "World-specific Temperature Bands settings. Do not edit!");
         } catch (IOException ex) {

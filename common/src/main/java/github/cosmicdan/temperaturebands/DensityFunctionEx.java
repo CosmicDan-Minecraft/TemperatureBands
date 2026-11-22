@@ -5,15 +5,10 @@ import github.cosmicdan.temperaturebands.generator.BiomeProximityGenerator;
 import github.cosmicdan.temperaturebands.generator.IGenerator;
 import net.minecraft.core.Holder;
 import net.minecraft.util.KeyDispatchDataCodec;
-import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.DensityFunctions;
 import net.minecraft.world.level.levelgen.synth.NormalNoise;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.Set;
-
-import static github.cosmicdan.temperaturebands.TemperatureBands.DIMENSION_DATA_CACHE;
 
 public class DensityFunctionEx implements DensityFunction {
     public final static String HUMIDITY_NAME = "humidity (vegetation)";
@@ -50,7 +45,7 @@ public class DensityFunctionEx implements DensityFunction {
     private @NotNull IGenerator createHumidity() {
         if (config.humidityAlgorithm() == 1)
             return BandsGenerator.create(this, config, true, config.humidityTempWeight());
-        else if (config.humidityAlgorithm() == 2)
+        else if (config.humidityAlgorithm() == 2 || config.humidityAlgorithm() == 3)
             return BiomeProximityGenerator.create(this, config);
         else
             return TbUtils.doCrash("Temperature Bands has an unrecognized '" + CommonConfig.humidityAlgorithmName + "' setting of '" + config.humidityAlgorithm() + "'");
@@ -58,16 +53,6 @@ public class DensityFunctionEx implements DensityFunction {
 
     public final double computeOriginal(DensityFunction.FunctionContext context) {
         return funcOriginal.compute(context);
-    }
-
-    public final Set<Holder<Biome>> getBiomesFirst() {
-        fetchDimDataIfNeeded();
-        return dimData.getBiomeHelper().biomeOceans;
-    }
-
-    public final Set<Holder<Biome>> getBiomesSecond() {
-        fetchDimDataIfNeeded();
-        return dimData.getBiomeHelper().biomeRivers;
     }
 
     @Override
@@ -78,10 +63,15 @@ public class DensityFunctionEx implements DensityFunction {
 
     private void fetchDimDataIfNeeded() {
         if (dimData == null || !dimData.isLevelReady) {
-            dimData = DIMENSION_DATA_CACHE.getIfPresent(dimensionName);
+            dimData = TemperatureBands.DIMENSION_DATA_CACHE.getIfPresent(dimensionName);
             if (dimData == null)
                 TbUtils.doCrash("Couldn't find DimensionData on first compute! Eh? Dimension name = " + dimensionName);
         }
+    }
+
+    public DimensionData getDimData() {
+        fetchDimDataIfNeeded();
+        return dimData;
     }
 
     @Override
