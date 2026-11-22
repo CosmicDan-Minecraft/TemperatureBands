@@ -9,11 +9,12 @@
     "ClientGuiHooks$WorldSelectionListEntryHooks"
   ],
   "mixins": [
-    "LevelHooks$LevelStorageSourceHooks",
     "LevelHooks$ChunkMapHooks",
+    "LevelHooks$LevelStorageSourceHooks",
     "LevelHooks$NoiseRouterHooks",
     "LevelHooks$ServerLevelHooks",
-    "RandomStateHooks"
+    "RandomStateHooks",
+    "MinecraftServerHooks"
   ],
   "injectors": {
     "defaultRequire": 1
