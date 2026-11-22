@@ -6,8 +6,7 @@
   "plugin" : "github.cosmicdan.temperaturebands.fabric.mixin.Plugin",
   "mixins": [
     "WorldPreviewFabricHooks$WorkManagerHooks",
-    "WorldPreviewFabricHooks$WorkBatchHooks",
-    "WorldPreviewFabricHooks$SampleUtilsHooks"
+    "WorldPreviewFabricHooks$WorkBatchHooks"
   ],
   "client": [
   ],

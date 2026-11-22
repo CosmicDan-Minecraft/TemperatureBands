@@ -26,23 +26,19 @@ abstract class WorldPreviewFabricHooks {
         @Final
         private WorldPreviewConfig config;
 
-        @Shadow
-        @Final
-        private List<WorkBatch> currentBatches;
-
         @WrapOperation(
-                method = "queueRangeReal",
+                method = "queueRangeReal(Lnet/minecraft/core/BlockPos;Lnet/minecraft/core/BlockPos;J)V",
                 at = @At(value = "INVOKE", target = "Lorg/slf4j/Logger;info(Ljava/lang/String;[Ljava/lang/Object;)V"),
                 remap = false
         )
-        public void onQueueRangeStartBatch(Logger instance, String s, Object[] objects, Operation<Void> original, @Local(name = "units") int units) {
+        public void onQueueRangeStartBatch(Logger instance, String s, Object[] objects, Operation<Void> original, @Local(name = "units") int units, @Local(name = "retainedBatches") int retainedBatches) {
             if (TemperatureBands.CONFIG_GLOBAL.doBenchmark()) {
-                if (units != 0 && !currentBatches.isEmpty()) {
-                    if (false) // config.enablePreload doesn't exist here
+                if (units != 0 && retainedBatches != 0) {
+                    if (config.enablePreload)
                         TemperatureBands.LOGGER.warn("World Preview benchmark is requested, but the preload option is enabled which doesn't work properly with benchmarking. Please disable it via 'Settings > Other > Enable drag preloading' then re-open the world (re)creation screen.");
-                    else{
+                    else {
                         TbUtils.benchmarkReset();
-                        TbUtils.benchmarkStart(currentBatches.size(), units);
+                        TbUtils.benchmarkStart(retainedBatches, units);
                     }
                 }
             }

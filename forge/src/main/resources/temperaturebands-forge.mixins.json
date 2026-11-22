@@ -6,8 +6,7 @@
   "plugin" : "github.cosmicdan.temperaturebands.forge.mixin.Plugin",
   "mixins": [
     "WorldPreviewForgeHooks$WorkManagerHooks",
-    "WorldPreviewForgeHooks$WorkBatchHooks",
-    "WorldPreviewForgeHooks$SampleUtilsHooks"
+    "WorldPreviewForgeHooks$WorkBatchHooks"
   ],
   "client": [
   ],

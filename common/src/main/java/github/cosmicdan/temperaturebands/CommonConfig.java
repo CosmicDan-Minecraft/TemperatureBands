@@ -615,8 +615,8 @@ public class CommonConfig {
 
         builder.push(sectionHumidityWorld).comment(sectionHumidityWorldTxt);
         humidityAlgorithm = builder
-                .comment(humidityAlgorithmTxt + "\nDefault: 2")
-                .defineInRange("humidityAlgorithm", 2, 0, 2);
+                .comment(humidityAlgorithmTxt + "\nDefault: 3")
+                .defineInRange("humidityAlgorithm", 3, 0, 3);
         humidityTempWeight = builder
                 .comment(humidityTempWeightTxt + "\nDefault: 0.4")
                 .defineInRange("humidityTempWeight", 0.4, 0.0, 1.0);
