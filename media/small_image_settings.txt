@@ -1,3 +1,5 @@
+ - Note: First use Alt + ScrollDown to set Y level to max (don't show cave biomes)
+ - Note: Zoom is second-farthest (second from the right)
  - Canvas size to 1800x1100 (center)
  - Resize to 50%
  - Font is Calibri, size 48, White with Black 2.0 stroke
