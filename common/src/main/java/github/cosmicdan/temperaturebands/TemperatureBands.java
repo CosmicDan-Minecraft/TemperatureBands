@@ -25,8 +25,6 @@ public final class TemperatureBands {
 
     /** Global (not dimension-specific) config shared by all worlds/dimensions **/
     public static GlobalConfig CONFIG_GLOBAL = null;
-    /** Base world data and config. Set via ? */
-    public static DimensionData DIMENSION_DATA_BASE;
     /** Dimension-specific data and config for the current world. Entries are created via ChunkMapHooks, finalized via ServerLevelHooks,
      * are read from various places, and cleared on server shutdown via MinecraftServerHooks */
     public static final Cache<String, DimensionData> DIMENSION_DATA_CACHE = Caffeine.newBuilder().build();
@@ -69,7 +67,6 @@ public final class TemperatureBands {
             DIMENSION_DATA_CACHE.invalidateAll();
             DimensionConfig.clearWorldConfigs();
             isFirstDimensionData = true;
-            DIMENSION_DATA_BASE = null;
         } else {
             DimensionData dimData = DIMENSION_DATA_CACHE.getIfPresent(dimensionName);
             if (dimData != null) {

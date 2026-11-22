@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import static github.cosmicdan.temperaturebands.TemperatureBands.CONFIG_GLOBAL;
 
 public class BiomeProximityGenerator implements IGenerator {
-    public static final int blockY = 64;
+    public static final int blockY = 64; // TODO: Change to zero. Or just use 3D cache? Make it configurable. 3D cache improves support but costs twice as much cache space.
 
     public static AtomicLong benchmarkSampleCacheHitCount = new AtomicLong(0);
     public static AtomicLong benchmarkSampleTotalCount = new AtomicLong(0);
