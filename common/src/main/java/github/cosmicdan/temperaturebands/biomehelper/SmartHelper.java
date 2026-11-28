@@ -11,6 +11,7 @@ import net.minecraft.world.level.biome.MultiNoiseBiomeSource;
 import org.jspecify.annotations.Nullable;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class SmartHelper extends BiomeHelperBase {
     private final ParameterPointData oceanRiverPoints;
@@ -35,7 +36,7 @@ public class SmartHelper extends BiomeHelperBase {
             );
 
             // do dump if configured
-            if (TemperatureBands.CONFIG_GLOBAL.dumpRiverAndOceanBiomes()) {
+            if (TemperatureBands.CONFIG_GLOBAL.dumpRiverAndOceanBiomes() && TemperatureBands.BIOME_DUMP_DONE.compareAndSet(false, true)) {
                 final Set<Holder<Biome>> biomeOceans = new HashSet<>();
                 final Set<Holder<Biome>> biomeRivers = new HashSet<>();
                 Set<Holder<Biome>> possibleBiomes = biomeSource.possibleBiomes();

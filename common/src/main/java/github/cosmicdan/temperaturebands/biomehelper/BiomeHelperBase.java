@@ -25,13 +25,13 @@ public abstract class BiomeHelperBase {
                 }
             }
             LOGGER.info("List of all biomes with 'minecraft:is_river' tag for dimension '{}':", level.dimension().location());
+            doDump(biomeRivers);
             if (pointData != null) {
                 LOGGER.info("List of all climate dimension ranges for 'minecraft:is_river' biomes in dimension '{}':", level.dimension().location());
                 for (Climate.ParameterPoint riverPoint : pointData.riverPoints) {
                     LOGGER.info(" - {}", riverPoint.toString());
                 }
             }
-            doDump(biomeRivers);
         }
     }
 
