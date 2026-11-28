@@ -14,6 +14,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.lang.management.ManagementFactory;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public final class TemperatureBands {
@@ -34,6 +35,7 @@ public final class TemperatureBands {
     public static boolean isDeleteScreenActive = false;
 
     private static final Map<String, Set<String>> failedDimensionNoiseReplacements = new HashMap<>();
+    public static final AtomicBoolean BIOME_DUMP_DONE = new AtomicBoolean(false);
 
     public static AtomicInteger strongholdCountTotal = new AtomicInteger(-1);
     public static AtomicInteger strongholdCountCurrent = new AtomicInteger(0);
@@ -71,6 +73,7 @@ public final class TemperatureBands {
             DIMENSION_DATA_CACHE.invalidateAll();
             DimensionConfig.clearWorldConfigs();
             isFirstDimensionData = true;
+            BIOME_DUMP_DONE.set(false);
         } else {
             DimensionData dimData = DIMENSION_DATA_CACHE.getIfPresent(dimensionName);
             if (dimData != null) {
