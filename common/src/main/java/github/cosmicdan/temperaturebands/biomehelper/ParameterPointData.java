@@ -63,7 +63,7 @@ public class ParameterPointData {
     }
 
     private int setParamRequiredIfNotWildcard(Climate.Parameter param, int paramIndex, int[] paramMapping, boolean[] paramRequired) {
-        if (param.min() > PlatformConstants.CLIMATE_DIMENSION_VALUE_MIN || param.max() < PlatformConstants.CLIMATE_DIMENSION_VALUE_MAX) {
+        if (param.min() > -PlatformConstants.CLIMATE_DIMENSION_MIN_MAX_WILDCARD || param.max() < PlatformConstants.CLIMATE_DIMENSION_MIN_MAX_WILDCARD) {
             for (int i = 0; i < PlatformConstants.DIMENSION_COUNT; i++) {
                 if (paramMapping[i] == paramIndex) {
                     paramRequired[i] = true;

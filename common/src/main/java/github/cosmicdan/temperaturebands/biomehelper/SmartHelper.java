@@ -11,7 +11,6 @@ import net.minecraft.world.level.biome.MultiNoiseBiomeSource;
 import org.jspecify.annotations.Nullable;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class SmartHelper extends BiomeHelperBase {
     private final ParameterPointData oceanRiverPoints;
@@ -75,25 +74,25 @@ public class SmartHelper extends BiomeHelperBase {
     }
 
     private boolean isParamInvalid(Climate.Parameter param) {
-        return param.min() < 20000 || param.max() > 20000;
+        return param.min() < -PlatformConstants.CLIMATE_DIMENSION_MIN_MAX_HARD || param.max() > PlatformConstants.CLIMATE_DIMENSION_MIN_MAX_HARD;
     }
 
     public void onFirstCompute(DimensionData dimData, BiomeProximityGenerator.Config config) {
         // verify that all oceans have non-wildcard continentalness, and that humidity is a wildcard
         for (Climate.ParameterPoint point : oceanRiverPoints.oceanPoints) {
-            if (point.continentalness().min() == PlatformConstants.CLIMATE_DIMENSION_VALUE_MIN && point.continentalness().max() == PlatformConstants.CLIMATE_DIMENSION_VALUE_MAX) {
+            if (point.continentalness().min() <= -PlatformConstants.CLIMATE_DIMENSION_MIN_MAX_WILDCARD && point.continentalness().max() >= PlatformConstants.CLIMATE_DIMENSION_MIN_MAX_WILDCARD) {
                 TbUtils.doCrash(buildVerifyErrorMsgForBannedWildcardDimension("minecraft:is_ocean", "continentalness"));
             }
-            if (point.humidity().min() != PlatformConstants.CLIMATE_DIMENSION_VALUE_MIN || point.humidity().max() != PlatformConstants.CLIMATE_DIMENSION_VALUE_MAX) {
+            if (point.humidity().min() > -PlatformConstants.CLIMATE_DIMENSION_MIN_MAX_WILDCARD || point.humidity().max() < PlatformConstants.CLIMATE_DIMENSION_MIN_MAX_WILDCARD) {
                 TbUtils.doCrash(buildVerifyErrorMsgForMissingWildcardHumidity("minecraft:is_ocean"));
             }
         }
         // verify that all rivers have non-wildcard weirdness, and that humidity is a wildcard
         for (Climate.ParameterPoint point : oceanRiverPoints.riverPoints) {
-            if (point.weirdness().min() == PlatformConstants.CLIMATE_DIMENSION_VALUE_MIN && point.weirdness().max() == PlatformConstants.CLIMATE_DIMENSION_VALUE_MAX) {
+            if (point.weirdness().min() <= -PlatformConstants.CLIMATE_DIMENSION_MIN_MAX_WILDCARD && point.weirdness().max() >= PlatformConstants.CLIMATE_DIMENSION_MIN_MAX_WILDCARD) {
                 TbUtils.doCrash(buildVerifyErrorMsgForBannedWildcardDimension("minecraft:is_river", "weirdness"));
             }
-            if (point.humidity().min() != PlatformConstants.CLIMATE_DIMENSION_VALUE_MIN || point.humidity().max() != PlatformConstants.CLIMATE_DIMENSION_VALUE_MAX) {
+            if (point.humidity().min() > -PlatformConstants.CLIMATE_DIMENSION_MIN_MAX_WILDCARD || point.humidity().max() < PlatformConstants.CLIMATE_DIMENSION_MIN_MAX_WILDCARD) {
                 TbUtils.doCrash(buildVerifyErrorMsgForMissingWildcardHumidity("minecraft:is_river"));
             }
         }
