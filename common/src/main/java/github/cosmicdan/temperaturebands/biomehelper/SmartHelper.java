@@ -24,9 +24,9 @@ public class SmartHelper extends BiomeHelperBase {
             biomeSource.parameters().values().forEach(pair -> {
                 Climate.ParameterPoint point = pair.getFirst();
                 Holder<Biome> biomeHolder = pair.getSecond();
-                if (biomeHolder.is(BiomeTags.IS_OCEAN))
+                if (biomeHolder.is(BiomeTags.IS_OCEAN) && isPointValid(point))
                     oceanPointsRaw.add(point);
-                if (biomeHolder.is(BiomeTags.IS_RIVER))
+                if (biomeHolder.is(BiomeTags.IS_RIVER) && isPointValid(point))
                     riverPointsRaw.add(point);
             });
             // second, merge parameter points where possible
@@ -52,6 +52,30 @@ public class SmartHelper extends BiomeHelperBase {
         } else {
             oceanRiverPoints = null;
         }
+    }
+
+    private boolean isPointValid(Climate.ParameterPoint point) {
+        if (isParamInvalid(point.temperature()))
+            return false;
+        if (isParamInvalid(point.humidity()))
+            return false;
+        if (isParamInvalid(point.continentalness()))
+            return false;
+        if (isParamInvalid(point.erosion()))
+            return false;
+        // Depth is arbitrary, so don't bother
+        //if (isParamInvalid(point.depth()))
+        //    return false;
+        if (isParamInvalid(point.weirdness()))
+            return false;
+        // Offset is arbitrary, so don't check it
+        //if (point.offset() > 20000)
+        //    return false;
+        return true;
+    }
+
+    private boolean isParamInvalid(Climate.Parameter param) {
+        return param.min() < 20000 || param.max() > 20000;
     }
 
     public void onFirstCompute(DimensionData dimData, BiomeProximityGenerator.Config config) {
